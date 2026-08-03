@@ -137,7 +137,7 @@ flowchart TB
 ```
 
 **Reading the diagram:**
-- **PMB → ARKFLEET** = **REST API**, read-only pull, results cached in Redis. PMB never touches ARKFLEET's DB directly. (This is Iwan's stated preference and respects service ownership.)
+- **PMB → ARKFLEET** = **REST API** via Tailscale, authenticated with Laravel Sanctum Bearer token (`abilities:api:read`). Results cached in Redis. PMB never touches ARKFLEET's DB directly. All endpoints confirmed from arkfleet-next codebase — see §8 for full catalog.
 - **PMB → SAP (read)** = **two-tier approach**: (1) **Service Layer REST/OData** (`https://arkasrv2:50000/b1s/v1/`) for standard entity queries — documented, stable, SAP-supported; (2) **Direct SQL Server** (`sqlsrv` driver, host `arkasrv2`, port 1433) as fallback for complex joins and UDF fields that OData doesn't expose — e.g., `list_ITO.sql` with multi-table joins and custom fields. Service Layer is the primary path; direct SQL is used when OData field mapping fails.
 - **PMB → SAP (write)** = through the **Service Layer REST API** (cookie-based session auth — see §7.2), **never** raw SQL INSERTs. All writes are queued idempotent jobs.
 - **SAP B1 is a SQL Server database**, not MySQL. It runs on a separate host (`arkasrv2`). The `sap_sql` connection uses the `sqlsrv` PHP extension, not MySQL.
@@ -960,51 +960,243 @@ SAP_SQL_PASSWORD=your_sql_password
 
 ## 8. ARKFLEET Integration Specification
 
-### 8.1 REST API Endpoints Consumed
+> **Source of truth:** arkfleet-next codebase (`app/Http/Controllers/Api/V1/*`, `app/Models/*`). All endpoint details, response shapes, and field names below are confirmed from the actual implementation.
 
-| Endpoint | Use | Query params |
-|---|---|---|
-| `GET /api/v1/equipment` | Equipment selector, DMBD grid, budget allocation | `search`, `is_active`, `project_code`, `plant_type` |
-| `GET /api/v1/equipment/{id}` | Equipment detail for request/budget | — |
-| `GET /api/v1/equipment/{id}/hm-km-readings` | Cost-per-hour / maintenance cost analytics | — |
+### 8.1 Authentication
 
-Example response shape consumed (equipment):
+ARKFLEET API uses **Laravel Sanctum** with token abilities:
 
+```
+Middleware: auth:sanctum + abilities:api:read + throttle:api
+Base URL:   http://arkfleet-next.local/api/v1   (Tailscale-accessible from PMB)
+```
+
+PMB needs a **Sanctum personal access token** with the `api:read` ability. The token is stored in PMB's `.env` as `ARKFLEET_API_TOKEN` and sent as a `Bearer` token in the `Authorization` header. Tokens do not expire by default — if a 401 is received, regenerate the token via the ARKFLEET admin panel.
+
+### 8.2 API Endpoint Catalog (Confirmed)
+
+#### Equipment
+
+| Endpoint | Method | Filters | Response Wrapper | Default Per Page |
+|----------|--------|---------|-----------------|------------------|
+| `/equipment` | GET | `search`, `is_active` (bool), `project_code`, `unitstatus_id`, `plant_type` (name LIKE), `with_readings` (bool), `per_page` (max 100) | `{data: [...], meta: {current_page, last_page, per_page, total}}` | 20 |
+| `/equipment/{id}` | GET | — | `{data: {...}}` | N/A |
+| `/equipment/{id}/hm-km-readings` | GET | `reading_type` (hm/km), `date_from`, `date_to`, `per_page` (max 100) | `{data: [...], meta: {...}}` | 50 |
+| `/equipment/stats` | GET | `project_code` | `{data: {total, by_status, by_plant_type, rfu_count}}` | N/A |
+
+**Equipment response shape** (index, with `plantType`, `unitModel`, `department` relations):
 ```json
 {
-  "id": 1042,
-  "unit_code": "E 042",
-  "description": "Excavator PC2000",
-  "plant_type_id": 1,
-  "plant_type": "DIGGER",
-  "project_code": "PRJ-BRD",
-  "unitstatus_id": 1,
-  "unit_status": "ACTIVE",
-  "is_active": true,
-  "is_rfu": true
+  "data": [
+    {
+      "id": 1042,
+      "unit_code": "E 042",
+      "description": "Excavator PC2000",
+      "serial_no": "KMTPC234...",
+      "chasis_no": null,
+      "engine_model": "Cummins QSK23",
+      "machine_no": null,
+      "nomor_polisi": null,
+      "bahan_bakar": "Diesel",
+      "warna": null,
+      "capacity": "20.00",
+      "remarks": null,
+      "plant_type_id": 1,
+      "unitstatus_id": 1,
+      "project_code": "PRJ-BRD",
+      "is_active": true,
+      "is_rfu": true,
+      "acquisition_cost": null,
+      "acquisition_date": "2021-06-15",
+      "unit_model": {"id": 5, "name": "PC2000-8"},
+      "department": {"id": 2, "department_name": "Plant BRD"},
+      "plant_type": {"id": 1, "name": "Excavator"}
+    }
+  ],
+  "meta": {"current_page": 1, "last_page": 5, "per_page": 20, "total": 94}
 }
 ```
 
-### 8.2 Equipment Caching Strategy (Redis)
+**Equipment show** additionally loads: `unitstatus` (id, name, color), `assetCategory` (id, name, code), `fixedAsset` (id, equipment_id, status).
 
-- **Cache key:** `ark:equipment:{project_code}:{filters_hash}` for lists; `ark:equipment:id:{id}` for single.
-- **TTL:** 1 hour for lists; 6 hours for single detail; **manual bust** on DMBD status change.
-- PMB stores only `equipment_id` (FK) + `_cache` display fields on its own records; the cache is a performance layer, not a source of truth.
-- A scheduled **warm-up job** pre-caches active equipment per active project each morning.
+**Stats endpoint** (`/equipment/stats`) — used for dashboard widgets:
+```json
+{
+  "data": {
+    "total": 94,
+    "rfu_count": 68,
+    "by_status": [
+      {"status_id": 1, "status_name": "ACTIVE", "count": 72, "color": "#52c41a"},
+      {"status_id": 3, "status_name": "BREAKDOWN", "count": 8, "color": "#ff4d4f"}
+    ],
+    "by_plant_type": [
+      {"plant_type_id": 1, "plant_type_name": "Excavator", "count": 32},
+      {"plant_type_id": 2, "plant_type_name": "Dump Truck", "count": 45}
+    ]
+  }
+}
+```
 
-### 8.3 DMBD Status Sync (PMB → ARKFLEET)
+**`with_readings`** parameter appends `latest_hm`, `latest_km`, and `latest_reading_date` to each equipment record — useful for dashboard fleet health widgets.
 
-When a Planner sets operational status (RFU/Standby/Breakdown), a queued job pushes the status to ARKFLEET via its API so ARKFLEET (`is_rfu`, `unitstatus`) reflects reality. `dmbd_entry.synced_to_arkfleet` tracks success; failures retried.
+#### HM/KM Readings
 
-### 8.4 HM/KM Readings for Cost Analysis
+**Response shape:**
+```json
+{
+  "data": [
+    {
+      "id": 15420,
+      "equipment_id": 1042,
+      "reading_date": "2026-07-25",
+      "reading_type": "hm",
+      "reading_value": "15234.50",
+      "source": "manual",
+      "notes": null
+    }
+  ],
+  "meta": {"current_page": 1, "last_page": 3, "per_page": 50, "total": 120}
+}
+```
 
-`hm-km-readings` feed **cost-per-operating-hour** and **cost-per-km** analytics, joining PMB actual spend (from `budget_ledger`) per equipment to ARKFLEET utilization — a key CPA metric for maintenance efficiency and fleet TCO.
+#### Reference Data (Dropdowns)
 
-### 8.5 (Beta) Component Database & API
+| Endpoint | Response Wrapper | Fields | Use in PMB |
+|----------|-----------------|--------|------------|
+| `GET /plant-types` | `{data: [{id, name, is_active}]}` | id, name, is_active | Equipment type filter, budget allocation per type |
+| `GET /unit-statuses` | `{data: [{id, name, color, is_active}]}` | id, name, **color**, is_active | Status badges with ARKFLEET-standard colors |
+| `GET /asset-categories` | `{data: [{id, name, code, is_active}]}` | id, name, code, is_active | Equipment categorization |
+
+#### Projects
+
+| Endpoint | Response Wrapper | Filters |
+|----------|-----------------|---------|
+| `GET /projects` | ⚠️ **RAW paginator** (no `{data}` wrapper!) | `selectable_only`, `active_only` (default true), `search` |
+| `GET /projects/{code}` | `{data: {...}}` | — |
+
+**Project fields:** `code` (PK, used as FK in equipment), `sap_code`, `name`, `bowheer`, `location`, `description`, `is_active`, `is_selectable`, `synced_at`.
+
+⚠️ **Pothole:** `projects` index is the **only** endpoint that returns a raw Laravel paginator — NOT wrapped in `{data: ...}`. The PMB ARKFLEET client must handle this inconsistency. All other list endpoints return `{data: [...], meta: {...}}`.
+
+#### Fixed Assets & Depreciation
+
+| Endpoint | Use in PMB | Response Wrapper |
+|----------|-----------|-----------------|
+| `GET /fixed-assets` | Asset lifecycle context (optional) | ⚠️ RAW paginator |
+| `GET /fixed-assets/{id}` | Asset detail with depreciation history | `{data: {...}}` |
+| `GET /depreciation/runs` | Depreciation schedule context | ⚠️ RAW paginator |
+| `GET /depreciation/runs/{id}` | Run detail with entries | `{data: {...}}` |
+| `GET /depreciation/entries` | Cost analysis (period_from/to, fixed_asset_id) | ⚠️ RAW paginator |
+
+### 8.3 ⚠️ Response Format Inconsistencies (Must Handle)
+
+| Endpoint group | Wrapper | PMB client must |
+|---------------|---------|----------------|
+| Equipment (all), plant-types, unit-statuses, asset-categories, projects/show, fixed-assets/show, depreciation/runs/show | `{data: ...}` | `$response->json('data')` |
+| Projects/index, fixed-assets/index, depreciation/runs, depreciation/entries | **RAW** (no wrapper) | `$response->json()` directly |
+
+**Implementation:** PMB's `ArkfleetClient` wraps all responses through a normalizer that detects the shape and always returns data as an array. Example:
+```php
+$json = $response->json();
+// If response has 'data' key → unwrap; otherwise it's already raw data
+return Arr::get($json, 'data', $json);
+```
+
+### 8.4 Equipment Caching Strategy (Redis)
+
+- **Cache key:** `ark:equipment:{project_code}` → list; `ark:equipment:id:{id}` → single; `ark:equipment:stats:{project_code}` → stats
+- **TTL:** 1 hour for lists; 6 hours for single detail; stats 30 min; **manual bust** on DMBD status change or when Plant request creates new budget allocation
+- PMB stores only `equipment_id` (FK) + `_cache` display fields (`unit_code_cache`, `plant_type_cache`, `project_code_cache`). The cache is a performance layer, not a source of truth — always re-read from ARKFLEET for financial operations.
+- A scheduled **warm-up job** pre-caches active equipment per active project each morning (6 AM WITA).
+- **Cache fallback:** if ARKFLEET is unreachable, serve Redis cache with a staleness banner. Equipment selector, DMBD grid, and budget overview all degrade gracefully.
+
+### 8.5 DMBD Status Sync (PMB → ARKFLEET)
+
+When a Planner sets operational status (RFU/Standby/Breakdown) in PMB, the status must be reflected in ARKFLEET. Currently ARKFLEET has no `PATCH /equipment/{id}/status` endpoint — PMB will use the existing ARKFLEET admin UI or propose a new endpoint.
+
+**Proposed ARKFLEET endpoint** (coordinate with ARKFLEET team):
+```
+PATCH /api/v1/equipment/{id}/status
+Body: { "unitstatus_id": 3, "is_rfu": false }
+Auth: auth:sanctum + abilities:api:write
+```
+
+Until this endpoint exists, DMBD status is tracked in PMB only. `dmbd_entry.synced_to_arkfleet` flag indicates sync state; a scheduled job retries failed syncs.
+
+### 8.6 HM/KM Readings for Cost Analysis
+
+- PMB joins actual spend from `budget_ledger` (per equipment) to ARKFLEET `hm-km-readings` to compute **cost-per-operating-hour** and **cost-per-km**.
+- Period: monthly. Query `GET /equipment/{id}/hm-km-readings?date_from={month_start}&date_to={month_end}`.
+- `reading_type=hm` → hours meter; `reading_type=km` → odometer. Both used depending on equipment type.
+- **CPA metric:** `total_spend / delta_hm` = IDR/hour; `total_spend / delta_km` = IDR/km. Tracks maintenance efficiency.
+
+### 8.7 (Beta) Component Database & Cannibal API
 
 - PMB maintains a **hierarchical `component` table** (Housing → Inner Parts → Critical Parts) linked to ARKFLEET `equipment_id`, maintained by AML.
-- **Cannibal movements** update component status and (via ARKFLEET API) reflect part relocation between units for the **Major Asset Components Monitoring** dashboard.
-- Proposed ARKFLEET endpoint (to coordinate with ARKFLEET team): `POST /api/v1/equipment/{id}/components` and `PATCH /api/v1/components/{id}/status`.
+- **Cannibal movements** update component status in PMB; components reference ARKFLEET equipment IDs.
+- **Proposed ARKFLEET endpoints** (coordinate with ARKFLEET team):
+  - `GET /api/v1/equipment/{id}/components` — list installed components
+  - `PATCH /api/v1/components/{id}/status` — update after cannibal move
+
+### 8.8 ARKFLEET Client Implementation (Laravel)
+
+```php
+// config/services.php
+'arkfleet' => [
+    'base_url' => env('ARKFLEET_API_URL', 'http://arkfleet-next.local/api/v1'),
+    'token'    => env('ARKFLEET_API_TOKEN'),
+    'timeout'  => 10,
+    'retries'  => 2,
+],
+
+// ArkfleetClient.php
+class ArkfleetClient
+{
+    public function __construct(private Client $http) {
+        $this->http = new Client([
+            'base_uri' => config('services.arkfleet.base_url'),
+            'headers' => [
+                'Authorization' => 'Bearer ' . config('services.arkfleet.token'),
+                'Accept'        => 'application/json',
+            ],
+            'timeout' => config('services.arkfleet.timeout'),
+        ]);
+    }
+
+    public function getEquipment(array $filters = []): array
+    {
+        $response = $this->http->get('equipment', ['query' => $filters]);
+        return $this->unwrap($response); // data wrapper + meta
+    }
+
+    public function getEquipmentStats(?string $projectCode = null): array
+    {
+        $response = $this->http->get('equipment/stats', [
+            'query' => array_filter(['project_code' => $projectCode]),
+        ]);
+        return $this->unwrap($response)['data'];
+    }
+
+    private function unwrap(Response $response): array
+    {
+        $body = json_decode($response->getBody(), true);
+        // Generic normalizer — handles both {data:...} and raw responses
+        return is_array($body) && array_key_exists('data', $body)
+            ? ['data' => $body['data'], 'meta' => $body['meta'] ?? null]
+            : ['data' => $body, 'meta' => null];
+    }
+}
+```
+
+### 8.9 Error Handling & Resilience
+
+| Failure Mode | Handling |
+|---|---|
+| **401 Unauthorized** | Token invalid/expired — alert IT, fall back to Redis cache, block financial operations until resolved |
+| **Connection timeout / 5xx** | Retry up to 2 times (configurable). Serve Redis cache with staleness warning. Queue alert for ops. |
+| **Rate limit (429)** | Respect `Retry-After` header. Back off. |
+| **404 on equipment/{id}** | Equipment deleted in ARKFLEET — mark PMB cached record as `synced_at=null`, exclude from selectors |
+| **Response format change** | Client normalizer guards against shape changes. Log warnings on unexpected shapes for ops review. |
 
 ---
 
