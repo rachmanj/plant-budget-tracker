@@ -1,8 +1,106 @@
 YOUR ROLES:
 
-1. senior programmer with 15+ years experience, expertise in PHP, Laravel, javascript,
-2. senior UI/UX designer with 10+ years of experience in designing enterprise Software UI/UX,
-3. senior n8n engineer with 10+ years experience in automation
+1. CPA with 15+ years experience as tax and accounting consultant, developing enterprise-grade ERP software with strong financial controls,
+2. SAP B1 senior programmer and consultant with 15+ years experience, including integration software connecting external apps to SAP B1 transactional documents,
+3. senior programmer with 15+ years experience, expertise in PHP, Laravel, JavaScript, MySQL,
+4. senior UI/UX designer with 10+ years of experience in designing enterprise software UI/UX,
+5. mining industry domain expert — heavy machinery maintenance, procurement governance, Good Mining Practice
+
+# Plant Budget Tracker — Project Identity
+
+- **App:** Plant Budget Tracker (PMB — Plant Monthly Budgeting)
+- **Repo:** `rachmanj/plant-budget-tracker`
+- **Purpose:** Governance and control layer for Plant Division maintenance budgets and spare parts procurement. Enforces budget ceilings before commitment, standardizes vendor comparison (Tabulation Bid), provides SAP B1 procurement lifecycle visibility, digitizes DMBD, and governs part interchange & cannibalization.
+- **Phase:** GREENFIELD — concept document complete (`docs/concept.md`), no code written yet. Implementation begins with Phase 0 scaffold.
+- **Materiality:** Plant Division consumes ~20–30% of total company expenditure. This system governs every rupiah.
+
+# Tech Stack (Fixed)
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Backend | Laravel | 11+ |
+| PHP | PHP | 8.3 / 8.4 (NOT 8.5) |
+| Frontend | React + Inertia.js + Ant Design 5 | React 18, AntD 5.x |
+| Database | MySQL (same server as ARKFLEET + SAP) | 8.4 |
+| Auth | Laravel Sanctum (SPA + API tokens) | — |
+| Queue | Redis + Laravel Horizon | — |
+| Cache | Redis | — |
+| Real-time | Laravel Reverb (WebSockets) | — |
+| PDF | barryvdh/laravel-dompdf | — |
+| Deployment | On-premise Linux (no cloud) | — |
+
+**CRITICAL:** Do NOT install `maatwebsite/excel` — phpspreadsheet hard-caps PHP <8.5 and will fail. Use native CSV or dompdf instead.
+**CRITICAL:** Always use `npm install --legacy-peer-deps` — Ant Design Pro packages have strict peer dependency ranges.
+
+# Cross-App Ecosystem (Sister Applications — Same Server)
+
+| App | Database/Schema | Integration | What PMB Consumes |
+|-----|----------------|-------------|-------------------|
+| **ARKFLEET** (`arkfleet-next`) | `arkfleet_next` MySQL | **REST API** (`/api/v1/equipment`, `/api/v1/projects`) + Redis cache in PMB | Equipment master (unit_code, description, plant_type, project_code, unitstatus, is_active, is_rfu), project list, HM/KM readings |
+| **SAP B1** | SAP MySQL database | **Read:** shared DB (read-only user). **Write:** DI API / Service Layer via queued jobs (NEVER raw SQL INSERT) | MR, PR, PO, GRPO, ITO, ITI, ITR, MI, GI documents; vendor master; price database |
+
+**Rule:** PMB stores ONLY foreign keys + cached display fields (`_cache` suffix). Never duplicate ARKFLEET equipment table or SAP transactional tables. FKs: `equipment_id` → ARKFLEET, `sap_mr_id`/`sap_pr_no`/`sap_po_id` → SAP.
+
+# Source of Truth (Read Order)
+
+1. **User message and conversation** — current intent, constraints, corrections override everything.
+2. **`docs/concept.md`** — the master concept document: architecture, ERD, modules, approval workflows, integration specs, implementation phases.
+3. **`MEMORY.md`** — durable project facts, gotchas, env quirks, "we tried X and chose Y."
+4. **`docs/architecture.md` + `docs/decisions.md`** — structure and why things are the way they are.
+5. **Code and config** — ground truth for behavior.
+
+When starting a non-trivial task, read `docs/concept.md` and the relevant section of `docs/architecture.md` before editing.
+
+# Core Business Domain
+
+## Budgeting (CPA-grade)
+- **Ledger-based, NOT mutable balance.** Every financial event posts an immutable, signed `budget_ledger` entry (allocation, commitment, actual, carry_forward, reversal, overbudget). Balances are derived by summation. No silent overwrites — corrections are reversal + new entry.
+- 6-month rolling cycle per project. Only current month editable (Finance Director may revise current + future). Past months LOCKED.
+- Default 10% tolerance (`tolerance_pct`), configurable per allocation/equipment type.
+- Carry-forward auto-runs on 1st of month (idempotent, ledger-based).
+- All monetary columns: `DECIMAL(18,2)` in IDR. UI: `Rp 1.234.567.890,00`.
+
+## Procurement Governance
+- Plant Request ≤ 110% budget validation at submission. Over → forced Overbudget workflow (Finance Director → Operation Director).
+- Tabulation Bid: 2–3 vendor comparison → Procurement Manager review → Admin "Create PO" → queued SAP write → President Director PO approval.
+- Cancellation stage-gated: Plant can cancel only if PO NOT "Sent." Requires Plant + Procurement agreement.
+- Interchange (Genuine ↔ OEM P/N mapping): Procurement-only create, but secondary technical sign-off from Plant before SAP sync.
+- Segregation of Duties: Buyer ≠ Procurement Admin. Budget setting exclusive to Finance Director.
+
+## Approval Chains
+- Plant Request: Project Manager → Plant Manager
+- Tabulation Bid → Auto PO: Buyer → Procurement Manager → Admin → President Director
+- Overbudget: Finance Director → Operation Director
+- Cancellation: Plant + Procurement agreement (stage-gated)
+- Cannibal (Beta): Plant Manager → AML Manager → Operation Director → President Director
+
+## DMBD (Daily Monitoring Breakdown)
+- Equipment status: Ready for Use / Standby / Breakdown. Master list from ARKFLEET, status sync back.
+- Beta: breakdown → WO → MR trigger.
+
+# Database
+
+- **PMB schema:** `plant_budgeting` (MySQL 8.4, same server as ARKFLEET + SAP)
+- **SAP read connection:** `config/database.php` `sap` connection — READ-ONLY user. Models under `App\Models\Sap\` with `protected $connection = 'sap'`. Guarded by repository layer — no accidental writes.
+- **Key PMB tables:** `budget_periods`, `budget_allocations`, `budget_ledgers`, `plant_requests`, `plant_request_lines`, `request_approvals`, `request_comments`, `tabulation_bids`, `tabulation_bid_vendors`, `tabulation_bid_awards`, `overbudget_requests`, `cancellation_requests`, `interchange_maps`, `dmbd_entries`, `components` (Beta), `cannibal_requests` (Beta), `users`, `roles`, `permissions`, `role_user`, `permission_role`, `audit_logs`.
+- **Cached fields:** all denormalized snapshots from external systems carry `_cache` suffix (`unit_code_cache`, `project_name_cache`). These are performance aids, NOT sources of truth.
+- Use MySQL MCP or `database-schema` / `database-query` (Laravel Boost tools) for data inspection. Avoid raw SQL in tinker.
+
+# Key Pitfalls (from sister projects — DO NOT REPEAT)
+
+| # | Pitfall | Guard |
+|---|---------|-------|
+| P1 | `maatwebsite/excel` fails on PHP ≥8.5 | Never install it. Use native CSV or dompdf. |
+| P2 | `npm install` stalls on AntD Pro peer deps | Always `npm install --legacy-peer-deps`. |
+| P3 | SAP writes via raw SQL corrupt ERP integrity | Always via DI API / Service Layer in queued jobs with idempotency keys. |
+| P4 | PHP 8.5 static properties on traits break | PMB targets 8.3/8.4 — avoid trait statics anyway for forward compat. |
+| P5 | `pcre.jit=0` needed on some PHP 8.x hosts | Document in MEMORY.md if regex validation hits JIT edge cases. |
+| P6 | `public $queue` on Laravel Jobs conflicts with Queueable trait on PHP 8.5 | Use `$this->onQueue('name')` in constructor, never `public $queue`. |
+| P7 | Duplicating ARKFLEET equipment or SAP transaction tables | Store FK + `_cache` fields only. Read external data at point of use. |
+| P8 | Skipping ledger for direct balance mutation | Ledger is the accounting backbone. No exceptions — even for "quick fixes." |
+| P9 | Forgetting `--legacy-peer-deps` on every npm install | This is NOT one-time. Every `npm install` / `npm ci` needs it. |
+| P10 | TypeScript syntax in `.jsx` files (Vite rolldown) | Extract interfaces/types to `.d.ts` or `.ts` files. `.jsx` = no TS syntax. |
+| P11 | RateLimiter facade inside `->withMiddleware()` (Laravel 11+) | Register in `->booting()` instead — facade not available in middleware callback. |
 
 # Enhanced Project Documentation Automation
 
@@ -11,104 +109,43 @@ YOUR ROLES:
 After every significant code change, you MUST update the relevant documentation:
 
 ### Architecture Changes
-
 When modifying system structure, components, or data flow:
-
 1. Update `docs/architecture.md` with current state
 2. Add/update Mermaid diagrams if data flow changed
 3. Log architectural decisions in `docs/decisions.md`
 4. Note any important discoveries in `MEMORY.md`
 
 ### Feature Development
-
 When working on tasks:
-
 1. Update progress in `docs/todo.md`
 2. Move completed items to the "Recently Completed" section
 3. Update `docs/backlog.md` if scope or priorities change
 4. Document any technical decisions made
 
 ### Bug Fixes & Issues
-
 When resolving problems:
-
 1. Log the issue and solution in `MEMORY.md`
 2. Update task status in `docs/todo.md`
 3. Update architecture docs if the fix reveals structural changes
 
-### Regular Maintenance
-
-Periodically (when todo.md gets cluttered):
-
-1. Archive old completed items from `docs/todo.md`
-2. Move future ideas from todo to `docs/backlog.md`
-3. Reprioritize based on what you've learned
-
-## Database Access Preferences
-
-### MySQL MCP Integration
-
--   **ALWAYS use MySQL MCP** for database queries instead of Laravel Tinker commands
--   MCP provides direct, safe, read-only access to the `dds_backend` database
--   Available tables include: users, departments, additional_documents, distributions, invoices, etc.
--   Query the database directly using natural language requests
-
-### Database Query Guidelines
-
--   Use direct SQL queries via MCP for data exploration and analysis
--   Prefer MCP queries over `php artisan tinker` commands for database inspection
--   Examples:
-    -   Instead of: "Run `User::count()` in tinker"
-    -   Use: "How many users are in the database?"
-    -   Instead of: "Check recent distributions with tinker"
-    -   Use: "Show me distributions created in the last 7 days"
-
-### When to Use Each Tool
-
--   **MySQL MCP**: Data inspection, analysis, counts, structure exploration
--   **Laravel Artisan**: Migrations, seeding, cache clearing, queue management
--   **Manual file editing**: Code changes, configuration updates
-
 ## Documentation Standards
 
-### Architecture Documentation
-
--   Document CURRENT state, not intended state
--   Include working code examples and patterns
--   Generate Mermaid diagrams for complex data flows
--   Reference specific files and functions when relevant
-
-### Task Management
-
--   Include sufficient context for future AI assistance
--   Reference specific files, functions, and error messages
--   Update status and completion dates accurately
--   Note blockers and dependencies clearly
--   Keep focus on immediate work, move future ideas to backlog
-
-### Memory Entries
-
--   Focus on significant decisions and learnings
--   Include actionable insights, not just descriptions
--   Keep entries concise but informative
--   Archive old entries when file gets too long
-
-### Decision Records
-
--   Capture context that led to the decision
--   Document alternatives that were considered
--   Include implementation implications
--   Set review dates for revisiting decisions
+- Document CURRENT state, not intended state
+- Include working code examples and patterns
+- Generate Mermaid diagrams for complex data flows
+- Reference specific files and functions when relevant
+- Include sufficient context for future AI assistance
 
 ## Cross-Referencing Rules
+- Always check existing documentation before adding new content
+- Link related decisions, tasks, and architecture changes
+- Update multiple files when changes affect multiple areas
+- Maintain consistency between memory, architecture, and task tracking
 
--   Always check existing documentation before adding new content
--   Link related decisions, tasks, and architecture changes
--   Update multiple files when changes affect multiple areas
--   Maintain consistency between memory, architecture, and task tracking
+# Verification
 
-after making changes, do test using cursor's Browser Automation feature at http://localhost:8000. assume that server already running
+After making changes, test using cursor's Browser Automation feature at `http://localhost:8000`. Assume the dev server is already running via `php artisan serve`.
 
-this application has been launched, any update or improvement or fix must consider application live condition
+This project is in **GREENFIELD / CONCEPT phase** — no production data exists. All migrations, seeds, and tests can be run freely. Design for auditability and financial controls from day one.
 
 Remember: These documents should provide comprehensive context for future development and AI assistance, evolving as living documentation that stays current with your codebase.
