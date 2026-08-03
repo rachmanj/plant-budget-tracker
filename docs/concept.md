@@ -115,8 +115,8 @@ flowchart TB
     end
 
     subgraph SAP["SAP B1 (ERP - System of Record)"]
-        SAPDB[("SAP MySQL Database\nMR/PR/PO/GRPO/ITO/ITI...")]
-        SAPINT["SAP Interface\n(DI API / Service Layer)"]
+        SAPINT["Service Layer REST/OData\n(arkasrv2:50000)"]
+        SAPDB[("SAP SQL Server Database\n(arkasrv2, port 1433)")]
         SAPINT --- SAPDB
     end
 
@@ -126,8 +126,9 @@ flowchart TB
 
     Users --> WEB
     APP -- "REST (cached in Redis)" --> ARKAPI
-    APP -- "Shared DB read (same MySQL server)" --> SAPDB
-    APP -- "Write: PR/PO create (DI API / Service Layer)" --> SAPINT
+    APP -- "Read: Service Layer REST/OData + Direct SQL (sqlsrv)" --> SAPINT
+    APP -- "Read: Direct SQL Server (sqlsrv)\nfor complex queries (optional)" --> SAPDB
+    APP -- "Write: Service Layer REST/OData\n(cookie-based session, queued jobs)" --> SAPINT
     APP --- DMBDMOD
     DMBDMOD -- "status sync" --> ARKAPI
 
@@ -137,8 +138,9 @@ flowchart TB
 
 **Reading the diagram:**
 - **PMB → ARKFLEET** = **REST API**, read-only pull, results cached in Redis. PMB never touches ARKFLEET's DB directly. (This is Iwan's stated preference and respects service ownership.)
-- **PMB → SAP (read)** = **shared MySQL database read** on the same physical server. PMB queries SAP tables for MR/PR/PO/GRPO status and pricing. Read-only, ideally through a **read-only DB user** and dedicated read connection.
-- **PMB → SAP (write)** = through the **official SAP B1 interface** (DI API or Service Layer) — **never** raw SQL INSERTs into SAP tables. Writes are wrapped in queued jobs with idempotency keys.
+- **PMB → SAP (read)** = **two-tier approach**: (1) **Service Layer REST/OData** (`https://arkasrv2:50000/b1s/v1/`) for standard entity queries — documented, stable, SAP-supported; (2) **Direct SQL Server** (`sqlsrv` driver, host `arkasrv2`, port 1433) as fallback for complex joins and UDF fields that OData doesn't expose — e.g., `list_ITO.sql` with multi-table joins and custom fields. Service Layer is the primary path; direct SQL is used when OData field mapping fails.
+- **PMB → SAP (write)** = through the **Service Layer REST API** (cookie-based session auth — see §7.2), **never** raw SQL INSERTs. All writes are queued idempotent jobs.
+- **SAP B1 is a SQL Server database**, not MySQL. It runs on a separate host (`arkasrv2`). The `sap_sql` connection uses the `sqlsrv` PHP extension, not MySQL.
 
 ### 2.2 Technology Stack & Rationale
 
@@ -146,7 +148,7 @@ flowchart TB
 |---|---|---|
 | Backend framework | **Laravel 11+ (PHP 8.3/8.4)** | Matches company standard (arkfleet-next). Mature queue/broadcast/validation stack; strong accounting-grade transaction support via DB transactions & events. |
 | Frontend | **React 18 + Inertia.js + Ant Design 5** | Inertia removes the need for a separate API-only SPA layer for internal pages while keeping React DX. **AntD ProTable/ProForm** give us enterprise-grade tables, filters, and form scaffolding out-of-the-box — ideal for approval queues, vendor comparison grids, budget tables. |
-| Database | **MySQL 8.4** | Same server as arkfleet-next & SAP B1 → enables shared-DB reads of SAP without network hops. Window functions & CTEs support budget variance/carry-forward calculations. |
+| **Database** | **MySQL 8.4** (PMB own schema `plant_budgeting`) + **SQL Server** (SAP B1, remote host `arkasrv2:1433`, accessed via `sqlsrv` PHP extension) | PMB owns its schema; SAP data is read remotely — never duplicated locally. |
 | Auth | **Laravel Sanctum** | SPA session auth for Inertia + API tokens for any machine-to-machine (e.g., future mobile). Lightweight vs Passport; sufficient for on-prem internal app. |
 | Queue | **Redis + Laravel Horizon** | Reliable async processing for SAP writes (PR/PO creation), ARKFLEET sync, notifications. Horizon gives visibility/retry/monitoring for finance-critical jobs. |
 | Cache | **Redis** | ARKFLEET equipment cache and SAP pricing cache; reduces load on sibling systems and speeds up request forms. |
@@ -162,7 +164,8 @@ sequenceDiagram
     participant PL as Planner (PMB)
     participant PMB as PMB App
     participant ARK as ARKFLEET API
-    participant SAP as SAP DB / Interface
+    participant SAP as SAP Service Layer
+    participant SQL as SAP SQL Server (remote)
     participant PM as Project+Plant Mgr
     participant LOG as Logistic Foreman
     participant PROC as Procurement
@@ -170,18 +173,20 @@ sequenceDiagram
     PL->>PMB: Update DMBD (unit E 042 = Breakdown)
     PMB->>ARK: Pull equipment master (cached)
     PL->>PMB: Create Plant Request (link SAP MR)
-    PMB->>SAP: Read MR line items + Part Numbers
+    PMB->>SAP: Read MR line items + Part Numbers (Service Layer / Direct SQL)
     PMB->>PMB: Estimate price (Tabulation Bid + SAP price cache)
     PMB->>PMB: Validate cumulative <= 110% budget
     PMB->>PM: Notify for approval
     PM-->>PMB: Approve (Project Mgr, then Plant Mgr)
     PMB->>LOG: Notify Logistic (stock check)
     LOG-->>PMB: Stock unavailable
-    PMB->>SAP: Auto-create PR (DI API / Service Layer)
+    PMB->>SAP: Auto-create PR (Service Layer, cookie auth)
+    SAP->>SQL: Persist PR
     SAP-->>PMB: PR number
     PROC->>PMB: Tabulation Bid (2-3 vendors)
     PROC->>PMB: Admin "Create PO"
-    PMB->>SAP: Auto-create PO
+    PMB->>SAP: Auto-create PO (Service Layer, cookie auth)
+    SAP->>SQL: Persist PO
     SAP-->>PMB: PO number (tracked to GRPO)
 ```
 
@@ -190,8 +195,9 @@ sequenceDiagram
 | Integration Point | Direction | Mechanism | Why |
 |---|---|---|---|
 | ARKFLEET equipment/projects | Read | **REST API** + Redis cache | Service ownership boundary; avoids duplicate asset table; API already exists. |
-| SAP MR/PR/PO/GRPO/inventory | Read | **Shared MySQL read** (read-only user) | Same server; low latency; avoids duplicating transactional documents. |
-| SAP PR/PO creation | Write | **DI API / Service Layer** via queued jobs | Data integrity — SAP business logic & validations must run; never raw SQL writes. |
+| SAP MR/PR/PO/GRPO/inventory | Read | **Service Layer REST/OData** (primary) + **Direct SQL Server / sqlsrv** (for complex queries/OData gaps) | Service Layer is documented & stable; direct SQL fills OData gaps (UDF fields, multi-table joins, field name mismatches). Remote SQL Server host `arkasrv2:1433`. |
+| SAP PR/PO creation | Write | **Service Layer REST/OData** via queued jobs — **cookie-based session auth** (Guzzle CookieJar) | Data integrity — SAP business logic must run; Service Layer is the official write path. Cookie auth (B1SESSION + ROUTEID) managed automatically by Guzzle. |
+| SAP pricing / vendor master | Read | **Service Layer REST/OData** (primary) + cached in Redis | Standard entity queries; daily cache refresh with staleness fallback. |
 | DMBD status → ARKFLEET | Write | **REST API** (status sync) | Keeps ARKFLEET the asset-status source of truth. |
 | Approvals / alerts | Push | **Reverb WebSockets** | Real-time UX for time-sensitive approvals. |
 
@@ -777,62 +783,178 @@ flowchart LR
 
 ## 7. SAP Integration Specification
 
-### 7.1 Read Strategy (Shared MySQL Database)
+### 7.1 Architecture: Dual Access (Service Layer + Direct SQL Server)
 
-PMB connects to the **SAP B1 MySQL database on the same server** using a **dedicated read-only connection** (`sap` connection in `config/database.php`). We **do not** duplicate SAP transactional tables.
+SAP B1 runs on a **SQL Server** database on host `arkasrv2`, NOT MySQL and NOT on the same physical server as PMB. PMB accesses SAP through two complementary channels:
 
-| SAP Document | Purpose in PMB | Key Fields Consumed | Frequency |
+| Channel | Use Case | Protocol | PHP Driver |
+|---------|----------|----------|------------|
+| **Service Layer REST/OData** | Standard CRUD, writes (PR/PO creation), vendor/price lookups | HTTPS REST/OData (`https://arkasrv2:50000/b1s/v1/`) | Guzzle HTTP (cookie-based session) |
+| **Direct SQL Server** | Complex joins, UDF fields, OData gaps (e.g., `list_ITO.sql`) | SQL over TCP (`arkasrv2:1433`) | `sqlsrv` PHP extension |
+
+**Priority for read operations:** Direct SQL Server first (most accurate, matches existing SQL queries exactly), OData as fallback. See the sync job pattern below.
+
+### 7.2 Service Layer — Cookie-Based Session Authentication
+
+SAP B1 Service Layer uses **HTTP cookie-based session management** — NOT API keys, NOT Bearer tokens:
+
+1. **Login request** → `POST /Login` with `{CompanyDB, UserName, Password}`
+2. **SAP responds** with `Set-Cookie: B1SESSION=...` and `Set-Cookie: ROUTEID=.node1`
+3. **Guzzle CookieJar** automatically stores cookies and includes them in all subsequent requests
+4. **Session expiry** → SAP returns `401 Unauthorized` → auto-re-login and retry
+
+```php
+// SapService setup — Guzzle handles cookies automatically
+$this->cookieJar = new CookieJar();
+$this->client = new Client([
+    'base_uri' => 'https://arkasrv2:50000/b1s/v1/',
+    'cookies'  => $this->cookieJar,   // ← Guzzle stores & sends cookies
+    'headers'  => ['Content-Type' => 'application/json'],
+]);
+
+public function login(): bool
+{
+    $response = $this->client->post('Login', [
+        'json' => [
+            'CompanyDB' => $this->config['db_name'],
+            'UserName'  => $this->config['user'],
+            'Password'  => $this->config['password'],
+        ],
+    ]);
+    return $response->getStatusCode() === 200;
+    // Cookies (B1SESSION, ROUTEID) are now in CookieJar — all subsequent requests
+    // automatically include them in the Cookie header.
+}
+```
+
+**Session management strategy:**
+- Register `SapService` as a **Laravel singleton** — one SAP session per application instance, reused across requests. Prevents session-limit exhaustion.
+- On `401` response → catch, call `login()`, retry the original request. Transparent to callers.
+- Validate session before heavy operations: `if (!$this->cookieJar->count()) { $this->login(); }`
+- Sessions are **independent per application** — multiple apps can use the same SAP credentials simultaneously with separate B1SESSION cookies.
+
+### 7.3 Direct SQL Server Access
+
+For queries that the Service Layer's OData interface cannot express (complex joins, UDF/user-defined fields, field name mismatches), PMB uses the `sqlsrv` PHP extension to execute parameterized SQL directly on SAP's SQL Server.
+
+**Connection (`config/database.php`):**
+```php
+'sap_sql' => [
+    'driver'    => 'sqlsrv',
+    'host'      => env('SAP_SQL_HOST', 'arkasrv2'),
+    'port'      => env('SAP_SQL_PORT', '1433'),
+    'database'  => env('SAP_SQL_DATABASE'),
+    'username'  => env('SAP_SQL_USERNAME'),
+    'password'  => env('SAP_SQL_PASSWORD'),
+    'charset'   => 'utf8',
+    'options'   => ['TrustServerCertificate' => true],
+],
+```
+
+**Requirements:** PHP `sqlsrv` extension installed on the PMB server. Read-only SQL user recommended for audit safety.
+
+**Use cases:** Complex ITO queries (joining `OWTR`, `WTR1`, `OITW` with UDF fields like `U_MIS_TransferType`), multi-table price lookups, reporting joins that OData `$expand` cannot handle efficiently.
+
+### 7.4 Read Strategy — Sync Job Priority Pattern
+
+For scheduled sync jobs, PMB tries methods in priority order:
+
+1. **Direct SQL Server** — most accurate, matches existing SQL queries exactly
+2. **Service Layer OData** — fallback if sqlsrv is unavailable
+3. **Service Layer Query Execution** — last-resort if both fail
+
+| SAP Document | Purpose in PMB | Primary Method | Frequency |
 |---|---|---|---|
-| **MR** (Material Request) | Source for Plant Request lines | MR DocEntry/No, item P/N, qty, UoM, WO ref | On-demand (request creation) + hourly cache refresh |
-| **PR** (Purchase Request) | Tabulation Bid source; lifecycle status | PR DocEntry/No, status, linked MR | On-demand + hourly |
-| **PO** (Purchase Order) | PO tracking, GRPO reconciliation | PO DocEntry/No, status (Created/Approved/Sent), amount | Every 15 min poll + event on change |
-| **GRPO** | Convert commitment → actual in ledger | GRPO No, received qty, value, PO ref | Every 15 min poll |
-| **ITR/ITO/ITI** | Inventory transfer visibility | doc no, from/to warehouse, status | On-demand |
-| **MI / GI** | Issuance closure | doc no, item, qty | On-demand |
-| **Price DB** | Pricing estimation cache | item P/N, last price, currency | Daily full refresh + on-demand |
-| **Vendor master** | Tabulation Bid vendor selection | vendor code, name, terms | Daily |
+| **MR** (Material Request) | Source for Plant Request lines | Service Layer | On-demand + hourly cache |
+| **PR** (Purchase Request) | Tabulation Bid source; lifecycle | Service Layer | On-demand + hourly |
+| **PO** (Purchase Order) | PO tracking, GRPO reconciliation | Service Layer | Poll 15 min |
+| **GRPO** | Commitment → actual in ledger | Service Layer | Poll 15 min |
+| **ITR/ITO/ITI** | Inventory transfer visibility | Direct SQL (OData fallback) | On-demand / scheduled |
+| **MI / GI** | Issuance closure | Service Layer | On-demand |
+| **Price DB** | Pricing estimation cache | Service Layer | Daily refresh |
+| **Vendor master** | Tabulation Bid vendor selection | Service Layer | Daily |
 
-**Implementation:** read-only Eloquent models on the `sap` connection (e.g., `App\Models\Sap\MaterialRequest`) with `protected $connection = 'sap'` and no write methods. Guarded by a repository layer so no accidental writes occur.
+### 7.5 Write Operations (Service Layer Only)
 
-### 7.2 Write Operations (DI API / Service Layer)
-
-Writes **never** use raw SQL. They go through SAP's official interface, wrapped in **idempotent queued jobs** with a stored correlation key to prevent duplicates on retry.
+Writes go **exclusively through the Service Layer** — never raw SQL. All writes are wrapped in **idempotent queued jobs** with correlation keys.
 
 | Operation | Trigger | Interface | Idempotency |
 |---|---|---|---|
-| **PR creation** | Logistic Foreman confirms stock unavailable | DI API / Service Layer | `plant_request_id` correlation key; skip if `sap_pr_no` already set |
-| **PO creation** | Procurement Admin "Create PO" | DI API / Service Layer | `tabulation_bid_id` correlation key |
-| **GRPO verification read-back** | After GRPO posted in SAP | Read | reconcile by PO ref |
+| **PR creation** | Logistic Foreman confirms stock unavailable | `POST /PurchaseRequests` via Service Layer | `plant_request_id` correlation key |
+| **PO creation** | Procurement Admin clicks "Create PO" | `POST /Orders` via Service Layer | `tabulation_bid_id` correlation key |
+| **GRPO verification** | After GRPO posted in SAP | Read via Service Layer | Reconcile by PO ref |
 | **Interchange sync** | Procurement saves mapping | Service Layer (part master) | `interchange_map_id` |
 
 ```mermaid
 sequenceDiagram
     participant PMB as PMB Job (Horizon)
-    participant SL as SAP Service Layer
-    participant DB as SAP DB
+    participant SL as SAP Service Layer (arkasrv2:50000)
+    participant DB as SAP SQL Server
     PMB->>PMB: Acquire lock (correlation key)
-    PMB->>SL: POST /PurchaseRequests (payload from MR)
+    PMB->>PMB: Ensure session (check CookieJar, login if needed)
+    PMB->>SL: POST /Login (if session expired)
+    SL-->>PMB: 200 {Set-Cookie: B1SESSION=...}
+    PMB->>SL: POST /PurchaseRequests (Cookie: B1SESSION)
     SL->>DB: Validate & persist (SAP business logic)
     SL-->>PMB: 201 {DocEntry, DocNum}
     PMB->>PMB: Store sap_pr_no, release lock
-    Note over PMB,SL: On failure → retry w/ backoff;<br/>duplicate guarded by correlation key
+    Note over PMB,SL: On 401 → re-login + retry<br/>On failure → retry w/ backoff (3x)<br/>Duplicate guarded by correlation key
 ```
 
-### 7.3 Part Number Resolution (Genuine vs OEM, Interchange)
+### 7.6 Part Number Resolution (Genuine vs OEM, Interchange)
 
 - SAP requires **exact P/N matching**. PMB resolves substitutions via `interchange_map` **before** creating PR/PO, translating an OEM P/N to the SAP-recognized Genuine P/N (or vice versa) per the mapping.
 - If no mapping exists and pricing/part cannot be resolved → line flagged, **Procurement notified**, request cannot proceed to PR for that line.
 
-### 7.4 Lifecycle Visibility (MR → PR → PO → GRPO)
+### 7.7 Lifecycle Visibility (MR → PR → PO → GRPO)
 
 Each `plant_request` renders a **lifecycle stepper** driven by SAP reads: MR (source) → PR (`sap_pr_no`) → PO (`sap_po_id`, stage) → GRPO (received) → Issued (MI/GI). Delays annotated via categorized comments.
 
-### 7.5 Error Handling (SAP Connectivity)
+### 7.8 Error Handling & Resilience
 
-- **Read failures:** serve last-good **Redis cache** with a staleness banner; degrade gracefully (request creation allowed with cached pricing, flagged).
-- **Write failures:** job retried with exponential backoff (e.g., 3 attempts); on final failure, mark request `sap_sync_failed`, alert Procurement via Reverb, surface in a **SAP Sync Dashboard** (Horizon + custom).
-- **Circuit breaker:** if SAP is unreachable, pause write jobs and queue them; auto-resume on health-check recovery.
-- **Reconciliation job:** nightly job compares PMB workflow state vs SAP documents and flags divergences for review.
+| Failure Mode | Handling |
+|---|---|
+| **Service Layer 401 (session expired)** | Catch → `login()` → retry original request. Transparent to caller. |
+| **Service Layer unreachable** | Fall back to Redis cache (pricing, vendor) with staleness banner. Queued write jobs retry with exponential backoff (3 attempts). Final failure → mark `sap_sync_failed`, alert via Reverb. |
+| **Direct SQL Server unreachable** | Fall back to Service Layer OData for that query. If both fail → degrade gracefully with last-good cache. |
+| **Session limit exceeded** | Singleton `SapService` prevents session proliferation. If limit still hit → log warning, wait, retry with existing session. |
+| **Write conflict (duplicate DocNum)** | SAP rejects duplicate; PMB correlation key prevents double-submit. Log and alert. |
+| **Data conflicts (two apps modify same record)** | SAP's last-write-wins. PMB mitigates by reading `UpdateDate` before writes (optimistic locking). |
+| **Nightly reconciliation** | Scheduled job compares PMB workflow state vs SAP documents; flags divergences. |
+
+### 7.9 SAP Database Connection Configuration
+
+`.env` variables:
+```env
+# SAP Service Layer (REST/OData)
+SAP_SERVER_URL=https://arkasrv2:50000
+SAP_DB_NAME=your_sap_company_db
+SAP_USER=your_sap_username
+SAP_PASSWORD=your_sap_password
+
+# SAP Direct SQL Server (for complex queries)
+SAP_SQL_HOST=arkasrv2
+SAP_SQL_PORT=1433
+SAP_SQL_DATABASE=your_sap_database
+SAP_SQL_USERNAME=your_sql_username
+SAP_SQL_PASSWORD=your_sql_password
+```
+
+`config/database.php` connections:
+```php
+// Service Layer connection (HTTP — not a DB connection, managed by SapService)
+// SQL Server direct connection
+'sap_sql' => [
+    'driver'    => 'sqlsrv',
+    'host'      => env('SAP_SQL_HOST', 'arkasrv2'),
+    'port'      => env('SAP_SQL_PORT', '1433'),
+    'database'  => env('SAP_SQL_DATABASE'),
+    'username'  => env('SAP_SQL_USERNAME'),
+    'password'  => env('SAP_SQL_PASSWORD'),
+    'charset'   => 'utf8',
+    'options'   => ['TrustServerCertificate' => true],
+],
+```
 
 ---
 
@@ -1027,13 +1149,15 @@ Field supervisors at mining sites use **tablets/phones**. DMBD entry, approval a
 | Decision | Chosen Approach | Alternatives | Rationale |
 |---|---|---|---|
 | **ARKFLEET integration** | REST API + Redis cache | Shared DB read | Respects service ownership; API exists; Iwan's preference; avoids coupling to ARKFLEET schema. |
-| **SAP read** | Shared MySQL read (read-only user) | Service Layer read | Same server = low latency; heavy reporting joins impractical over API. |
-| **SAP write** | DI API / Service Layer via queued jobs | Direct SQL insert | SAP business logic & validation must run; direct writes corrupt ERP integrity. |
-| **SAP data freshness** | Hybrid: poll (15 min for PO/GRPO) + on-demand read + cache | Pure real-time | Real-time push from SAP not available; polling + cache balances freshness vs load. |
+| **SAP read** | **Two-tier**: Direct SQL Server (sqlsrv, primary) + Service Layer REST/OData (fallback) | Service Layer only | OData has gaps (UDF fields, complex joins, field name mismatches). Direct SQL matches existing queries exactly; OData is the documented, stable fallback. SAP is SQL Server, NOT MySQL. |
+| **SAP write** | **Service Layer REST/OData** via queued jobs — cookie-based Guzzle CookieJar session | Raw SQL INSERT | SAP business logic & validation must run via Service Layer. Cookie auth (B1SESSION + ROUTEID) handled automatically by Guzzle. |
+| **SAP session management** | **Singleton SapService** — one B1SESSION per app instance, auto-reconnect on 401 | New session per request | Prevents session-limit exhaustion. Guzzle CookieJar handles cookie lifecycle; 401 catch → login() → retry. |
+| **SAP data freshness** | Hybrid: poll (15 min for PO/GRPO) + on-demand read + Redis cache | Pure real-time | Real-time push from SAP not available; polling + cache balances freshness vs SAP load. |
 | **Budget calculation** | **Materialized ledger** (`budget_ledger`) with derived balances | Computed-on-read | Auditable, provable trail; balances reconstructable; performance via periodic snapshots if needed. |
 | **Multi-tenancy** | Single DB, `project_code` scoping via `role_user` + global query scopes | Separate DB per project | Simpler ops; shared reporting; enforced isolation via scopes/policies. |
 | **Real-time** | Laravel Reverb (self-hosted) | Pusher (SaaS) | On-prem/security mandate; no external dependency. |
 | **PDF** | barryvdh/laravel-dompdf | maatwebsite/excel | Excel package to be avoided; dompdf covers board reports/PO docs without native binaries. |
+| **PHP sqlsrv extension** | Required on PMB server for SAP direct SQL access | OData-only (no sqlsrv) | Accurate complex queries (ITO, UDF fields) need sqlsrv. If unavailable, fall back to Service Layer OData. |
 
 **PHP 8.5 sibling / compatibility notes** (ARKFLEET runs PHP 8.5; PMB targets 8.3/8.4):
 - `pcre.jit=0` may be required if regex-heavy validation hits JIT edge cases on 8.5 hosts.
@@ -1060,8 +1184,12 @@ Field supervisors at mining sites use **tablets/phones**. DMBD entry, approval a
 4. **110% tolerance — appropriate for all equipment types?**
    *Recommendation:* Keep 10% as default but make `tolerance_pct` **configurable per allocation / plant_type** (DIGGER/HAULER/SUPPORT) — critical assets may warrant a higher buffer. Already modeled in `budget_allocation.tolerance_pct`.
 
-5. **SAP B1 version & protocol?**
-   *Open — must confirm with SAP team:* Is it **HANA** or **SQL/MySQL** backend? Available interface — **DI API, Service Layer, or direct DB read**? This determines the write path in Phases 3–4. *Recommendation:* prefer **Service Layer** (REST/JSON) for writes if available.
+5. **SAP B1 version & protocol — ✅ CONFIRMED:**
+   - **Database:** SQL Server (NOT MySQL), host `arkasrv2`, port 1433, accessed via PHP `sqlsrv` extension.
+   - **API:** Service Layer REST/OData on `https://arkasrv2:50000/b1s/v1/` — cookie-based session auth (Guzzle CookieJar with B1SESSION + ROUTEID).
+   - **Write path:** Service Layer exclusively (POST/PATCH via REST). **Never raw SQL INSERTs.**
+   - **Read path:** Direct SQL Server (primary, for complex queries) + Service Layer OData (fallback, for standard entities).
+   - **Session strategy:** Singleton `SapService`, auto-reconnect on 401.
 
 6. **Read-only DB user & data governance:** confirm we can provision a **read-only SAP DB user** and that reporting joins won't impact SAP performance (consider a read replica if load is significant).
 
