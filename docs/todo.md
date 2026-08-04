@@ -61,12 +61,13 @@ Include relevant context in brackets to help with future AI-assisted coding:
 
 ## Recently Completed
 
+- `[done] P0: Phase 0 — Laravel 11 scaffold, Sanctum SPA auth, Inertia+React+AntD, spatie RBAC (Teams/project_code), ArkfleetClient+EquipmentCache, admin UI, tests [docs/plan.md §Phase 0] (completed: 2026-08-04)`
 - `[done] P0: Create detailed implementation action plan [docs/plan.md — Project Setup Guide, Phases 0-8, Route Table, Frontend Tree, Testing Strategy, Conventions, Pitfalls] (completed: 2026-08-04)`
 
 ## Up Next
 
-- `[ ] P0: Phase 0 — Laravel 11 scaffold, Sanctum SPA auth, Inertia+React+AntD setup, roles/permissions, ArkfleetClient [docs/plan.md §Phase 0]`
-- `[ ] P1: Confirm ARKFLEET API token + network reachability before starting Phase 0 (blocker for ArkfleetClient smoke test)`
+- `[ ] P1: Phase 1 — Budget Management (ledger-based) [docs/plan.md §Phase 1]`
+- `[ ] P1: Confirm ARKFLEET API token + network reachability for live ArkfleetClient smoke test`
 - `[ ] P1: Confirm SAP Service Layer + sqlsrv direct SQL credentials/reachability before Phase 2 (blocker for MR read)`
 
 ## Quick Notes
