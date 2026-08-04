@@ -98,6 +98,12 @@ composer require --dev laravel/pint pestphp/pest pestphp/pest-plugin-laravel
 # Laravel Boost (per user rule — always install for AI-assisted dev workflows)
 composer require laravel/boost --dev
 php artisan boost:install
+
+# RBAC — spatie/laravel-permission with Teams for project scoping
+composer require spatie/laravel-permission
+php artisan vendor:publish --provider="Spatie\\Permission\\PermissionServiceProvider"
+php artisan vendor:publish --tag="permission-config"
+# Then edit config/permission.php: set 'team_foreign_key' => 'project_code'
 ```
 
 > **Do NOT run** `composer require maatwebsite/excel` — it hard-caps PHP <8.5's spreadsheet dependency chain and is explicitly banned (see `docs/concept.md` §11 and Pitfall P1 below). All exports use `barryvdh/laravel-dompdf` (PDF) or native `fputcsv` (CSV).
@@ -337,111 +343,77 @@ php artisan tinker
 
 #### B. Migration Definitions
 
+**Spatie permission tables** (published from package):
+
+```bash
+php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider" --tag="migrations"
+```
+
+This publishes spatie's standard migrations: `create_permission_tables.php` (handles `permissions`, `roles`, `model_has_permissions`, `model_has_roles`, `role_has_permissions` in one file).
+
+**One additional migration** — extend `model_has_roles` with project scoping:
+
 ```php
-// database/migrations/xxxx_create_roles_table.php
-Schema::create('roles', function (Blueprint $table) {
-    $table->id();
-    $table->string('name')->unique();      // e.g. 'finance_director', 'planner'
-    $table->string('label');               // e.g. 'Finance Director'
-    $table->timestamps();
+// database/migrations/xxxx_add_project_code_to_model_has_roles_table.php
+Schema::table('model_has_roles', function (Blueprint $table) {
+    $table->string('project_code', 20)->nullable()->after('model_type');
+    $table->index('project_code');
 });
+```
 
-// database/migrations/xxxx_create_permissions_table.php
-Schema::create('permissions', function (Blueprint $table) {
-    $table->id();
-    $table->string('name')->unique();      // e.g. 'budget.set', 'plant_request.approve.pm'
-    $table->string('group');               // e.g. 'budget', 'plant_request', 'tabulation_bid'
-    $table->timestamps();
-});
+> This adds a nullable `project_code` column to spatie's `model_has_roles` pivot. A user can have the same role in multiple projects (different `project_code` values per row), or a null scope for global roles (Finance Director, President Director). spatie's `setPermissionsTeamId($projectCode)` uses this via the `team_foreign_key` config.
 
-// database/migrations/xxxx_create_permission_role_table.php   (alphabetical: permission_role)
-Schema::create('permission_role', function (Blueprint $table) {
-    $table->foreignId('permission_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('role_id')->constrained()->cascadeOnDelete();
-    $table->primary(['permission_id', 'role_id']);
-});
+**Users table extension:**
 
-// database/migrations/xxxx_create_role_user_table.php   (alphabetical: role_user)
-Schema::create('role_user', function (Blueprint $table) {
-    $table->foreignId('role_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-    $table->string('project_code', 20)->nullable();  // scoped role assignment; null = all projects
-    $table->timestamps();
-    $table->primary(['role_id', 'user_id', 'project_code']);
-});
-
+```php
 // database/migrations/xxxx_add_division_and_scope_to_users_table.php
 Schema::table('users', function (Blueprint $table) {
     $table->string('employee_no')->nullable()->unique()->after('email');
     $table->enum('division', ['plant', 'aml', 'procurement', 'finance', 'directorate', 'it'])->nullable()->after('employee_no');
-    $table->string('project_code_scope', 20)->nullable()->after('division'); // primary/default project for single-project users
+    $table->string('project_code_scope', 20)->nullable()->after('division');
     $table->boolean('is_active')->default(true)->after('project_code_scope');
 });
 ```
 
 #### C. Model Definitions
 
+Spatie provides `Role` and `Permission` models via `Spatie\Permission\Models\Role` and `Spatie\Permission\Models\Permission`. No custom Role/Permission model files needed.
+
+**User model** — add spatie's `HasRoles` trait, remove hand-rolled methods:
+
 ```php
-// app/Models/Role.php
-class Role extends Model
-{
-    protected $fillable = ['name', 'label'];
+// app/Models/User.php
+use Spatie\Permission\Traits\HasRoles;
 
-    public function permissions(): BelongsToMany
-    {
-        return $this->belongsToMany(Permission::class, 'permission_role');
-    }
-
-    public function users(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'role_user')->withPivot('project_code');
-    }
-}
-
-// app/Models/Permission.php
-class Permission extends Model
-{
-    protected $fillable = ['name', 'group'];
-
-    public function roles(): BelongsToMany
-    {
-        return $this->belongsToMany(Role::class, 'permission_role');
-    }
-}
-
-// app/Models/User.php (extend default Laravel skeleton)
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, HasRoles, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'employee_no', 'division', 'project_code_scope', 'is_active'];
+    protected $fillable = [
+        'name', 'email', 'password', 'employee_no',
+        'division', 'project_code_scope', 'is_active',
+    ];
     protected $hidden = ['password', 'remember_token'];
-    protected $casts = ['is_active' => 'boolean', 'email_verified_at' => 'datetime'];
-
-    public function roles(): BelongsToMany
+    protected function casts(): array
     {
-        return $this->belongsToMany(Role::class, 'role_user')->withPivot('project_code');
-    }
-
-    public function hasRole(string $name, ?string $projectCode = null): bool
-    {
-        return $this->roles()
-            ->where('name', $name)
-            ->when($projectCode, fn ($q) => $q->where(fn ($q2) => $q2->whereNull('role_user.project_code')->orWhere('role_user.project_code', $projectCode)))
-            ->exists();
-    }
-
-    public function hasPermission(string $permissionName, ?string $projectCode = null): bool
-    {
-        return $this->roles()
-            ->whereHas('permissions', fn ($q) => $q->where('name', $permissionName))
-            ->when($projectCode, fn ($q) => $q->where(fn ($q2) => $q2->whereNull('role_user.project_code')->orWhere('role_user.project_code', $projectCode)))
-            ->exists();
+        return [
+            'is_active' => 'boolean',
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
     }
 }
 ```
 
-> **Decision on `spatie/laravel-permission`:** the concept ERD defines PMB's own `roles`/`permissions`/`role_user`/`permission_role` tables with a project-scoped pivot (`role_user.project_code`) that Spatie's package does not support out of the box. **Do not add the Spatie package** — implement the hand-rolled model methods above plus the `EnsureRole`/`EnsurePermission` middleware. This keeps the schema exactly matching `docs/concept.md` §3 and avoids a second, conflicting permission system.
+**No custom `hasRole()` / `hasPermission()` methods** — spatie provides `$user->hasRole('plant_manager')`, `$user->can('submit plant-request')`, and `$user->getAllPermissions()` natively.
+
+**`config/permission.php`** — configure Teams for project scoping:
+```php
+// config/permission.php
+'team_foreign_key' => 'project_code',
+```
+
+> spatie's `setPermissionsTeamId($projectCode)` uses this key to scope `hasRole()` / `can()` / `assignRole()` to a specific project. The `EnsureProjectScope` middleware (see §D) sets the team ID per request.
 
 #### D. Controller Methods
 
@@ -503,7 +475,7 @@ None required in Phase 0 (cache warm-up runs as a scheduled Artisan command, not
 
 #### G. Policies
 
-- `app/Policies/RolePolicy.php` — `manage(User $user)`: true only for `it_manager` role. Registered for `Role` and `Permission` models.
+- No Policy classes needed in Phase 0 — spatie handles role/permission authorization via its built-in `role:` and `permission:` middleware and `Gate::before()` callback. If a custom `RolePolicy` is needed later for UI-level role-management gating, add it then.
 - No domain policies yet (added per-phase as models are introduced).
 
 #### H. Frontend Pages
@@ -511,24 +483,69 @@ None required in Phase 0 (cache warm-up runs as a scheduled Artisan command, not
 | File | Purpose | AntD components |
 |---|---|---|
 | `resources/js/app.tsx` | Inertia + React root, AntD `ConfigProvider` with `id_ID` locale + custom theme tokens | `ConfigProvider`, `App` (AntD static message/notification holder) |
-| `resources/js/Layouts/AppLayout.tsx` | Role-aware sidebar (menu items filtered by `usePage().props.auth.user.roles`), header with notification bell (Reverb) | `Layout`, `Menu`, `Avatar`, `Badge`, `Dropdown` |
+| `resources/js/Layouts/AppLayout.tsx` | Role-aware sidebar (menu items filtered via `usePage().props.auth.can` array of permission names), header with notification bell (Reverb) | `Layout`, `Menu`, `Avatar`, `Badge`, `Dropdown` |
 | `resources/js/Pages/Auth/Login.tsx` | Login form | `Form`, `Input`, `Button`, `Card` |
 | `resources/js/Pages/Dashboard.tsx` | Placeholder role-aware landing widgets | `Row`, `Col`, `Statistic`, `Card` |
 | `resources/js/Pages/Admin/Projects.tsx` | Project list (from ARKFLEET) + sync button | `ProTable` |
-| `resources/js/Pages/Admin/Users.tsx` | User list + role/project-scope assignment modal | `ProTable`, `Modal`, `Form`, `Select` (multi, tag mode for roles) |
+| `resources/js/Pages/Admin/Users.tsx` | User list + role/project-scope assignment modal (using spatie's `$user->assignRole()`, `$user->syncRoles()`, `$user->givePermissionTo()`) | `ProTable`, `Modal`, `Form`, `Select` (multi, tag mode for roles) |
+| `resources/js/Pages/Admin/Roles.tsx` | Role list + permission assignment matrix | `ProTable`, `Transfer` (shuttle for permissions), `Modal` |
 | `resources/js/Hooks/useArkfleet.ts` | Client-side hook wrapping Inertia-fetched or API-fetched equipment/project lists with loading/stale state | — (hook, no UI) |
+
+#### I. Middleware Registration
+
+In `bootstrap/app.php`:
+
+```php
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->web(append: [
+        \App\Http\Middleware\EnsureProjectScope::class,  // sets permissionsTeamId
+    ]);
+
+    $middleware->alias([
+        'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+        'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+    ]);
+})
+```
+
+**`app/Http/Middleware/EnsureProjectScope.php`:**
+
+```php
+class EnsureProjectScope
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        if ($user = $request->user()) {
+            $projectCode = $request->route('project_code')
+                ?? $request->input('project_code')
+                ?? session('current_project')
+                ?? $user->project_code_scope;
+
+            if ($projectCode) {
+                setPermissionsTeamId($projectCode);
+            }
+        }
+        return $next($request);
+    }
+}
+```
+
+> This makes all `$user->hasRole('plant_manager')` and `$user->can('submit plant-request')` calls automatically scoped to the current project. Routes use spatie's built-in `->middleware('role:plant_manager')` and `->middleware('permission:submit plant-request')`.
+
+#### J. Routes
 
 #### I. Routes
 
 See consolidated [Full Route Table](#3-full-route-table) §3.1 (Auth & Admin block).
 
-#### J. Tests
+#### K. Tests
 
 - `tests/Feature/Auth/AuthenticationTest.php` — login success/failure, inactive user blocked.
-- `tests/Feature/Admin/RoleAssignmentTest.php` — IT Manager can assign roles with `project_code` scope; non-IT-Manager forbidden (403).
+- `tests/Feature/Admin/RoleAssignmentTest.php` — IT Manager can assign roles via spatie's `assignRole()` / `syncRoles()`; non-IT-Manager forbidden (403 via `permission:manage roles` middleware).
+- `tests/Feature/Admin/ProjectScopedRoleTest.php` — a user with `plant_manager` role scoped to Project A can access Project A pages but NOT Project B pages (assert `setPermissionsTeamId()` scoping works).
 - `tests/Feature/Arkfleet/ArkfleetClientTest.php` — mocked Guzzle responses covering **both** the wrapped `{data}` shape and the raw paginator shape (projects/index); asserts `ArkfleetResponseNormalizer` returns a consistent `['data', 'meta']` shape in both cases.
 - `tests/Feature/Arkfleet/EquipmentCacheTest.php` — cache hit/miss, TTL respected (using `Cache::shouldReceive` or fake Redis), stale-fallback behavior when ARKFLEET client throws `ConnectException`.
-- `tests/Unit/Models/UserRoleScopeTest.php` — `hasRole()`/`hasPermission()` respect `project_code` scoping (null scope = global; specific scope = only that project).
 
 ---
 
@@ -2240,7 +2257,7 @@ app/
 │   ├── Component.php, CannibalRequest.php
 │   └── SapSyncLog.php
 ├── Notifications/                # PlantRequestSubmitted, PlantRequestApprovalNeeded, PoApprovalNeeded, PoCreationFailed, PricingGapDetected, ...
-├── Policies/                     # one per domain model — RolePolicy, BudgetAllocationPolicy, PlantRequestPolicy, TabulationBidPolicy, DmbdEntryPolicy, OverbudgetRequestPolicy, CancellationRequestPolicy, InterchangeMapPolicy, ComponentPolicy, CannibalRequestPolicy, ReportPolicy
+├── Policies/                     # one per domain model — BudgetAllocationPolicy, PlantRequestPolicy, TabulationBidPolicy, DmbdEntryPolicy, OverbudgetRequestPolicy, CancellationRequestPolicy, InterchangeMapPolicy, ComponentPolicy, CannibalRequestPolicy, ReportPolicy. (Role/permission authorization: spatie handles via Gate::before + middleware; no RolePolicy needed.)
 └── Services/
     ├── Arkfleet/                 # ArkfleetClient, EquipmentCache, ArkfleetResponseNormalizer
     ├── Sap/                      # SapService (singleton), SapReadRepository, SapCircuitBreaker
@@ -2258,7 +2275,7 @@ app/
 | Jobs | `{Verb}{Noun}Job` or `{Verb}{Noun}` when the job name already reads as an imperative action | `CarryForwardJob`, `CreateSapPurchaseOrder`, `SyncDmbdStatusToArkfleet`, `ReconcileGrpoToLedger` |
 | Policies | `{Model}Policy`, ability names are verbs matching controller method names (`create`, `update`, `view`, `decide`, `award`, `createPo`, `signoff`, `agree`, `cancel`) | `PlantRequestPolicy::submit()`, `TabulationBidPolicy::createPo()` |
 | FormRequests | `{Verb}{Model}Request` | `StorePlantRequestRequest`, `ApprovalDecisionRequest` |
-| Migrations (pivot tables) | alphabetical table-name order per user rule | `permission_role`, `role_user`, `cannibal_request_component` |
+| Migrations (pivot tables) | alphabetical table-name order per user rule | `cannibal_request_component`, `create_permission_tables` (spatie published) |
 | Route names | dot notation, resource-first | `plant-requests.submit`, `tabulation-bids.create-po` |
 
 ### 6.3 Monetary & Cached-Field Conventions
@@ -2314,6 +2331,7 @@ One Policy class per domain model that has non-trivial authorization logic (see 
 | A4 | Singleton `SapService` session exhaustion if accidentally re-bound as non-singleton, or if a code path constructs `new SapService()` directly instead of resolving via the container | SAP session-limit errors under load (§7.8 in concept.md) | `SapService` is registered via `$this->app->singleton(SapService::class)` in `AppServiceProvider::register()` (Phase 4 §E) and **every** consumer resolves it via `app(SapService::class)` / constructor injection — never `new SapService()`. A grep for `new SapService(` returning zero results outside the class's own file is a valid CI/code-review check. |
 | A5 | Ledger double-counting when a `commitment` converts to `actual` via GRPO reconciliation, if the offsetting reversal of the original commitment is forgotten | Budget figures silently inflate (a request's cost counted in both `commitment` and `actual` simultaneously) | `BudgetEngine::postActual()` (Phase 1 §E) **always** posts the `actual` entry **and** a matching `reversal` of the equivalent `commitment` amount in the same DB transaction — verified by `LedgerReversalCorrectnessSuite` (§5.4), which asserts the sum of `(original commitment + actual + reversal)` nets to exactly the actual spend, never double. |
 | A6 | 110% tolerance is configurable per allocation (`tolerance_pct`), but a hardcoded `1.10` literal anywhere in code would silently ignore per-equipment-type overrides (e.g., a critical DIGGER unit configured at 15% tolerance) | `BudgetEngine::validateAgainstTolerance()` (Phase 1 §E) and `BudgetAllocation::getToleranceCapAttribute()` always read `$this->tolerance_pct` from the allocation row — never a hardcoded `1.10`/`0.10` constant anywhere in the codebase. Grep check: no literal `1.10` or `* 1.1` in `app/Services/Budget/` or `app/Http/Controllers/PlantRequestController.php`. |
+| A7 | Forgetting to call `setPermissionsTeamId($projectCode)` before role/permission checks — spatie's Teams feature requires the team context to be set, or else `$user->hasRole('plant_manager')` returns false even for correctly assigned roles | `EnsureProjectScope` middleware (Phase 0 §I) sets the team ID on every request automatically. In queued jobs, CLI commands, and tests, call `setPermissionsTeamId($projectCode)` explicitly at the top of `handle()` / test `setUp()` — document this in the team onboarding guide. |
 
 ---
 
