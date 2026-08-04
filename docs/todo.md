@@ -59,7 +59,18 @@ Include relevant context in brackets to help with future AI-assisted coding:
 - `[done] P0: Set up database schema [users table, profiles table] (completed: 2025-01-15)`
 - `[done] P1: Create basic routing [React Router setup] (completed: 2025-01-14)`
 
+## Recently Completed
+
+- `[done] P0: Create detailed implementation action plan [docs/plan.md — Project Setup Guide, Phases 0-8, Route Table, Frontend Tree, Testing Strategy, Conventions, Pitfalls] (completed: 2026-08-04)`
+
+## Up Next
+
+- `[ ] P0: Phase 0 — Laravel 11 scaffold, Sanctum SPA auth, Inertia+React+AntD setup, roles/permissions, ArkfleetClient [docs/plan.md §Phase 0]`
+- `[ ] P1: Confirm ARKFLEET API token + network reachability before starting Phase 0 (blocker for ArkfleetClient smoke test)`
+- `[ ] P1: Confirm SAP Service Layer + sqlsrv direct SQL credentials/reachability before Phase 2 (blocker for MR read)`
+
 ## Quick Notes
 
-[Any important discoveries, decisions, or context for current work]
+- `docs/plan.md` (v1.0, 4 Aug 2026) is the file-by-file, phase-by-phase implementation companion to `docs/concept.md`. Read both before starting any phase — concept.md is the source of truth for architecture/rationale; plan.md is the concrete build guide (migrations, models, jobs, routes, tests).
+- Plan.md flags a few deliberate additions beyond the base ERD (interchange `technical_signoff_by`/`technical_signoff_at` columns, `cannibal_request_component` pivot table) — these implement Open Questions #2 and the ERD's many-to-many `moves` relationship respectively; documented inline in the Phase 6/8 sections with rationale.
 ```

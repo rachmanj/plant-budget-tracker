@@ -27,4 +27,9 @@
 
 ## Project Memory Entries
 
-[Your memory entries go here, following the format above]
+### [M001] Implementation action plan created (2026-08-04) ✅ COMPLETE
+
+- **Decision:** Created `docs/plan.md` as the file-by-file, phase-by-phase implementation companion to `docs/concept.md`, covering Project Setup, Phases 0-8, full route table, frontend tree, testing strategy, conventions, and pitfalls.
+- **Key learning:** Decided against `spatie/laravel-permission` — the concept ERD's project-scoped `role_user.project_code` pivot isn't supported by that package out of the box, so Phase 0 uses hand-rolled `hasRole()`/`hasPermission()` model methods instead to keep schema exactly matching the ERD.
+- **Key learning:** Plan.md adds two schema details beyond the base ERD (with rationale documented inline): `interchange_maps.technical_signoff_by`/`technical_signoff_at` (Open Question #2's secondary sign-off recommendation) and a `cannibal_request_component` pivot table (concrete implementation of the ERD's `CANNIBAL_REQUEST ||--o{ COMPONENT` many-to-many).
+- **Key learning:** Cannibal (Beta, Phase 8) is designed behind a `FEATURE_CANNIBAL_BETA` flag — build it but ship disabled until Directors sign off, per concept.md's Beta scope note.
