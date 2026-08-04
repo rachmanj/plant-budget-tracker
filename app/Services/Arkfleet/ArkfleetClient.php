@@ -81,6 +81,13 @@ class ArkfleetClient
         ]);
     }
 
+    public function patchComponentStatus(int $equipmentId, int $componentId, string $status): array
+    {
+        return $this->request('PATCH', "equipment/{$equipmentId}/components/{$componentId}/status", [
+            'json' => ['status' => $status],
+        ]);
+    }
+
     private function request(string $method, string $uri, array $options = []): array
     {
         $retries = (int) config('services.arkfleet.retries', 2);

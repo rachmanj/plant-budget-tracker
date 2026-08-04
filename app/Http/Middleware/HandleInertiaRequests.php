@@ -36,6 +36,9 @@ class HandleInertiaRequests extends \Inertia\Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            'features' => [
+                'cannibal_beta' => config('features.cannibal_beta', false),
+            ],
         ]);
     }
 

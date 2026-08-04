@@ -16,3 +16,13 @@ Schedule::command('arkfleet:warm-cache')
 Schedule::job(new CarryForwardJob)
     ->monthlyOn(1, '00:01')
     ->timezone('Asia/Makassar');
+
+Schedule::job(new \App\Jobs\PollSapPoStatus)
+    ->everyFifteenMinutes();
+
+Schedule::job(new \App\Jobs\NightlyReconciliation)
+    ->dailyAt('02:00')
+    ->timezone('Asia/Makassar');
+
+Schedule::command('dmbd:retry-sync')
+    ->everyThirtyMinutes();

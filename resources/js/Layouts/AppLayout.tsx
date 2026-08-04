@@ -29,6 +29,9 @@ interface PageProps {
         user: AuthUser | null;
         can: string[];
     };
+    features?: {
+        cannibal_beta?: boolean;
+    };
     flash?: {
         success?: string;
         error?: string;
@@ -41,7 +44,7 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, title }: AppLayoutProps) {
-    const { auth } = usePage<PageProps>().props;
+    const { auth, features } = usePage<PageProps>().props;
     const can = auth.can ?? [];
 
     const menuItems: MenuProps['items'] = [
@@ -57,6 +60,41 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             key: 'budget',
             icon: <DollarOutlined />,
             label: <Link href="/budget">Anggaran</Link>,
+        });
+    }
+
+    if (can.includes('plant_request.create')) {
+        menuItems.push({
+            key: 'plant-requests',
+            label: <Link href="/plant-requests">Plant Requests</Link>,
+        });
+    }
+
+    if (can.includes('dmbd.view') || can.includes('dmbd.update')) {
+        menuItems.push({
+            key: 'dmbd',
+            label: <Link href="/dmbd">DMBD</Link>,
+        });
+    }
+
+    if (can.includes('tabulation_bid.create') || can.includes('tabulation_bid.review')) {
+        menuItems.push({
+            key: 'tabulation-bids',
+            label: <Link href="/tabulation-bids">Tabulation Bid</Link>,
+        });
+    }
+
+    if (can.includes('reports.view')) {
+        menuItems.push({
+            key: 'reports',
+            label: <Link href="/reports/budget-consumption">Reports</Link>,
+        });
+    }
+
+    if (features?.cannibal_beta && can.includes('component.view')) {
+        menuItems.push({
+            key: 'components',
+            label: <Link href="/components">Components</Link>,
         });
     }
 
