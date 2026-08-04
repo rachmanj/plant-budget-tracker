@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::middleware('can:budget.view')->prefix('budget')->name('budget.')->group(function () {
+        Route::get('/', [BudgetController::class, 'index'])->name('index');
+        Route::get('/variance', [BudgetController::class, 'variance'])->name('variance');
+
+        Route::middleware('role:finance_director')->group(function () {
+            Route::get('/setting', [BudgetController::class, 'setting'])->name('setting');
+            Route::post('/', [BudgetController::class, 'store'])->name('store');
+            Route::post('/{period}/carry-forward', [BudgetController::class, 'carryForward'])->name('carry-forward');
+            Route::patch('/allocations/{allocation}', [BudgetController::class, 'revise'])->name('allocations.revise');
+        });
+    });
 
     Route::middleware('can:manage,'.\Spatie\Permission\Models\Role::class)->prefix('admin')->name('admin.')->group(function () {
         Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');

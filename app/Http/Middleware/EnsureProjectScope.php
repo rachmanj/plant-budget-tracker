@@ -16,9 +16,7 @@ class EnsureProjectScope
                 ?? session('current_project')
                 ?? $user->project_code_scope;
 
-            if ($projectCode) {
-                setPermissionsTeamId($projectCode);
-            }
+            setPermissionsTeamId($projectCode ?? '');
         }
 
         return $next($request);

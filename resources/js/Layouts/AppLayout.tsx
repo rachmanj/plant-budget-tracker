@@ -8,6 +8,7 @@ import {
     BellOutlined,
     LogoutOutlined,
     UserOutlined,
+    DollarOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import type { ReactNode } from 'react';
@@ -50,6 +51,14 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             label: <Link href="/dashboard">Dashboard</Link>,
         },
     ];
+
+    if (can.includes('budget.view')) {
+        menuItems.push({
+            key: 'budget',
+            icon: <DollarOutlined />,
+            label: <Link href="/budget">Anggaran</Link>,
+        });
+    }
 
     if (can.includes('user.manage')) {
         menuItems.push(
