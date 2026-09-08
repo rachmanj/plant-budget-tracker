@@ -1,7 +1,8 @@
 import { Head, useForm } from '@inertiajs/react';
-import { Button, Card, Form, Input, Typography, Alert } from 'antd';
+import { Button, Card, Form, Input, Typography, Alert, theme } from 'antd';
 
 export default function Login() {
+    const { token } = theme.useToken();
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -19,7 +20,7 @@ export default function Login() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: '#f5f5f5',
+                background: token.colorBgLayout,
             }}
         >
             <Head title="Masuk" />

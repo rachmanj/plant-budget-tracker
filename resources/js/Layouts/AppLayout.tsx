@@ -1,5 +1,5 @@
 import { usePage, Link, router } from '@inertiajs/react';
-import { Layout, Menu, Avatar, Badge, Dropdown, Typography, Button } from 'antd';
+import { Layout, Menu, Avatar, Badge, Dropdown, Typography, Button, theme } from 'antd';
 import {
     DashboardOutlined,
     TeamOutlined,
@@ -9,9 +9,12 @@ import {
     LogoutOutlined,
     UserOutlined,
     DollarOutlined,
+    BulbOutlined,
+    BulbFilled,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import type { ReactNode } from 'react';
+import { useTheme } from '@/Hooks/useTheme';
 
 const { Header, Sider, Content } = Layout;
 
@@ -46,6 +49,8 @@ interface AppLayoutProps {
 export default function AppLayout({ children, title }: AppLayoutProps) {
     const { auth, features } = usePage<PageProps>().props;
     const can = auth.can ?? [];
+    const { isDark, toggleTheme } = useTheme();
+    const { token } = theme.useToken();
 
     const menuItems: MenuProps['items'] = [
         {
@@ -129,7 +134,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Sider breakpoint="lg" collapsedWidth={0} theme="light">
+            <Sider breakpoint="lg" collapsedWidth={0} theme={isDark ? 'dark' : 'light'}>
                 <div style={{ padding: '16px', fontWeight: 700, fontSize: 16 }}>
                     PMB
                 </div>
@@ -138,7 +143,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             <Layout>
                 <Header
                     style={{
-                        background: '#fff',
+                        background: token.colorBgContainer,
                         padding: '0 24px',
                         display: 'flex',
                         alignItems: 'center',
@@ -149,6 +154,12 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                         {title ?? 'Plant Budget Tracker'}
                     </Typography.Title>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <Button
+                            type="text"
+                            icon={isDark ? <BulbOutlined /> : <BulbFilled />}
+                            onClick={toggleTheme}
+                            aria-label={isDark ? 'Mode terang' : 'Mode gelap'}
+                        />
                         <Badge count={0} size="small">
                             <Button type="text" icon={<BellOutlined />} />
                         </Badge>

@@ -1,4 +1,4 @@
-import { Table, Tag } from 'antd';
+import { Table, Tag, theme } from 'antd';
 
 interface Vendor {
     id: number;
@@ -20,6 +20,7 @@ const stockColor: Record<string, string> = {
 };
 
 export default function VendorComparisonTable({ vendors }: Props) {
+    const { token } = theme.useToken();
     const lowest = vendors.reduce((min, v) => (parseFloat(v.price) < parseFloat(min.price) ? v : min), vendors[0]);
 
     return (
@@ -33,7 +34,12 @@ export default function VendorComparisonTable({ vendors }: Props) {
                     title: 'Price',
                     dataIndex: 'price',
                     render: (price: string, row: Vendor) => (
-                        <span style={{ color: row.id === lowest?.id ? 'green' : undefined, fontWeight: row.id === lowest?.id ? 600 : 400 }}>
+                        <span
+                            style={{
+                                color: row.id === lowest?.id ? token.colorSuccess : undefined,
+                                fontWeight: row.id === lowest?.id ? 600 : 400,
+                            }}
+                        >
                             {price}
                         </span>
                     ),
