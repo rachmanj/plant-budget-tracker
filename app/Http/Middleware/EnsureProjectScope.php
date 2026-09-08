@@ -11,12 +11,7 @@ class EnsureProjectScope
     public function handle(Request $request, Closure $next): Response
     {
         if ($user = $request->user()) {
-            $projectCode = $request->route('project_code')
-                ?? $request->input('project_code')
-                ?? session('current_project')
-                ?? $user->project_code_scope;
-
-            setPermissionsTeamId($projectCode ?? '');
+            setPermissionsTeamId($user->project_code_scope ?? '');
         }
 
         return $next($request);
