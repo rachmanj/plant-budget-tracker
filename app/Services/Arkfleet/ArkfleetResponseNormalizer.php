@@ -2,13 +2,16 @@
 
 namespace App\Services\Arkfleet;
 
+use Illuminate\Http\Client\Response as HttpClientResponse;
 use Psr\Http\Message\ResponseInterface;
 
 class ArkfleetResponseNormalizer
 {
-    public function normalize(ResponseInterface $response): array
+    public function normalize(HttpClientResponse|ResponseInterface $response): array
     {
-        $body = json_decode((string) $response->getBody(), true) ?? [];
+        $body = $response instanceof HttpClientResponse
+            ? ($response->json() ?? [])
+            : (json_decode((string) $response->getBody(), true) ?? []);
 
         if (is_array($body) && array_key_exists('current_page', $body)) {
             return [
@@ -23,7 +26,12 @@ class ArkfleetResponseNormalizer
         }
 
         if (is_array($body) && array_key_exists('data', $body)) {
-            return ['data' => $body['data'], 'meta' => $body['meta'] ?? null];
+            $meta = $body['meta'] ?? null;
+            if ($meta === null && array_key_exists('count', $body)) {
+                $meta = ['count' => $body['count'], 'total' => $body['count']];
+            }
+
+            return ['data' => $body['data'], 'meta' => $meta];
         }
 
         return ['data' => $body, 'meta' => null];

@@ -1,43 +1,24 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Console\Commands;
 
-use App\Http\Controllers\Controller;
 use App\Models\ProjectCache;
 use App\Services\Arkfleet\ArkfleetClient;
-use Illuminate\Http\RedirectResponse;
-use Inertia\Inertia;
-use Inertia\Response;
+use Illuminate\Console\Command;
 
-class ProjectController extends Controller
+class SyncArkfleetProjects extends Command
 {
-    public function index(ArkfleetClient $client): Response
-    {
-        try {
-            $response = $client->getProjects();
-            $projects = $response['data'] ?? [];
-            $stale = false;
-        } catch (\Throwable $e) {
-            $projects = ProjectCache::orderBy('project_name')->get()->map(fn ($p) => [
-                'code' => $p->project_code,
-                'name' => $p->project_name,
-                'is_active' => $p->is_active,
-            ])->all();
-            $stale = true;
-        }
+    protected $signature = 'arkfleet:sync-projects';
 
-        return Inertia::render('Admin/Projects', [
-            'projects' => $projects,
-            'cachedProjects' => ProjectCache::orderBy('project_name')->get(),
-            'stale' => $stale,
-        ]);
-    }
+    protected $description = 'Sync project list from ARKFLEET (ns15 legacy API) into projects_cache';
 
-    public function sync(ArkfleetClient $client): RedirectResponse
+    public function handle(ArkfleetClient $client): int
     {
         $response = $client->getProjects();
         $projects = $response['data'] ?? [];
         $activeProjects = config('services.arkfleet.active_projects', []);
+
+        $synced = 0;
 
         foreach ($projects as $project) {
             $code = $project['project_code'] ?? $project['code'] ?? null;
@@ -56,10 +37,14 @@ class ProjectController extends Controller
                     'synced_at' => now(),
                 ]
             );
+
+            $synced++;
         }
 
         ProjectCache::query()->whereIn('project_code', ['MBL', 'SML'])->delete();
 
-        return back()->with('success', 'Daftar proyek berhasil disinkronkan dari ARKFLEET.');
+        $this->info("Synced {$synced} projects from ARKFLEET.");
+
+        return self::SUCCESS;
     }
 }

@@ -3,82 +3,113 @@
 namespace Tests\Feature\Arkfleet;
 
 use App\Services\Arkfleet\ArkfleetClient;
-use App\Services\Arkfleet\ArkfleetResponseNormalizer;
 use App\Services\Arkfleet\EquipmentCache;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Psr7\Response;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class EquipmentCacheTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'services.arkfleet.base_url' => 'http://192.168.32.15/ark-fleet/api',
+            'services.arkfleet.token' => '',
+        ]);
+    }
+
     public function test_cache_hit_returns_data_without_stale_flag_on_success(): void
     {
         Cache::flush();
 
-        $mock = new MockHandler([
-            new Response(200, [], json_encode(['data' => [['id' => 1]]])),
-            new Response(200, [], json_encode(['data' => [['id' => 1]]])),
+        Http::fake([
+            '*/equipments' => Http::sequence()
+                ->push(['count' => 1, 'data' => [$this->legacyItem(['project_code' => '021C'])]])
+                ->push(['count' => 1, 'data' => [$this->legacyItem(['project_code' => '021C'])]]),
         ]);
 
-        $client = $this->makeClient($mock);
-        $cache = new EquipmentCache($client);
+        $cache = app(EquipmentCache::class);
 
-        $first = $cache->list(['project_code' => 'MBL']);
+        $first = $cache->list(['project_code' => '021C']);
         $this->assertFalse($first['stale']);
         $this->assertCount(1, $first['data']);
 
-        $second = $cache->list(['project_code' => 'MBL']);
+        $second = $cache->list(['project_code' => '021C']);
         $this->assertFalse($second['stale']);
+        $this->assertCount(1, $second['data']);
     }
 
     public function test_stale_fallback_when_arkfleet_unreachable(): void
     {
         Cache::flush();
 
-        $success = new Response(200, [], json_encode(['data' => [['id' => 1, 'unit_code' => 'E-001']]]));
-        $failure = new ConnectException('Connection refused', new Request('GET', 'equipment'));
+        Http::fake([
+            '*/equipments' => Http::response(['count' => 1, 'data' => [$this->legacyItem()]]),
+        ]);
 
-        $mock = new MockHandler([$success, $failure]);
-        $client = $this->makeClient($mock);
-        $cache = new EquipmentCache($client);
+        $cache = app(EquipmentCache::class);
+        $cache->list(['project_code' => '021C']);
 
-        $cache->list(['project_code' => 'MBL']);
+        Http::fake(function () {
+            throw new ConnectionException(new \Exception('Connection refused'));
+        });
 
-        $stale = $cache->list(['project_code' => 'MBL']);
+        $stale = $cache->list(['project_code' => '021C']);
         $this->assertTrue($stale['stale']);
-        $this->assertSame('E-001', $stale['data'][0]['unit_code']);
+        $this->assertSame('AC 001', $stale['data'][0]['unit_code']);
     }
 
     public function test_empty_fallback_when_arkfleet_unreachable_and_no_cache(): void
     {
         Cache::flush();
 
-        $mock = new MockHandler([
-            new ConnectException('Connection refused', new Request('GET', 'equipment')),
-        ]);
-        $client = $this->makeClient($mock);
-        $cache = new EquipmentCache($client);
+        Http::fake(function () {
+            throw new ConnectionException(new \Exception('Connection refused'));
+        });
 
-        $result = $cache->list(['project_code' => 'MBL']);
+        $cache = app(EquipmentCache::class);
+        $result = $cache->list(['project_code' => '021C']);
 
         $this->assertTrue($result['stale']);
         $this->assertSame([], $result['data'] ?? []);
     }
 
-    private function makeClient(MockHandler $mock): ArkfleetClient
+    public function test_project_filter_uses_cached_full_list(): void
     {
-        $http = new Client(['handler' => HandlerStack::create($mock)]);
-        $arkfleet = new ArkfleetClient(new ArkfleetResponseNormalizer());
-        $reflection = new \ReflectionClass($arkfleet);
-        $property = $reflection->getProperty('client');
-        $property->setAccessible(true);
-        $property->setValue($arkfleet, $http);
+        Cache::flush();
 
-        return $arkfleet;
+        Http::fake([
+            '*/equipments' => Http::response([
+                'count' => 2,
+                'data' => [
+                    $this->legacyItem(['project_code' => '021C']),
+                    $this->legacyItem(['id' => 2, 'unit_no' => 'AC 002', 'project_code' => '022C']),
+                ],
+            ]),
+        ]);
+
+        $cache = app(EquipmentCache::class);
+
+        $all = $cache->list([]);
+        $this->assertCount(2, $all['data']);
+
+        $filtered = $cache->list(['project_code' => '022C']);
+        $this->assertCount(1, $filtered['data']);
+        $this->assertSame('022C', $filtered['data'][0]['project_code']);
+    }
+
+    private function legacyItem(array $overrides = []): array
+    {
+        return array_merge([
+            'id' => 229,
+            'unit_no' => 'AC 001',
+            'description' => 'Air Compressor Yanmar TF55',
+            'project_code' => '021C',
+            'plant_type' => 'SUPPORT',
+            'unitstatus' => 'ACTIVE',
+        ], $overrides);
     }
 }

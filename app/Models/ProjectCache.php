@@ -11,6 +11,7 @@ class ProjectCache extends Model
     protected $fillable = [
         'project_code',
         'project_name',
+        'location',
         'is_active',
         'selectable_only',
         'raw_payload',

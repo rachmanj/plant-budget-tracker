@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Models\DmbdEntry;
 use App\Services\Arkfleet\ArkfleetClient;
-use GuzzleHttp\Exception\ClientException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -29,8 +29,8 @@ class SyncDmbdStatusToArkfleet implements ShouldQueue
         try {
             $client->patchEquipmentStatus($entry->equipment_id, $entry->operational_status);
             $entry->update(['synced_to_arkfleet' => true]);
-        } catch (ClientException $e) {
-            if ($e->getResponse()?->getStatusCode() === 404) {
+        } catch (RequestException $e) {
+            if ($e->response?->status() === 404) {
                 Log::info('ARKFLEET status PATCH endpoint not available yet — will retry on schedule.');
 
                 return;

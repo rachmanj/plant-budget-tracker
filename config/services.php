@@ -40,6 +40,10 @@ return [
         'token' => env('ARKFLEET_API_TOKEN'),
         'timeout' => env('ARKFLEET_TIMEOUT', 10),
         'retries' => env('ARKFLEET_RETRIES', 2),
+        'active_projects' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('ARKFLEET_ACTIVE_PROJECTS', '021C,025C,APS'))
+        ))),
         'cache_ttl' => [
             'list' => env('ARKFLEET_CACHE_TTL_LIST', 3600),
             'detail' => env('ARKFLEET_CACHE_TTL_DETAIL', 21600),

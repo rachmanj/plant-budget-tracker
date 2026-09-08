@@ -14,11 +14,22 @@ class EquipmentCache
 
     public function list(array $filters = []): array
     {
-        $projectCode = $filters['project_code'] ?? 'all';
-        $key = 'ark:equipment:'.$projectCode.':'.md5(json_encode($filters));
+        $key = 'ark:equipment:all';
         $ttl = (int) config('services.arkfleet.cache_ttl.list', 3600);
 
-        return $this->remember($key, $ttl, fn () => $this->client->getEquipment($filters));
+        $result = $this->remember($key, $ttl, fn () => $this->client->getEquipment([]));
+
+        if ($filters === []) {
+            return $result;
+        }
+
+        $data = $result['data'] ?? [];
+        $filtered = $this->client->applyEquipmentFilters($data, $filters);
+
+        return array_merge($result, [
+            'data' => $filtered,
+            'meta' => array_merge($result['meta'] ?? [], ['total' => count($filtered)]),
+        ]);
     }
 
     public function find(int $id): array
@@ -41,6 +52,7 @@ class EquipmentCache
     public function bust(int $id): void
     {
         Cache::forget("ark:equipment:id:{$id}");
+        Cache::forget('ark:equipment:all');
     }
 
     public function bustProject(string $projectCode): void
@@ -56,6 +68,9 @@ class EquipmentCache
                 $connection->del($key);
             }
         }
+
+        Cache::forget('ark:equipment:all');
+        Cache::forget("ark:equipment:stats:{$projectCode}");
     }
 
     private function remember(string $key, int $ttl, callable $callback): array
@@ -77,7 +92,7 @@ class EquipmentCache
                 return array_merge($cached, ['stale' => true]);
             }
 
-            return ['stale' => true];
+            return ['stale' => true, 'data' => []];
         }
     }
 }

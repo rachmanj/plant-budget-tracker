@@ -14,15 +14,19 @@ class WarmArkfleetCache extends Command
 
     public function handle(EquipmentCache $cache): int
     {
+        $this->info('Warming full equipment list...');
+        $cache->list([]);
+        $cache->stats(null);
+
         $projects = ProjectCache::where('is_active', true)->pluck('project_code');
 
         if ($projects->isEmpty()) {
-            $projects = collect(['MBL', 'SML']);
+            $projects = collect(config('services.arkfleet.active_projects', []));
         }
 
         foreach ($projects as $projectCode) {
             $this->info("Warming equipment cache for {$projectCode}...");
-            $cache->list(['project_code' => $projectCode, 'is_active' => true]);
+            $cache->list(['project_code' => $projectCode]);
             $cache->stats($projectCode);
         }
 

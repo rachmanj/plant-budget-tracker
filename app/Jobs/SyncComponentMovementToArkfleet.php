@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Models\CannibalRequest;
 use App\Models\Component;
 use App\Services\Arkfleet\ArkfleetClient;
-use GuzzleHttp\Exception\ClientException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -31,8 +31,8 @@ class SyncComponentMovementToArkfleet implements ShouldQueue
             try {
                 $client->patchComponentStatus($request->target_equipment_id, $component->id, 'cannibalized');
                 $component->update(['status' => 'cannibalized', 'synced_to_arkfleet' => true]);
-            } catch (ClientException $e) {
-                if ($e->getResponse()?->getStatusCode() === 404) {
+            } catch (RequestException $e) {
+                if ($e->response?->status() === 404) {
                     Log::info('ARKFLEET component PATCH endpoint not available yet.');
 
                     return;

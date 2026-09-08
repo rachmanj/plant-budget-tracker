@@ -5,16 +5,12 @@ namespace Tests\Feature\Dmbd;
 use App\Jobs\SyncDmbdStatusToArkfleet;
 use App\Models\DmbdEntry;
 use App\Services\Arkfleet\ArkfleetClient;
-use App\Services\Arkfleet\ArkfleetResponseNormalizer;
 use App\Services\Arkfleet\EquipmentCache;
 use Database\Seeders\RoleAndPermissionSeeder;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Request;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\CreatesScopedUsers;
 use Tests\TestCase;
@@ -160,16 +156,8 @@ class DmbdEntryTest extends TestCase
 
     private function bindUnreachableArkfleetClient(): void
     {
-        $mock = new MockHandler([
-            new ConnectException('Connection refused', new Request('GET', 'equipment')),
-        ]);
-        $http = new Client(['handler' => HandlerStack::create($mock)]);
-        $arkfleet = new ArkfleetClient(new ArkfleetResponseNormalizer());
-        $reflection = new \ReflectionClass($arkfleet);
-        $property = $reflection->getProperty('client');
-        $property->setAccessible(true);
-        $property->setValue($arkfleet, $http);
-
-        $this->instance(ArkfleetClient::class, $arkfleet);
+        Http::fake(function () {
+            throw new ConnectionException(new \Exception('Connection refused'));
+        });
     }
 }

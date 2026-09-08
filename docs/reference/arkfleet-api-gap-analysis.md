@@ -1,5 +1,20 @@
 # MineOps → arkfleet-next API Gap Analysis & Implementation Plan
 
+> **ns15 legacy API (production source since 2026-09-08):** PMB production on saphire-two consumes the legacy ARKFLEET instance at `http://192.168.32.15/ark-fleet/api` (ns15). The arkfleet-next API on IDC VPS (103.55.38.96) is unreachable from the ARKA LAN due to ISP-level egress blocking. ns15 is open (no auth) and carries production data (~992 units).
+>
+> | Endpoint | Response | Notes |
+> |----------|----------|-------|
+> | `GET /equipments` | `{ "count": N, "data": [...] }` | Full list, no pagination; client-side filter by `project_code` / `unitstatus` |
+> | `GET /projects` | `{ "data": [{ "project_code", "bowheer", "location" }] }` | All projects |
+>
+> **Field mapping (legacy → PMB):** `unit_no` → `unit_code`; computed `is_active` = (`unitstatus === 'ACTIVE'`); `is_rfu` = false. Original legacy fields preserved.
+>
+> **Active projects config:** `ARKFLEET_ACTIVE_PROJECTS` env (default `021C,025C,APS`) → `config('services.arkfleet.active_projects')`. Budget project `022C` is budgeted but not in the active list per Iwan.
+>
+> **Sync:** `php artisan arkfleet:sync-projects` upserts all projects into `projects_cache`.
+
+---
+
 > **For:** Athena (arkfleet-next API implementation)
 > **Date:** 30 July 2026
 > **Scope:** API endpoints arkfleet-next needs to expose for MineOps (ARKA daily-production) to consume
