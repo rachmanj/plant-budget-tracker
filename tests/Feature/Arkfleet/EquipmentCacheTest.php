@@ -54,6 +54,22 @@ class EquipmentCacheTest extends TestCase
         $this->assertSame('E-001', $stale['data'][0]['unit_code']);
     }
 
+    public function test_empty_fallback_when_arkfleet_unreachable_and_no_cache(): void
+    {
+        Cache::flush();
+
+        $mock = new MockHandler([
+            new ConnectException('Connection refused', new Request('GET', 'equipment')),
+        ]);
+        $client = $this->makeClient($mock);
+        $cache = new EquipmentCache($client);
+
+        $result = $cache->list(['project_code' => 'MBL']);
+
+        $this->assertTrue($result['stale']);
+        $this->assertSame([], $result['data'] ?? []);
+    }
+
     private function makeClient(MockHandler $mock): ArkfleetClient
     {
         $http = new Client(['handler' => HandlerStack::create($mock)]);

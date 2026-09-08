@@ -19,7 +19,9 @@ class DmbdController extends Controller
     public function index(Request $request): Response
     {
         $projectCode = session('current_project') ?? $request->user()->project_code_scope;
-        $equipment = $this->equipmentCache->list($projectCode);
+        $filters = $projectCode !== null ? ['project_code' => $projectCode] : [];
+        $result = $this->equipmentCache->list($filters);
+        $equipment = $result['data'] ?? [];
         $today = now()->toDateString();
 
         $entries = DmbdEntry::query()

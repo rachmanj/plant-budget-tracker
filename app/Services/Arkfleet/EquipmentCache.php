@@ -2,9 +2,9 @@
 
 namespace App\Services\Arkfleet;
 
-use GuzzleHttp\Exception\ConnectException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class EquipmentCache
 {
@@ -67,7 +67,7 @@ class EquipmentCache
             Cache::put($key, $fresh, $ttl);
 
             return array_merge($fresh, ['stale' => false]);
-        } catch (ConnectException $e) {
+        } catch (Throwable $e) {
             Log::warning('ARKFLEET unreachable, serving cache if available', [
                 'key' => $key,
                 'message' => $e->getMessage(),
@@ -77,7 +77,7 @@ class EquipmentCache
                 return array_merge($cached, ['stale' => true]);
             }
 
-            throw $e;
+            return ['stale' => true];
         }
     }
 }
