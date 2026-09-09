@@ -2,14 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BudgetAllocation;
+use App\Models\BudgetPeriod;
 use App\Models\PlantRequest;
+use App\Models\ProjectCache;
+use App\Services\Approval\ApprovalEngine;
+use App\Services\Arkfleet\EquipmentCache;
 use App\Services\Budget\BudgetEngine;
 use App\Services\Pricing\PricingEstimator;
 use App\Support\ApprovalChains;
-use App\Services\Approval\ApprovalEngine;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,6 +26,7 @@ class PlantRequestController extends Controller
         private readonly BudgetEngine $budgetEngine,
         private readonly ApprovalEngine $approvalEngine,
         private readonly PricingEstimator $pricingEstimator,
+        private readonly EquipmentCache $equipmentCache,
     ) {}
 
     public function index(Request $request): Response
@@ -37,8 +45,75 @@ class PlantRequestController extends Controller
 
     public function create(Request $request): Response
     {
+        $user = $request->user();
+        $projectCode = $request->input('project_code')
+            ?? session('current_project')
+            ?? $user->project_code_scope
+            ?? ProjectCache::query()->value('project_code')
+            ?? 'MBL';
+
+        $equipmentResult = $this->equipmentCache->list(['project_code' => $projectCode]);
+        $equipment = collect($equipmentResult['data'] ?? [])
+            ->map(fn (array $item) => [
+                'id' => $item['id'],
+                'unit_code' => $item['unit_code'],
+                'description' => $item['description'],
+                'plant_type' => $item['plant_type'],
+                'unitstatus' => $item['unitstatus'],
+            ])
+            ->sortBy('unit_code')
+            ->values()
+            ->all();
+
+        $periods = BudgetPeriod::query()
+            ->rollingWindow($projectCode)
+            ->with('allocations')
+            ->orderBy('period_month')
+            ->get();
+
+        $currentMonth = now()->startOfMonth();
+        $period = $periods->first(fn (BudgetPeriod $p) => $p->period_month->isSameMonth($currentMonth))
+            ?? $periods->first();
+
+        $allocations = $period
+            ? $period->allocations
+                ->sortBy('unit_code_cache')
+                ->map(fn (BudgetAllocation $allocation) => [
+                    'id' => $allocation->id,
+                    'unit_code_cache' => $allocation->unit_code_cache,
+                    'plant_type_cache' => $allocation->plant_type_cache,
+                    'allocated_amount' => (string) $allocation->allocated_amount,
+                    'tolerance_pct' => (string) $allocation->tolerance_pct,
+                    'committed_amount' => (string) $allocation->committed_amount,
+                    'actual_amount' => (string) $allocation->actual_amount,
+                    'tolerance_cap' => $allocation->tolerance_cap,
+                    'utilization_pct' => $allocation->utilization_pct,
+                    'remaining' => bcsub(
+                        (string) $allocation->allocated_amount,
+                        bcadd((string) $allocation->committed_amount, (string) $allocation->actual_amount, 2),
+                        2
+                    ),
+                ])
+                ->values()
+                ->all()
+            : [];
+
+        $projects = ProjectCache::query()
+            ->orderBy('project_code')
+            ->get(['project_code', 'project_name', 'is_active'])
+            ->map(fn (ProjectCache $project) => [
+                'project_code' => $project->project_code,
+                'project_name' => $project->project_name,
+                'is_active' => $project->is_active,
+            ])
+            ->all();
+
         return Inertia::render('PlantRequest/Create', [
-            'prefill' => $request->only(['dmbd_entry_id', 'equipment_id', 'unit_code_cache']),
+            'prefill' => $request->only(['dmbd_entry_id', 'equipment_id', 'unit_code_cache', 'project_code']),
+            'projectCode' => $projectCode,
+            'projects' => $projects,
+            'equipment' => $equipment,
+            'allocations' => $allocations,
         ]);
     }
 
@@ -58,6 +133,23 @@ class PlantRequestController extends Controller
             'lines.*.unit_price_est' => 'nullable|numeric',
             'lines.*.price_source' => 'nullable|in:tabulation_bid,sap_price,manual,none',
         ]);
+
+        $user = $request->user();
+        $projectCode = $request->input('project_code')
+            ?? session('current_project')
+            ?? $user->project_code_scope
+            ?? ProjectCache::query()->value('project_code')
+            ?? 'MBL';
+
+        $allocation = BudgetAllocation::query()
+            ->with('period')
+            ->findOrFail($validated['budget_allocation_id']);
+
+        if ($allocation->period->project_code !== $projectCode) {
+            throw ValidationException::withMessages([
+                'budget_allocation_id' => ['Allocation bukan untuk project ini'],
+            ]);
+        }
 
         $plantRequest = DB::transaction(function () use ($validated, $request) {
             $total = '0.00';
@@ -169,10 +261,25 @@ class PlantRequestController extends Controller
             ->with('success', 'Plant request submitted for approval.');
     }
 
-    public function estimatePrice(Request $request): array
+    public function estimatePart(Request $request): JsonResponse
     {
-        $request->validate(['part_number' => 'required|string']);
+        $validator = Validator::make($request->all(), [
+            'part_number' => 'required|string|max:50',
+        ]);
 
-        return $this->pricingEstimator->estimate($request->part_number);
+        if ($validator->fails()) {
+            return response()->json([
+                'ok' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $result = $this->pricingEstimator->estimate($validator->validated()['part_number']);
+
+        return response()->json([
+            'ok' => true,
+            'unit_price' => $result['unit_price'],
+            'source' => $result['source'],
+        ]);
     }
 }

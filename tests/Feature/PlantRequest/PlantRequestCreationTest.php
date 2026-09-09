@@ -3,12 +3,13 @@
 namespace Tests\Feature\PlantRequest;
 
 use App\Models\BudgetAllocation;
+use App\Models\BudgetPeriod;
 use App\Models\DmbdEntry;
 use App\Models\PlantRequest;
 use App\Models\TabulationBid;
 use App\Models\TabulationBidAward;
 use App\Models\TabulationBidVendor;
-use App\Models\User;
+use App\Services\Arkfleet\EquipmentCache;
 use App\Services\Pricing\PricingEstimator;
 use App\Services\Sap\SapReadRepository;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -25,6 +26,123 @@ class PlantRequestCreationTest extends TestCase
     {
         parent::setUp();
         $this->seed(RoleAndPermissionSeeder::class);
+    }
+
+    public function test_create_returns_equipment_and_allocations_props(): void
+    {
+        $finance = $this->makeFinanceDirector();
+        $allocation = $this->makeAllocation($finance, 'MBL', '5000000.00', 42, 'E-042');
+        $planner = $this->makeUserWithRole('planner');
+
+        $this->mock(EquipmentCache::class, function ($mock) {
+            $mock->shouldReceive('list')
+                ->once()
+                ->with(['project_code' => 'MBL'])
+                ->andReturn([
+                    'data' => [
+                        [
+                            'id' => 42,
+                            'unit_code' => 'E-042',
+                            'description' => 'Excavator PC200',
+                            'plant_type' => 'EXCAVATOR',
+                            'project_code' => 'MBL',
+                            'unitstatus' => 'ACTIVE',
+                            'is_active' => true,
+                        ],
+                    ],
+                    'stale' => false,
+                ]);
+        });
+
+        $this->actingAsProject($planner)
+            ->get('/plant-requests/create')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('PlantRequest/Create', false)
+                ->where('projectCode', 'MBL')
+                ->has('equipment', 1)
+                ->where('equipment.0.unit_code', 'E-042')
+                ->has('allocations', 1)
+                ->where('allocations.0.id', $allocation->id)
+                ->where('allocations.0.unit_code_cache', 'E-042')
+            );
+    }
+
+    public function test_estimate_part_returns_sap_price_for_known_part(): void
+    {
+        $planner = $this->makeUserWithRole('planner');
+
+        $this->mock(SapReadRepository::class, function ($mock) {
+            $mock->shouldReceive('getPriceList')
+                ->once()
+                ->with(['PN-EST'])
+                ->andReturn(collect([(object) ['Price' => 99000.00]]));
+        });
+
+        $this->actingAsProject($planner)
+            ->postJson('/plant-requests/estimate-part', ['part_number' => 'PN-EST'])
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'unit_price' => '99000.00',
+                'source' => 'sap_price',
+            ]);
+    }
+
+    public function test_estimate_part_returns_ok_false_for_empty_part_number(): void
+    {
+        $planner = $this->makeUserWithRole('planner');
+
+        $this->actingAsProject($planner)
+            ->postJson('/plant-requests/estimate-part', ['part_number' => ''])
+            ->assertStatus(422)
+            ->assertJson([
+                'ok' => false,
+            ]);
+    }
+
+    public function test_store_rejects_allocation_from_another_project(): void
+    {
+        $finance = $this->makeFinanceDirector();
+        $this->makeAllocation($finance, 'MBL');
+        $otherPeriod = BudgetPeriod::factory()->create([
+            'project_code' => '022C',
+            'created_by' => $finance->id,
+            'status' => 'open',
+            'period_month' => now()->startOfMonth(),
+        ]);
+        $otherAllocation = BudgetAllocation::factory()->create([
+            'budget_period_id' => $otherPeriod->id,
+            'equipment_id' => 99,
+            'unit_code_cache' => 'E-099',
+            'allocated_amount' => '8000000.00',
+            'tolerance_pct' => '10.00',
+        ]);
+
+        $planner = $this->makeUserWithRole('planner', 'MBL');
+
+        $this->actingAsProject($planner, 'MBL')
+            ->post('/plant-requests', [
+                'budget_allocation_id' => $otherAllocation->id,
+                'equipment_id' => 42,
+                'unit_code_cache' => 'E-042',
+                'sap_mr_id' => 5001,
+                'lines' => [
+                    [
+                        'part_number' => 'PN-001',
+                        'material_name' => 'Filter',
+                        'uom' => 'EA',
+                        'qty' => 1,
+                        'unit_price_est' => 100000,
+                        'price_source' => 'manual',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors(['budget_allocation_id']);
+
+        $this->assertDatabaseMissing('plant_requests', [
+            'budget_allocation_id' => $otherAllocation->id,
+        ]);
     }
 
     public function test_planner_can_create_draft_plant_request(): void
