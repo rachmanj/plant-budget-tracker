@@ -9,7 +9,7 @@ class ProjectSeeder extends Seeder
 {
     public function run(): void
     {
-        $activeProjects = config('services.arkfleet.active_projects', ['021C', '025C', 'APS']);
+        $activeProjects = config('services.arkfleet.active_projects', ['021C', '022C', '025C', 'APS']);
 
         $projects = [
             ['project_code' => '000H', 'project_name' => 'Head Office', 'location' => 'Balikpapan'],

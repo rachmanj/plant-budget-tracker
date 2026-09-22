@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ProjectCache;
 use App\Services\Arkfleet\ArkfleetClient;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,53 +14,65 @@ class ProjectController extends Controller
 {
     public function index(ArkfleetClient $client): Response
     {
+        $arkfleetReachable = true;
+
         try {
-            $response = $client->getProjects();
-            $projects = $response['data'] ?? [];
-            $stale = false;
-        } catch (\Throwable $e) {
-            $projects = ProjectCache::orderBy('project_name')->get()->map(fn ($p) => [
-                'code' => $p->project_code,
-                'name' => $p->project_name,
-                'is_active' => $p->is_active,
-            ])->all();
-            $stale = true;
+            $client->getProjects();
+        } catch (\Throwable) {
+            $arkfleetReachable = false;
         }
+
+        $projects = ProjectCache::query()
+            ->orderBy('project_name')
+            ->get()
+            ->map(fn (ProjectCache $p) => [
+                'project_code' => $p->project_code,
+                'project_name' => $p->project_name,
+                'location' => $p->location,
+                'is_active' => $p->is_active,
+                'synced_at' => $p->synced_at?->toIso8601String(),
+            ])
+            ->values()
+            ->all();
+
+        $lastSyncedAt = ProjectCache::query()->max('synced_at');
 
         return Inertia::render('Admin/Projects', [
             'projects' => $projects,
-            'cachedProjects' => ProjectCache::orderBy('project_name')->get(),
-            'stale' => $stale,
+            'lastSyncedAt' => $lastSyncedAt ? (string) $lastSyncedAt : null,
+            'arkfleetReachable' => $arkfleetReachable,
         ]);
+    }
+
+    public function update(Request $request, string $projectCode): RedirectResponse
+    {
+        $validated = $request->validate([
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        $project = ProjectCache::query()
+            ->where('project_code', $projectCode)
+            ->firstOrFail();
+
+        $project->update(['is_active' => $validated['is_active']]);
+
+        $message = $validated['is_active']
+            ? "Proyek {$projectCode} diaktifkan."
+            : "Proyek {$projectCode} dinonaktifkan.";
+
+        return back()->with('success', $message);
     }
 
     public function sync(ArkfleetClient $client): RedirectResponse
     {
         $response = $client->getProjects();
         $projects = $response['data'] ?? [];
-        $activeProjects = config('services.arkfleet.active_projects', []);
 
-        foreach ($projects as $project) {
-            $code = $project['project_code'] ?? $project['code'] ?? null;
-            if (! $code) {
-                continue;
-            }
+        $counts = ProjectCache::syncFromArkfleet($projects);
 
-            ProjectCache::updateOrCreate(
-                ['project_code' => $code],
-                [
-                    'project_name' => $project['name'] ?? $project['project_name'] ?? $project['bowheer'] ?? $code,
-                    'location' => $project['location'] ?? null,
-                    'is_active' => in_array($code, $activeProjects, true),
-                    'selectable_only' => (bool) ($project['selectable_only'] ?? false),
-                    'raw_payload' => $project,
-                    'synced_at' => now(),
-                ]
-            );
-        }
-
-        ProjectCache::query()->whereIn('project_code', ['MBL', 'SML'])->delete();
-
-        return back()->with('success', 'Daftar proyek berhasil disinkronkan dari ARKFLEET.');
+        return back()->with(
+            'success',
+            "Sinkronisasi selesai: {$counts['created']} proyek baru, {$counts['updated']} diperbarui."
+        );
     }
 }

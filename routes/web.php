@@ -111,6 +111,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:manage,'.\Spatie\Permission\Models\Role::class)->prefix('admin')->name('admin.')->group(function () {
         Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+        Route::patch('/projects/{projectCode}', [ProjectController::class, 'update'])->name('projects.update');
         Route::post('/projects/sync', [ProjectController::class, 'sync'])->name('projects.sync');
 
         Route::get('/users', [UserController::class, 'index'])->name('users.index');

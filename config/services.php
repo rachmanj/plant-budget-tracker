@@ -42,7 +42,7 @@ return [
         'retries' => env('ARKFLEET_RETRIES', 2),
         'active_projects' => array_values(array_filter(array_map(
             'trim',
-            explode(',', (string) env('ARKFLEET_ACTIVE_PROJECTS', '021C,025C,APS'))
+            explode(',', (string) env('ARKFLEET_ACTIVE_PROJECTS', '021C,022C,025C,APS'))
         ))),
         'cache_ttl' => [
             'list' => env('ARKFLEET_CACHE_TTL_LIST', 3600),

@@ -2,6 +2,7 @@
 
 namespace App\Services\Arkfleet;
 
+use App\Models\ProjectCache;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
@@ -189,8 +190,21 @@ class ArkfleetClient
         ]);
     }
 
-    private function activeProjectCodes(): array
+    public function activeProjectCodes(): array
     {
+        try {
+            $codes = ProjectCache::query()
+                ->where('is_active', true)
+                ->pluck('project_code')
+                ->all();
+
+            if ($codes !== []) {
+                return $codes;
+            }
+        } catch (\Throwable) {
+            // fall back to config when cache table is unavailable
+        }
+
         return config('services.arkfleet.active_projects', []);
     }
 
