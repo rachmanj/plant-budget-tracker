@@ -13,6 +13,38 @@ export function formatIdr(value: string | number): string {
     }).format(num);
 }
 
+export function formatIdrCompact(value: string | number): string {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+
+    if (Number.isNaN(num)) {
+        return 'Rp 0';
+    }
+
+    const sign = num < 0 ? '-' : '';
+    const abs = Math.abs(num);
+
+    const tiers: Array<[number, string]> = [
+        [1_000_000_000_000, 'T'],
+        [1_000_000_000, 'M'],
+        [1_000_000, 'jt'],
+        [1_000, 'rb'],
+    ];
+
+    for (const [threshold, suffix] of tiers) {
+        if (abs >= threshold) {
+            const scaled = abs / threshold;
+            const formatted = scaled.toLocaleString('id-ID', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+            });
+
+            return `${sign}Rp ${formatted} ${suffix}`;
+        }
+    }
+
+    return `${sign}Rp ${abs.toLocaleString('id-ID')}`;
+}
+
 export function parseIdrInput(value: string | number | null | undefined): string {
     if (value === null || value === undefined || value === '') {
         return '0.00';
