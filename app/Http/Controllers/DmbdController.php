@@ -147,6 +147,10 @@ class DmbdController extends Controller
                 ...($isBreakdown ? ['min:5'] : []),
                 'max:500',
             ],
+        ], [
+            'breakdown_note.required' => 'Catatan breakdown wajib diisi.',
+            'breakdown_note.min' => 'Catatan breakdown minimal 5 karakter.',
+            'breakdown_note.max' => 'Catatan breakdown maksimal 500 karakter.',
         ]);
 
         $entry = DmbdEntry::upsertForToday(

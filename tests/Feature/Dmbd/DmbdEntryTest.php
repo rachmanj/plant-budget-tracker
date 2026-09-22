@@ -315,6 +315,28 @@ class DmbdEntryTest extends TestCase
         ]);
     }
 
+    public function test_store_returns_indonesian_message_when_breakdown_note_missing(): void
+    {
+        Queue::fake();
+
+        $this->mock(EquipmentCache::class, function ($mock) {
+            $mock->shouldReceive('bust');
+        });
+
+        $planner = $this->makeUserWithRole('planner');
+
+        $this->actingAsProject($planner)
+            ->postJson('/dmbd', [
+                'equipment_id' => 502,
+                'unit_code_cache' => 'E-502',
+                'operational_status' => 'breakdown',
+            ])
+            ->assertStatus(422)
+            ->assertJsonFragment([
+                'breakdown_note' => ['Catatan breakdown wajib diisi.'],
+            ]);
+    }
+
     public function test_can_update_flag_reflects_planner_role_only(): void
     {
         $this->mock(EquipmentCache::class, function ($mock) {
