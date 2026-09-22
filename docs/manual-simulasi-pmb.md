@@ -1,9 +1,14 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.12 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.13 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
 
+> **Perubahan v1.13:** **batas akses per peran**. Menu dan halaman Approvals, Tabulation Bid,
+> Overbudget, Pembatalan, dan Interchange kini hanya terbuka untuk peran yang memang terlibat, dan
+> pembuatan draf Plant Request khusus Planner/Mechanic. Peran lain tidak melihat menunya sama sekali;
+> bila alamatnya dibuka langsung akan ditolak dengan pesan yang jelas. Tabel lengkapnya di bagian 10.
+>
 > **Perubahan v1.12:** modul **Laporan**. Halaman `/reports` kini menjadi daftar laporan (tiga laporan:
 > konsumsi anggaran, kinerja vendor, biaya peralatan), tiap laporan punya tombol **Unduh PDF** dan
 > **Unduh CSV**. Izin unduh ditegakkan: akun tanpa izin unduh tetap bisa **melihat** laporan di layar
@@ -663,7 +668,7 @@ Ringkasan keputusan di akhir simulasi:
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
 Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
-**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9); B-8 (v1.10); B-12 (v1.12). Semuanya sudah live
+**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9); B-8 (v1.10); B-12 (v1.12); B-16 & B-17 (v1.13). Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
@@ -683,10 +688,32 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-13 | SAP Sync | Hanya bisa dibuka IT Manager, Procurement Manager, dan Finance Director |
 | B-14 | Beta | Modul **Components** dan **Cannibal** (fitur tahap Beta) belum diaktifkan, jadi halamannya belum bisa dibuka |
 | B-15 | ✅ Dashboard | **Diperbaiki 22 Sep 2026** — kartu "—" diganti angka nyata: pagu/terpakai/sisa/% terpakai bulan ini, jumlah permintaan per status, peringatan *Perlu keputusan Anda* untuk approver, pengadaan (bid menunggu review/PO), DMBD hari ini, dan tindakan menunggu. Angka dihitung dengan rumus yang sama seperti halaman Anggaran; kartu bisa diklik ke halaman terkait |
-| B-16 | Batas akses | Menyimpan **draft** Plant Request belum dibatasi khusus ke Planner/Mechanic — akun lain yang login masih bisa membuat draft (submit tetap hanya untuk pembuatnya) |
-| B-17 | Batas akses | Halaman Approvals, Tabulation Bid, Overbudget, Cancellation, dan Interchange bisa **dibuka** semua akun yang login; yang dibatasi adalah tindakannya (menyetujui, menetapkan vendor, menyimpan) |
+| B-16 | ✅ Batas akses | **Diperbaiki 22 Sep 2026** — membuat draf Plant Request kini hanya bisa dilakukan **Planner** dan **Mechanic** (menunya pun hanya muncul untuk mereka). Akun lain yang membuka alamat pembuatan draf akan ditolak dengan pesan yang jelas |
+| B-17 | ✅ Batas akses | **Diperbaiki 22 Sep 2026** — kelima halaman itu kini **hanya bisa dibuka peran yang terlibat** (lihat tabel menu per peran di bawah); role lain tidak melihat menunya dan alamatnya ditolak. Hak aksi tetap seperti sebelumnya |ibatasi adalah tindakannya (menyetujui, menetapkan vendor, menyimpan) |
 | B-18 | Proyek bawaan | Akun direktur/pengadaan/IT tidak terikat proyek, jadi halaman terbuka di proyek `000H` dan layar DMBD menampilkan seluruh unit dari banyak proyek — rawan salah pilih |
 | B-19 | ✅ Menu sidebar | **Diperbaiki 22 Sep 2026 (v1.2)** — Approvals, Overbudget, Cancellation, Interchange, dan SAP Sync sudah punya menu |
+
+### Tabel menu per peran (setelah v1.13) — dipakai saat simulasi
+
+Tanda ✓ = menu muncul dan halaman bisa dibuka. Tanda — = menu **tidak muncul** dan bila alamatnya
+dibuka langsung akan **ditolak** dengan pesan yang jelas.
+
+| Peran | Approvals | Tabulation Bid | Overbudget | Pembatalan | Interchange | Buat Permintaan |
+|-------|-----------|----------------|------------|------------|-------------|-----------------|
+| Planner & Mechanic | — | — | ✓ | ✓ | — | ✓ |
+| Project Manager | ✓ | — | ✓ | ✓ | ✓ | — |
+| Plant Manager | ✓ | — | ✓ | ✓ | ✓ | — |
+| Buyer | — | ✓ | — | ✓ | ✓ | — |
+| Procurement Manager & Admin | ✓ | ✓ | — | ✓ | ✓ | — |
+| Finance Director & Operation Director | ✓ | — | ✓ | — | — | — |
+| President Director | ✓ | ✓ | — | — | — | — |
+| AML Manager | ✓ | — | — | — | ✓ (untuk sign-off) | — |
+| IT Manager | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Logistic Foreman & PIC | — | — | — | — | — | — |
+
+Sumber aturan: rantai persetujuan dan pemisahan tugas di dokumen konsep. Bila kamu (penguji) merasa
+sebuah peran seharusnya boleh membuka salah satu halaman di atas, catat di lembar observasi — daftar
+peran diambil dari satu tempat saja sehingga mudah disesuaikan.
 
 ---
 
