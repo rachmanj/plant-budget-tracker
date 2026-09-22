@@ -1,9 +1,15 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.10 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.11 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
 
+> **Perubahan v1.11:** perbaikan **perhitungan anggaran**. Sebelumnya dua keadaan membuat angka anggaran
+> keliru: (1) permintaan yang **dibatalkan** tetap "memakan" anggaran — sekarang anggaran kembali utuh;
+> (2) setelah **barang diterima (GRPO)**, pemakaian dihitung dua kali (komitmen + aktual sekaligus) —
+> sekarang hanya dihitung sekali. Dengan perbaikan ini, angka **Pagu / Terpakai / Sisa** di halaman
+> Anggaran dan di Dashboard selalu konsisten dengan catatan transaksinya.
+>
 > **Perubahan v1.10:** halaman **Plant Request** kini punya kartu **Riwayat Pengadaan** (nomor MR/PR/PO/GRPO,
 > tanggal & penerima) dan tombol **Buat PR di SAP** (Procurement Admin/IT Manager) serta **Tandai Barang
 > Diterima** (Plant Manager, Project Manager, Logistic Foreman/PIC) sehingga status lanjutan `pr_created` →
@@ -659,7 +665,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-5 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol "Buat Bid" + form vendor lengkap (ketersediaan stok, syarat pembayaran, catatan); sebelumnya penyimpanan selalu gagal validasi |
 | B-6 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
 | B-7 | ✅ Plant Request | **Diperbaiki 22 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
-| B-8 | ✅ Status lanjutan | **Diperbaiki 22 Sep 2026 (v1.10)** — kartu Riwayat Pengadaan menampilkan nomor MR/PR/PO/GRPO; tombol "Buat PR di SAP" (Procurement Admin/IT Manager) dan "Tandai Barang Diterima" (Plant Manager/Project Manager/Logistic Foreman/PIC) memajukan status `approved` → `pr_created` → `po_created` → `received` langsung dari aplikasi |
+| B-8 | ✅ Status lanjutan | **Diperbaiki 22 Sep 2026 (v1.10)** — kartu Riwayat Pengadaan menampilkan nomor MR/PR/PO/GRPO; tombol "Buat PR di SAP" (Procurement Admin/IT Manager) dan "Tandai Barang Diterima" (Plant Manager/Project Manager/Logistic Foreman/PIC) memajukan status `approved` → `pr_created` → `po_created` → `received` langsung dari aplikasi. **Catatan:** menekan "Tandai Barang Diterima" mengubah status & mencatat nomor GRPO, tetapi angka **aktual** anggaran baru terisi otomatis setelah dokumen GRPO terbaca dari SAP — jadi wajar bila sesaat setelah ditekan angka anggaran masih tampil sebagai komitmen |
 | B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Catatan Breakdown** (wajib saat status Breakdown) + daftar unit berhalaman (25/50/100) dengan pencarian, filter status & filter proyek, serta ringkasan status harian |
 | B-10 | ✅ Budget | **Diperbaiki 22 Sep 2026** — pilihan unit memakai daftar nyata dari ARKFLEET per proyek (bisa dicari, dikelompokkan per tipe plant; SOLD/SCRAP dikecualikan) dan alokasi tingkat **divisi (tanpa unit)** sudah tersedia, lengkap dengan pencegahan alokasi ganda |
 | B-11 | ✅ Harga | **Diperbaiki 22 Sep 2026** — harga diambil **per part number** dari SAP (harga PO terakhir, lalu harga beli terakhir di item master), dengan **referensi** yang terlihat (mis. "PO 260206551 · 2026-09-22"); bila SAP tidak punya data dipakai harga historis part yang sama dari permintaan sebelumnya, dan hanya kalau semuanya kosong harga 0,00 + "Belum ada". Sekaligus diperbaiki: koneksi baca SAP yang selama ini gagal sehingga pencarian harga selalu nihil |
