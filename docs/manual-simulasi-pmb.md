@@ -1,12 +1,17 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.1 · **Tanggal:** 17 September 2026
+**Versi dokumen:** 1.2 · **Tanggal:** 17 September 2026
 **Lingkungan uji:** produksi LAN `http://192.168.32.149:86` (saphire-two)
-**Kode terpasang:** commit `684131a` · **DB:** `plant_budget_tracker` (MySQL 8, container `mysql`)
+**Kode terpasang:** commit `1706f6d` · **DB:** `plant_budget_tracker` (MySQL 8, container `mysql`)
 **Sumber kebenaran bisnis:** `docs/concept.md` (EN) / `docs/concept-id.md` (ID)
 
+> **Perubahan v1.2:** **menu sidebar** untuk Approvals (dengan badge jumlah pending), Overbudget,
+> Cancellation, Interchange, dan SAP Sync sudah tersedia, dan **Plant Request draft sekarang bisa
+> diedit** (unit, alokasi anggaran, SAP MR ID, dan baris material) selama statusnya masih `draft`
+> dan hanya oleh pembuatnya. Gap B-4, B-7, dan B-19 di §10 ditutup.
+
 > **Perubahan v1.1:** lima gap yang membuat alur berhenti sudah diperbaiki dan sudah live di server
-> (commit `684131a`) — form Overbudget, tombol Create PO, tombol Buat Bid + kelengkapan form vendor,
+> — form Overbudget, tombol Create PO, tombol Buat Bid + kelengkapan form vendor,
 > tombol pembatalan & Agree, serta form Interchange + Sign-off. Skenario S-07, S-09, S-11, S-12,
 > S-13 di bawah sudah memakai alur baru.
 
@@ -85,15 +90,16 @@ Menu sidebar muncul otomatis mengikuti izin. Yang **tidak punya menu** tetap bis
 | Reports | `/reports/...` | `reports.view` | hampir semua role |
 | Components | `/components` | `component.view` + flag beta | AML |
 | Pengguna / Role / Proyek | `/admin/users`, `/admin/roles`, `/admin/projects` | `user.manage` | IT Manager |
-| Approvals | `/approvals` | — (otomatis per role) | semua approver |
-| Overbudget | `/overbudget` | — | Plant + approver |
-| Cancellation | `/cancellation` | — | Plant + Procurement |
-| Interchange | `/interchange` | — | Procurement (+ sign-off Plant/AML) |
+| Approvals | `/approvals` | menu muncul bila role Anda termasuk approver (badge = jumlah pending) | semua approver |
+| Overbudget | `/overbudget` | izin `plant_request.create` atau `overbudget.approve.*` | Planner/Mechanic + Fin Dir + Ops Dir |
+| Cancellation | `/cancellation` | izin `cancellation.plant` / `cancellation.procurement` | Plant + Procurement |
+| Interchange | `/interchange` | izin `interchange.manage` atau role `plant_manager`/`aml_manager` | Procurement (+ sign-off Plant/AML) |
 | SAP Sync Dashboard | `/sap/sync-dashboard` | Gate `viewSapDashboard` | IT Manager, Procurement Manager, Finance Director |
 
-**Catatan menu (terkini, v1.1):** menu untuk **Approvals, Overbudget, Cancellation, Interchange, dan
-SAP Sync** masih belum ada di sidebar — akses lewat URL langsung. Tombol **Buat Bid** sudah tersedia
-di halaman Tabulation Bid (muncul untuk role Buyer).
+**Catatan menu (v1.2):** semua halaman kerja kini punya menu di sidebar — **Approvals** (badge jumlah
+pending, hanya untuk role approver), **Overbudget**, **Cancellation**, **Interchange**, dan **SAP Sync**
+(muncul sesuai izin/role), selain Dashboard, Anggaran, Plant Requests, DMBD, Tabulation Bid, Reports,
+dan menu Admin untuk IT Manager.
 
 ---
 
@@ -292,6 +298,10 @@ Buat request baru pada alokasi **AC 035** (Rp 25 jt) dengan total ≈ Rp 30 jt l
 
 **Uji negatif 2 — submit tanpa MR**
 Buat draft dengan SAP MR ID = 0 → klik Submit → diharapkan ditolak (HTTP 403 / tak ada akses).
+**Perbaikan alur (v1.2):** draft seperti ini sekarang bisa diperbaiki — buka detailnya, klik
+**Ubah Draft**, isi SAP MR ID dan/atau perbaiki baris material, lalu **Simpan Perubahan**; setelah itu
+Submit berhasil. Uji juga: draft bisa diedit **hanya oleh pembuatnya** (planner lain di proyek yang
+sama harus mendapat 403), dan **hanya selama status `draft`** (setelah submit tombol Ubah Draft hilang).
 
 **Uji batas scope proyek:** setelah login sebagai planner 022C, coba buka
 `/plant-requests/create?project_code=021C` → daftar unit/alokasi mengikuti konteks proyek;
@@ -303,7 +313,8 @@ catat apakah user bisa bekerja di luar scope-nya (temuan penting untuk audit).
 
 **Login:** `project.manager@pmb.demo` (022C)
 
-1. Buka **`/approvals`** (belum ada menu — ketik URL).
+1. Buka menu **Approvals** di sidebar (menu ini muncul untuk role approver, dengan badge jumlah
+   approval yang menunggu).
 2. Diharapkan: tabel berisi 1 baris `PlantRequest` dengan role `project_manager`, status pending.
 3. Klik **Decide** → pilih **Approve** → isi Remarks "Sesuai kebutuhan breakdown E 062" → OK.
 4. Buka `/plant-requests/{id}` untuk melihat status.
@@ -322,7 +333,7 @@ catat apakah user bisa bekerja di luar scope-nya (temuan penting untuk audit).
 
 **Login:** `plant.manager@pmb.demo` (022C)
 
-1. `/approvals` → baris `PlantRequest` role `plant_manager` → **Decide → Approve**.
+1. Menu **Approvals** → baris `PlantRequest` role `plant_manager` → **Decide → Approve**.
 2. Buka detail request → status akhir **`approved`**.
    - Diharapkan: kedua baris approval `approved`, dokumen siap diteruskan ke pengadaan.
 3. Perhatikan: **belum ada** tombol lanjutan untuk membuat PR / mengubah status ke
@@ -538,19 +549,19 @@ Ringkasan keputusan di akhir simulasi:
 
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
-Daftar ini hasil pembacaan kode terpasang (commit `684131a`) supaya simulator tidak bingung.
-**Sudah diperbaiki pada v1.1** (ditandai ✅): B-1, B-2, B-3, B-5, B-6 — kelimanya live di server,
-jadi skenario terkait kini normal, bukan temuan.
+Daftar ini hasil pembacaan kode terpasang (commit `1706f6d`) supaya simulator tidak bingung.
+**Sudah diperbaiki (v1.1):** B-1, B-2, B-3, B-5, B-6. **(v1.2):** B-4, B-7, B-19. Semuanya sudah live
+di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
 |---|-------|---------|
 | B-1 | ✅ Overbudget | **Diperbaiki 17 Sep 2026** — form pengajuan (prefill + justifikasi) sudah tersedia; sebelumnya alur berhenti di halaman daftar |
 | B-2 | ✅ Cancellation | **Diperbaiki 17 Sep 2026** — tombol Ajukan Pembatalan di halaman Plant Request + tombol Agree di halaman Cancellation |
 | B-3 | ✅ Interchange | **Diperbaiki 17 Sep 2026** — form pemetaan Genuine↔OEM + tombol Sign-off Teknis |
-| B-4 | Approvals | Tidak ada menu sidebar — akses lewat URL `/approvals` |
+| B-4 | ✅ Approvals | **Diperbaiki 17 Sep 2026 (v1.2)** — menu sidebar dengan badge jumlah pending, muncul untuk role approver |
 | B-5 | ✅ Tabulation Bid | **Diperbaiki 17 Sep 2026** — tombol "Buat Bid" + form vendor lengkap (ketersediaan stok, syarat pembayaran, catatan); sebelumnya penyimpanan selalu gagal validasi |
 | B-6 | ✅ Tabulation Bid | **Diperbaiki 17 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
-| B-7 | Plant Request | Tidak ada halaman Edit; SAP MR ID harus benar sejak pembuatan draft (kalau 0, draft tidak bisa di-submit) |
+| B-7 | ✅ Plant Request | **Diperbaiki 17 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
 | B-8 | Status lanjutan | `pr_created`, `po_created`, `received` ada di model tetapi belum ada jalur UI untuk mencapainya |
 | B-9 | DMBD | Belum ada kolom catatan breakdown di UI; tabel unit tampil tanpa paginasi |
 | B-10 | Budget | Dropdown **Unit Code** di form alokasi masih hardcode `E-001`/`E-002`; anggaran level "divisi" (unit kosong) belum bisa dipilih dari daftar unit nyata |
@@ -562,7 +573,7 @@ jadi skenario terkait kini normal, bukan temuan.
 | B-16 | Keamanan izin | `GET /plant-requests/create` dan `POST /plant-requests` (simpan draft) **tidak** dibatasi izin `plant_request.create` di server — semua user yang login bisa membuat draft (submit tetap dibatasi policy) |
 | B-17 | Keamanan izin | Halaman `/approvals`, `/tabulation-bids`, `/overbudget`, `/cancellation`, `/interchange` bisa dibuka **semua role** yang login (tidak ada gerbang izin di route); pembatasan hanya pada aksinya (decide/award/store) — terverifikasi 17 Sep 2026 |
 | B-18 | Proyek bawaan | User tanpa `project_code_scope` (director, IT, buyer, procurement) default ke proyek `000H`; halaman DMBD tanpa scope menampilkan seluruh 992 unit lintas proyek sehingga rawan salah input |
-| B-19 | Menu sidebar | Belum ada menu untuk Approvals/Overbudget/Cancellation/Interchange/SAP → penguji harus mengetik URL (sudah pernah diusulkan diperbaiki) |
+| B-19 | ✅ Menu sidebar | **Diperbaiki 17 Sep 2026 (v1.2)** — Approvals, Overbudget, Cancellation, Interchange, dan SAP Sync sudah punya menu |
 
 ---
 
