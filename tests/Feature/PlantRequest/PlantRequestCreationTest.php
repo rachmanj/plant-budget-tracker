@@ -6,9 +6,7 @@ use App\Models\BudgetAllocation;
 use App\Models\BudgetPeriod;
 use App\Models\DmbdEntry;
 use App\Models\PlantRequest;
-use App\Models\TabulationBid;
-use App\Models\TabulationBidAward;
-use App\Models\TabulationBidVendor;
+use App\Models\PlantRequestLine;
 use App\Services\Arkfleet\EquipmentCache;
 use App\Services\Pricing\PricingEstimator;
 use App\Services\Sap\SapReadRepository;
@@ -73,10 +71,15 @@ class PlantRequestCreationTest extends TestCase
         $planner = $this->makeUserWithRole('planner');
 
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getPriceList')
+            $mock->shouldReceive('getItemPurchasePrice')
                 ->once()
-                ->with(['PN-EST'])
-                ->andReturn(collect([(object) ['Price' => 99000.00]]));
+                ->with('PN-EST')
+                ->andReturn([
+                    'price' => '99000.00',
+                    'currency' => 'IDR',
+                    'source' => 'item_master',
+                    'reference' => 'Harga beli terakhir (item master SAP)',
+                ]);
         });
 
         $this->actingAsProject($planner)
@@ -225,24 +228,26 @@ class PlantRequestCreationTest extends TestCase
         ]);
     }
 
-    public function test_pricing_uses_tabulation_bid_award_when_available(): void
+    public function test_pricing_uses_pmb_historical_price_when_sap_has_no_data(): void
     {
+        $finance = $this->makeFinanceDirector();
+        $allocation = $this->makeAllocation($finance);
         $buyer = $this->makeUserWithRole('buyer');
-        $bid = TabulationBid::factory()->create([
-            'status' => 'forwarded_admin',
-            'created_by' => $buyer->id,
+        $priorRequest = PlantRequest::factory()->create([
+            'status' => 'po_created',
+            'requested_by' => $buyer->id,
+            'budget_allocation_id' => $allocation->id,
         ]);
-        $vendor = TabulationBidVendor::factory()->create([
-            'tabulation_bid_id' => $bid->id,
-            'price' => '275000.00',
-            'rank' => 1,
+        PlantRequestLine::factory()->create([
+            'plant_request_id' => $priorRequest->id,
+            'part_number' => 'PN-TAB',
+            'unit_price_est' => '275000.00',
+            'price_source' => 'tabulation_bid',
         ]);
-        TabulationBidAward::create([
-            'tabulation_bid_id' => $bid->id,
-            'tabulation_bid_vendor_id' => $vendor->id,
-            'awarded_by' => $buyer->id,
-            'awarded_at' => now(),
-        ]);
+
+        $this->mock(SapReadRepository::class, function ($mock) {
+            $mock->shouldReceive('getItemPurchasePrice')->andReturn(null);
+        });
 
         $estimator = app(PricingEstimator::class);
         $result = $estimator->estimate('PN-TAB');
@@ -251,13 +256,18 @@ class PlantRequestCreationTest extends TestCase
         $this->assertSame('tabulation_bid', $result['source']);
     }
 
-    public function test_pricing_falls_back_to_sap_price_list(): void
+    public function test_pricing_falls_back_to_sap_price(): void
     {
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getPriceList')
+            $mock->shouldReceive('getItemPurchasePrice')
                 ->once()
-                ->with(['PN-SAP'])
-                ->andReturn(collect([(object) ['Price' => 125000.50]]));
+                ->with('PN-SAP')
+                ->andReturn([
+                    'price' => '125000.50',
+                    'currency' => 'IDR',
+                    'source' => 'po',
+                    'reference' => 'PO 9001 · 2026-07-01',
+                ]);
         });
 
         $estimator = app(PricingEstimator::class);
@@ -274,8 +284,13 @@ class PlantRequestCreationTest extends TestCase
         $planner = $this->makeUserWithRole('planner');
 
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getPriceList')
-                ->andReturn(collect([(object) ['Price' => 100000]]));
+            $mock->shouldReceive('getItemPurchasePrice')
+                ->andReturn([
+                    'price' => '100000.00',
+                    'currency' => 'IDR',
+                    'source' => 'item_master',
+                    'reference' => 'Harga beli terakhir (item master SAP)',
+                ]);
         });
 
         $this->actingAsProject($planner)

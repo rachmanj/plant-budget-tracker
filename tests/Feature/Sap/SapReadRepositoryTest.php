@@ -70,6 +70,75 @@ class SapReadRepositoryTest extends TestCase
         $this->assertSame('A1', $prices->first()->ItemCode);
     }
 
+    public function test_get_item_purchase_price_uses_latest_po_price_in_idr(): void
+    {
+        $connection = Mockery::mock();
+        $connection->shouldReceive('selectOne')
+            ->once()
+            ->withArgs(function ($sql, $bindings) {
+                return str_contains($sql, 'FROM [POR1]')
+                    && str_contains($sql, 'INNER JOIN [OPOR]')
+                    && $bindings === ['CO-VOE24070789', 'IDR'];
+            })
+            ->andReturn((object) [
+                'Price' => 74253500,
+                'Currency' => 'IDR',
+                'DocNum' => 12345,
+                'DocDate' => '2026-08-12',
+            ]);
+
+        DB::shouldReceive('connection')
+            ->with('sap_sql')
+            ->andReturn($connection);
+
+        $sapService = Mockery::mock(SapService::class);
+        $repo = new SapReadRepository($sapService);
+
+        $result = $repo->getItemPurchasePrice('CO-VOE24070789');
+
+        $this->assertSame('74253500.00', $result['price']);
+        $this->assertSame('po', $result['source']);
+        $this->assertStringContainsString('PO 12345', $result['reference']);
+        $this->assertStringContainsString('2026-08-12', $result['reference']);
+    }
+
+    public function test_get_item_purchase_price_falls_back_to_item_master_when_no_idr_po_row(): void
+    {
+        $connection = Mockery::mock();
+        $connection->shouldReceive('selectOne')
+            ->once()
+            ->withArgs(fn ($sql) => str_contains($sql, 'FROM [POR1]'))
+            ->andReturn(null);
+        $connection->shouldReceive('selectOne')
+            ->once()
+            ->withArgs(fn ($sql) => str_contains($sql, 'FROM [OITM]'))
+            ->andReturn((object) ['LastPurPrc' => 88000]);
+
+        DB::shouldReceive('connection')
+            ->with('sap_sql')
+            ->andReturn($connection);
+
+        $sapService = Mockery::mock(SapService::class);
+        $repo = new SapReadRepository($sapService);
+
+        $result = $repo->getItemPurchasePrice('PART-NO-PO');
+
+        $this->assertSame('88000.00', $result['price']);
+        $this->assertSame('item_master', $result['source']);
+    }
+
+    public function test_get_item_purchase_price_returns_null_on_connection_failure(): void
+    {
+        DB::shouldReceive('connection')
+            ->with('sap_sql')
+            ->andThrow(new \RuntimeException('SSL certificate verify failed'));
+
+        $sapService = Mockery::mock(SapService::class);
+        $repo = new SapReadRepository($sapService);
+
+        $this->assertNull($repo->getItemPurchasePrice('PART-X'));
+    }
+
     public function test_get_material_request_falls_back_to_odata_when_sql_fails(): void
     {
         $connection = Mockery::mock();

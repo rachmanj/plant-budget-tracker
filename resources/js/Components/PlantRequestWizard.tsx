@@ -12,6 +12,7 @@ import {
     Select,
     Space,
     Tag,
+    Tooltip,
     Typography,
     message,
 } from 'antd';
@@ -63,6 +64,7 @@ interface LineItem {
     qty: number;
     unit_price_est: string | number;
     price_source: PriceSource;
+    price_reference?: string | null;
 }
 
 interface EditRequest {
@@ -138,6 +140,7 @@ function initialLines(
             qty: line.qty,
             unit_price_est: line.unit_price_est,
             price_source: line.price_source,
+            price_reference: null,
         }));
     }
 
@@ -149,6 +152,7 @@ function initialLines(
             qty: 1,
             unit_price_est: '',
             price_source: 'none',
+            price_reference: null,
         },
     ];
 }
@@ -266,6 +270,7 @@ export default function PlantRequestWizard({
                 qty: 1,
                 unit_price_est: '',
                 price_source: 'none',
+                price_reference: null,
             },
         ]);
     };
@@ -313,6 +318,7 @@ export default function PlantRequestWizard({
             updateLine(index, {
                 unit_price_est: result.unit_price,
                 price_source: result.source as PriceSource,
+                price_reference: result.reference ?? null,
             });
         } catch {
             message.error('Gagal menghubungi server');
@@ -328,6 +334,7 @@ export default function PlantRequestWizard({
             part_number: partNumber,
             unit_price_est: '',
             price_source: 'none',
+            price_reference: null,
         };
         setData('lines', lines);
     };
@@ -601,6 +608,22 @@ export default function PlantRequestWizard({
                                     <Tag>
                                         {PRICE_SOURCE_LABELS[line.price_source] ?? 'Belum ada'}
                                     </Tag>
+                                    {line.price_source === 'none' ? (
+                                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                            Harga tidak ditemukan — isi manual
+                                        </Typography.Text>
+                                    ) : (
+                                        line.price_reference && (
+                                            <Tooltip title={line.price_reference}>
+                                                <Typography.Text
+                                                    type="secondary"
+                                                    style={{ fontSize: 12, cursor: 'help' }}
+                                                >
+                                                    {line.price_reference}
+                                                </Typography.Text>
+                                            </Tooltip>
+                                        )
+                                    )}
                                 </Space>
                                 <Typography.Text type="secondary">
                                     Total baris: {formatIdr(lineTotal(line.qty, line.unit_price_est))}

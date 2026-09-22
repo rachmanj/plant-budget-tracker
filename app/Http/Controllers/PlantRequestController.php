@@ -339,6 +339,7 @@ class PlantRequestController extends Controller
             'ok' => true,
             'unit_price' => $result['unit_price'],
             'source' => $result['source'],
+            'reference' => $result['reference'] ?? null,
         ]);
     }
 

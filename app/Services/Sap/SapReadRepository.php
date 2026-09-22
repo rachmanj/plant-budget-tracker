@@ -85,6 +85,56 @@ class SapReadRepository
         }
     }
 
+    public function getItemPurchasePrice(string $itemCode): ?array
+    {
+        try {
+            $connection = DB::connection('sap_sql');
+
+            $poRow = $connection->selectOne(
+                'SELECT TOP 1 [POR1].[Price], [POR1].[Currency], [OPOR].[DocNum], [OPOR].[DocDate]
+                 FROM [POR1]
+                 INNER JOIN [OPOR] ON [OPOR].[DocEntry] = [POR1].[DocEntry]
+                 WHERE [POR1].[ItemCode] = ? AND [POR1].[Price] > 0 AND [POR1].[Currency] = ?
+                 ORDER BY [OPOR].[DocDate] DESC, [OPOR].[DocNum] DESC',
+                [$itemCode, 'IDR']
+            );
+
+            if ($poRow && (float) $poRow->Price > 0) {
+                $docDate = $poRow->DocDate instanceof \DateTimeInterface
+                    ? Carbon::parse($poRow->DocDate)->toDateString()
+                    : (string) $poRow->DocDate;
+
+                return [
+                    'price' => number_format((float) $poRow->Price, 2, '.', ''),
+                    'currency' => (string) $poRow->Currency,
+                    'source' => 'po',
+                    'reference' => "PO {$poRow->DocNum} · {$docDate}",
+                ];
+            }
+
+            $itemRow = $connection->selectOne(
+                "SELECT TOP 1 [LastPurPrc] FROM [OITM] WHERE [ItemCode] = ? AND [validFor] = 'Y' AND [LastPurPrc] > 0",
+                [$itemCode]
+            );
+
+            if ($itemRow && (float) $itemRow->LastPurPrc > 0) {
+                return [
+                    'price' => number_format((float) $itemRow->LastPurPrc, 2, '.', ''),
+                    'currency' => 'IDR',
+                    'source' => 'item_master',
+                    'reference' => 'Harga beli terakhir (item master SAP)',
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SAP item purchase price lookup failed', [
+                'item_code' => $itemCode,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
     public function getVendorMaster(string $cardCode): array
     {
         try {

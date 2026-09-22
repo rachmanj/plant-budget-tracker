@@ -57,6 +57,7 @@ return [
         'user' => env('SAP_USER'),
         'password' => env('SAP_PASSWORD'),
         'verify_ssl' => env('SAP_SERVICE_LAYER_VERIFY_SSL', false),
+        'price_cache_ttl' => env('SAP_PRICE_CACHE_TTL', 21600),
     ],
 
 ];

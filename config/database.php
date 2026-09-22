@@ -122,9 +122,8 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'options' => [
-                'TrustServerCertificate' => true,
-            ],
+            'encrypt' => env('SAP_SQL_ENCRYPT', 'no'),
+            'trust_server_certificate' => env('SAP_SQL_TRUST_SERVER_CERTIFICATE', true),
         ],
 
     ],
