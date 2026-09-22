@@ -100,15 +100,18 @@ class SapReadRepository
             );
 
             if ($poRow && (float) $poRow->Price > 0) {
-                $docDate = $poRow->DocDate instanceof \DateTimeInterface
-                    ? Carbon::parse($poRow->DocDate)->toDateString()
-                    : (string) $poRow->DocDate;
+                $reference = "PO {$poRow->DocNum}";
+
+                if ($poRow->DocDate !== null) {
+                    $docDate = Carbon::parse($poRow->DocDate)->format('Y-m-d');
+                    $reference .= " · {$docDate}";
+                }
 
                 return [
                     'price' => number_format((float) $poRow->Price, 2, '.', ''),
                     'currency' => (string) $poRow->Currency,
                     'source' => 'po',
-                    'reference' => "PO {$poRow->DocNum} · {$docDate}",
+                    'reference' => $reference,
                 ];
             }
 

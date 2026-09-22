@@ -83,8 +83,8 @@ class SapReadRepositoryTest extends TestCase
             ->andReturn((object) [
                 'Price' => 74253500,
                 'Currency' => 'IDR',
-                'DocNum' => 12345,
-                'DocDate' => '2026-08-12',
+                'DocNum' => 260206551,
+                'DocDate' => '2026-09-22 00:00:00.000',
             ]);
 
         DB::shouldReceive('connection')
@@ -98,8 +98,31 @@ class SapReadRepositoryTest extends TestCase
 
         $this->assertSame('74253500.00', $result['price']);
         $this->assertSame('po', $result['source']);
-        $this->assertStringContainsString('PO 12345', $result['reference']);
-        $this->assertStringContainsString('2026-08-12', $result['reference']);
+        $this->assertSame('PO 260206551 · 2026-09-22', $result['reference']);
+    }
+
+    public function test_get_item_purchase_price_omits_date_when_doc_date_is_null(): void
+    {
+        $connection = Mockery::mock();
+        $connection->shouldReceive('selectOne')
+            ->once()
+            ->andReturn((object) [
+                'Price' => 74253500,
+                'Currency' => 'IDR',
+                'DocNum' => 260206551,
+                'DocDate' => null,
+            ]);
+
+        DB::shouldReceive('connection')
+            ->with('sap_sql')
+            ->andReturn($connection);
+
+        $sapService = Mockery::mock(SapService::class);
+        $repo = new SapReadRepository($sapService);
+
+        $result = $repo->getItemPurchasePrice('CO-VOE24070789');
+
+        $this->assertSame('PO 260206551', $result['reference']);
     }
 
     public function test_get_item_purchase_price_falls_back_to_item_master_when_no_idr_po_row(): void

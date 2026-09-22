@@ -1,8 +1,13 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.7 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.8 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+
+> **Perubahan v1.8:** pencarian harga part number kini benar-benar **per part** dari SAP
+> (harga PO terakhir → harga beli terakhir item master → harga historis permintaan sebelumnya),
+> lengkap dengan **referensi sumber harga** di layar; koneksi baca SAP yang sebelumnya gagal juga
+> diperbaiki (gap B-11 ditutup).
 
 > **Perubahan v1.7:** form **alokasi anggaran** kini memakai daftar unit nyata dari ARKFLEET
 > (dikelompokkan per tipe plant, SOLD/SCRAP dikecualikan) dan mendukung alokasi tingkat **divisi
@@ -318,9 +323,12 @@ Finance Director).
 4. Bagian **2. Budget Allocation**: pilih `E 062 · DIGGER` (alokasi Rp 120 jt, sisa penuh),
    perhatikan panel ringkas Alokasi / Komitmen+Aktual / Sisa / Penggunaan.
 5. Bagian **3. Line Items**: baris pertama sudah tersedia.
-   - Part Number: mis. `FILTER-FUEL-001` → klik **Cari harga** (atau biarkan; harga juga dicari
-     otomatis saat field ditinggalkan). Perhatikan **tag sumber harga**: SAP Price / Tabulation /
-     Manual / Belum ada. Harga 0,00 = tidak ditemukan.
+   - Part Number: masukkan kode item SAP yang benar, mis. `SP-A30T` → klik **Cari harga** (atau
+     biarkan; harga juga dicari otomatis saat field ditinggalkan). Perhatikan **tag sumber harga**
+     (SAP Price / Tabulation / Manual / Belum ada) dan **referensi harga** di sampingnya, mis.
+     `PO 260206551 · 2026-09-22` atau `Harga beli terakhir (item master SAP)`.
+   - Uji juga part yang tidak punya harga di SAP (mis. `CE-SMALLFILTER`): hasilnya 0,00 dengan
+     penanda "Belum ada" dan pesan *Harga tidak ditemukan — isi manual*. Ini bukan error.
    - Nama Material, UOM (EA/PCS/SET/…), Qty, Harga Estimasi (boleh diisi manual).
    - Klik **Tambah baris** untuk item kedua (mis. P/N `SEAL-KIT-002`, qty 2), lalu isi harganya.
 6. Bagian **4. Ringkasan**: sekaligus cek **Estimasi Total** dan **Proyeksi Penggunaan Budget**
@@ -597,7 +605,7 @@ Ringkasan keputusan di akhir simulasi:
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
 Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
-**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7). Semuanya sudah live
+**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8). Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
@@ -612,7 +620,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-8 | Status lanjutan | Tahap setelah approval (PR dibuat, PO dibuat, barang diterima) belum bisa diubah dari aplikasi — pemantauannya masih di SAP |
 | B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Catatan Breakdown** (wajib saat status Breakdown) + daftar unit berhalaman (25/50/100) dengan pencarian, filter status & filter proyek, serta ringkasan status harian |
 | B-10 | ✅ Budget | **Diperbaiki 22 Sep 2026** — pilihan unit memakai daftar nyata dari ARKFLEET per proyek (bisa dicari, dikelompokkan per tipe plant; SOLD/SCRAP dikecualikan) dan alokasi tingkat **divisi (tanpa unit)** sudah tersedia, lengkap dengan pencegahan alokasi ganda |
-| B-11 | Harga | Saat menekan **Cari harga**, sistem memakai harga penawaran terakhir yang menang, bukan harga per part number; kalau tidak ditemukan, harga tampil 0,00 dengan penanda "Belum ada" |
+| B-11 | ✅ Harga | **Diperbaiki 22 Sep 2026** — harga diambil **per part number** dari SAP (harga PO terakhir, lalu harga beli terakhir di item master), dengan **referensi** yang terlihat (mis. "PO 260206551 · 2026-09-22"); bila SAP tidak punya data dipakai harga historis part yang sama dari permintaan sebelumnya, dan hanya kalau semuanya kosong harga 0,00 + "Belum ada". Sekaligus diperbaiki: koneksi baca SAP yang selama ini gagal sehingga pencarian harga selalu nihil |
 | B-12 | Laporan | Belum ada tombol unduh di layar laporan (unduhan hanya lewat alamat langsung), dan pembatasan siapa yang boleh mengunduh belum dijalankan penuh |
 | B-13 | SAP Sync | Hanya bisa dibuka IT Manager, Procurement Manager, dan Finance Director |
 | B-14 | Beta | Modul **Components** dan **Cannibal** (fitur tahap Beta) belum diaktifkan, jadi halamannya belum bisa dibuka |
