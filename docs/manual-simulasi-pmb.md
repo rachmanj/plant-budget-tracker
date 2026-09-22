@@ -1,8 +1,11 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.5 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.6 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+
+> **Perubahan v1.6:** layar **DMBD** kini punya kolom **Catatan Breakdown** (wajib diisi saat status
+> Breakdown) dan daftar unit **berhalaman** dengan pencarian + filter status & proyek (gap B-9 ditutup).
 
 > **Perubahan v1.5:** koreksi tanggal dokumen dan seluruh cap tanggal di dalamnya (semula tertulis
 > 17 September 2026 — tanggal tersebut keliru, pekerjaan dan pemeriksaan dilakukan 22 September 2026).
@@ -262,17 +265,26 @@ Finance Director).
 
 **Login:** `planner@pmb.demo` (untuk ubah status), lalu ulangi sebagai `mechanic@pmb.demo` (uji batas)
 
-1. Buka `/dmbd` → judul `Daily Monitoring — <tanggal hari ini>`.
-2. Cari unit **E 062** pada tabel → ubah dropdown Status menjadi **Breakdown**.
-   - Diharapkan: tersimpan otomatis (satu entri per unit per tanggal, percobaan kedua menimpa
-     yang pertama, bukan menambah baris baru).
-3. Ubah status unit lain menjadi **Standby**, satu unit lain tetap **RFU** → bandingkan warna tag.
-4. Ulangi langkah 2 memakai akun **mechanic**: dropdown tetap tampil, tetapi setelah diubah
-   diharapkan gagal karena role `mechanic` tidak punya izin `dmbd.update` (perhatikan pesan yang
-   muncul — catat sebagai temuan UI).
+1. Buka menu **DMBD** → judul menampilkan tanggal laporan dan nama proyek yang sedang dilihat.
+2. Kenali baris filternya: kotak **cari unit** (kode/deskripsi), filter **status**
+   (Semua/RFU/Standby/Breakdown), filter **proyek** (termasuk **Semua proyek**), dan ringkasan
+   jumlah RFU / Standby / Breakdown hari ini.
+3. Daftar unit sekarang **berhalaman** (25/50/100 per halaman, bisa diganti di bawah tabel) —
+   tidak lagi menampilkan ratusan unit sekaligus. Coba pindah halaman dan pakai kotak pencarian
+   untuk menemukan **E 062**.
+4. Ubah status unit lain menjadi **Standby** lewat dropdown → tersimpan otomatis.
+5. Ubah status **E 062** menjadi **Breakdown**:
+   - Diharapkan: muncul jendela **Catatan Breakdown** (wajib, minimal 5 karakter). Isi penyebabnya,
+     mis. "Hose bocor, menunggu part" → simpan.
+   - Kolom **Catatan Breakdown** pada baris E 062 kini terisi; klik teksnya untuk melihat catatan penuh.
+6. Klik tombol **Ubah Catatan** pada baris yang sama → ubah isi catatan (status tidak berubah) → simpan.
+7. Pakai filter **status = Breakdown** → hanya unit berstatus breakdown yang tampil; ringkasan di atas
+   tabel tetap menunjukkan total seluruh unit (bukan hanya halaman/filter aktif).
+8. Login sebagai `mechanic@pmb.demo` → layar DMBD **hanya bisa dilihat**: status tampil sebagai label
+   (tanpa dropdown), kolom catatan tetap terbaca, dan tombol Aksi tidak muncul.
 
 **Cara memastikan (tanpa alat teknis)**
-- Buka ulang halaman **DMBD**: status yang baru diubah tetap tersimpan untuk tanggal hari ini.
+- Buka ulang halaman **DMBD**: status dan catatan yang baru diisi tetap ada untuk tanggal hari ini.
 - Aturan satu unit satu status per hari: mengubah ulang unit yang sama akan menimpa, bukan menambah baris.
 - Sinkronisasi balik ke ARKFLEET berjalan di latar belakang; minta Dea memeriksa bila perlu.
 
@@ -569,7 +581,7 @@ Ringkasan keputusan di akhir simulasi:
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
 Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
-**Sudah diperbaiki (v1.1):** B-1, B-2, B-3, B-5, B-6. **(v1.2):** B-4, B-7, B-19. Semuanya sudah live
+**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6). Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
@@ -582,7 +594,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-6 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
 | B-7 | ✅ Plant Request | **Diperbaiki 22 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
 | B-8 | Status lanjutan | Tahap setelah approval (PR dibuat, PO dibuat, barang diterima) belum bisa diubah dari aplikasi — pemantauannya masih di SAP |
-| B-9 | DMBD | Layar DMBD belum punya kolom catatan penyebab breakdown, dan daftar unit tampil sekaligus tanpa halaman |
+| B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Catatan Breakdown** (wajib saat status Breakdown) + daftar unit berhalaman (25/50/100) dengan pencarian, filter status & filter proyek, serta ringkasan status harian |
 | B-10 | Budget | Pilihan **Unit Code** di form alokasi anggaran masih menampilkan dua contoh tetap (E-001/E-002), belum daftar unit sebenarnya; anggaran tingkat divisi (tanpa unit) juga belum bisa dipilih |
 | B-11 | Harga | Saat menekan **Cari harga**, sistem memakai harga penawaran terakhir yang menang, bukan harga per part number; kalau tidak ditemukan, harga tampil 0,00 dengan penanda "Belum ada" |
 | B-12 | Laporan | Belum ada tombol unduh di layar laporan (unduhan hanya lewat alamat langsung), dan pembatasan siapa yang boleh mengunduh belum dijalankan penuh |
