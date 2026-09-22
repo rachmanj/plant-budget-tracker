@@ -301,11 +301,27 @@ class BudgetEngine
         $allocation->refresh();
 
         $committed = $this->sumLedgerByType($allocation, 'commitment');
-        $actual = $this->sumLedgerByType($allocation, 'actual');
-        $carryForward = $this->sumLedgerByType($allocation, 'carry_forward');
 
-        $committedAmount = bccomp($committed, '0', 2) < 0 ? bcmul($committed, '-1', 2) : '0.00';
+        $reversalForCommitment = BudgetLedger::query()
+            ->where('budget_allocation_id', $allocation->id)
+            ->where('entry_type', 'reversal')
+            ->where(function ($query) {
+                $query->whereNull('ref_type')
+                    ->orWhere('ref_type', '!=', 'allocation');
+            })
+            ->sum('amount');
+
+        $commitmentNet = bcadd(
+            $committed,
+            $this->normalizeAmount((string) ($reversalForCommitment ?? 0)),
+            2
+        );
+        $committedAmount = bccomp($commitmentNet, '0', 2) < 0 ? bcmul($commitmentNet, '-1', 2) : '0.00';
+
+        $actual = $this->sumLedgerByType($allocation, 'actual');
         $actualAmount = bccomp($actual, '0', 2) < 0 ? bcmul($actual, '-1', 2) : '0.00';
+
+        $carryForward = $this->sumLedgerByType($allocation, 'carry_forward');
 
         $allocation->update([
             'committed_amount' => $committedAmount,
