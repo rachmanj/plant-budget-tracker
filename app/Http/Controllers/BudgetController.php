@@ -8,8 +8,10 @@ use App\Models\BudgetAllocation;
 use App\Models\BudgetPeriod;
 use App\Models\ProjectCache;
 use App\Services\Arkfleet\ArkfleetClient;
+use App\Services\Arkfleet\EquipmentCache;
 use App\Services\Budget\BudgetEngine;
 use App\Services\Budget\VarianceCalculator;
+use App\Support\PlantTypeResolver;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,10 +20,13 @@ use Inertia\Response;
 
 class BudgetController extends Controller
 {
+    private const NON_ALLOCATABLE_STATUSES = ['SOLD', 'SCRAP'];
+
     public function __construct(
         private readonly BudgetEngine $budgetEngine,
         private readonly VarianceCalculator $varianceCalculator,
         private readonly ArkfleetClient $arkfleetClient,
+        private readonly EquipmentCache $equipmentCache,
     ) {}
 
     public function index(Request $request): Response
@@ -82,16 +87,69 @@ class BudgetController extends Controller
     {
         $this->authorize('create', BudgetAllocation::class);
 
+        $user = $request->user();
+
+        $projectCode = $request->input('project_code')
+            ?? session('current_project')
+            ?? $user->project_code_scope
+            ?? ProjectCache::query()->where('is_active', true)->orderBy('project_code')->value('project_code');
+
         $projects = ProjectCache::query()
             ->orderBy('project_code')
             ->get(['project_code', 'project_name']);
 
+        [$equipment, $stale] = $this->loadAllocatableEquipment($projectCode);
+
         return Inertia::render('Budget/Setting', [
             'projects' => $projects,
-            'defaultProjectCode' => $request->input('project_code')
-                ?? session('current_project')
-                ?? $request->user()->project_code_scope,
+            'defaultProjectCode' => $projectCode,
+            'equipment' => $equipment,
+            'stale' => $stale,
         ]);
+    }
+
+    /**
+     * @return array{0: list<array<string, mixed>>, 1: bool}
+     */
+    private function loadAllocatableEquipment(?string $projectCode): array
+    {
+        if ($projectCode === null) {
+            return [[], false];
+        }
+
+        try {
+            $result = $this->equipmentCache->list(['project_code' => $projectCode]);
+        } catch (\Throwable) {
+            return [[], true];
+        }
+
+        $stale = (bool) ($result['stale'] ?? false);
+        $items = $result['data'] ?? [];
+
+        $items = array_values(array_filter(
+            $items,
+            fn (array $item) => ! in_array(
+                strtoupper(trim((string) ($item['unitstatus'] ?? ''))),
+                self::NON_ALLOCATABLE_STATUSES,
+                true
+            )
+        ));
+
+        usort(
+            $items,
+            fn (array $a, array $b) => strnatcasecmp((string) ($a['unit_no'] ?? ''), (string) ($b['unit_no'] ?? ''))
+        );
+
+        $equipment = array_map(fn (array $item) => [
+            'id' => (int) ($item['id'] ?? 0),
+            'unit_code' => $item['unit_no'] ?? null,
+            'description' => $item['description'] ?? null,
+            'plant_type' => $item['plant_type'] ?? null,
+            'unitstatus' => $item['unitstatus'] ?? null,
+            'plant_type_mapped' => PlantTypeResolver::fromArkfleet($item['plant_type'] ?? null),
+        ], $items);
+
+        return [$equipment, $stale];
     }
 
     public function store(StoreBudgetAllocationRequest $request): RedirectResponse
