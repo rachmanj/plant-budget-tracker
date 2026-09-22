@@ -14,7 +14,8 @@ dipakai Dea/IT saat memandu atau memverifikasi simulasi.
 | Host path | `/home/ark-adm/docker-apps/www/php82/plant-budget-tracker` |
 | Container | `php82` (PHP 8.2.30), MySQL container `mysql`, DB `plant_budget_tracker` |
 | Worker | `queue-plantbudget` (`--queue=sap-writes,budget,default`), `scheduler-plantbudget` (60 s) |
-| Versi terpasang saat manual dibuat | `1706f6d` (17 Sep 2026); docs v1.3 = `df45205` |
+| Versi terpasang saat manual dibuat | `5d40793` (17 Sep 2026); docs v1.4 |
+| Proyek aktif (DB, dikelola Admin → Proyek) | `021C`, `022C`, `025C`, `APS` — sinkronisasi ARKFLEET tidak menimpa `is_active` (hanya proyek baru memakai default `ARKFLEET_ACTIVE_PROJECTS`) |
 
 ## 2. Sebelum simulasi (baseline)
 

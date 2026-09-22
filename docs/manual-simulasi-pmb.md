@@ -1,8 +1,12 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.3 · **Tanggal:** 17 September 2026
+**Versi dokumen:** 1.4 · **Tanggal:** 17 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 17 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+
+> **Perubahan v1.4:** proyek aktif sekarang **dikelola dari halaman Admin → Proyek** (tombol aktif/
+> non-aktif per proyek), dan **sinkronisasi ARKFLEET tidak lagi menimpa** pilihan manual. Proyek aktif
+> saat ini: **021C, 022C, 025C, APS**. Skenario S-02 ditambah langkah uji kelola proyek aktif.
 
 > **Perubahan v1.2:** **menu sidebar** untuk Approvals (dengan badge jumlah pending), Overbudget,
 > Cancellation, Interchange, dan SAP Sync sudah tersedia, dan **Plant Request draft sekarang bisa
@@ -152,7 +156,7 @@ selalu lewat entri ledger baru. Batas pemakaian = alokasi + carry forward, ditol
 
 | Objek | Kondisi saat ini |
 |-------|------------------|
-| Proyek aktif (config `ARKFLEET_ACTIVE_PROJECTS`) | `021C`, `025C`, `APS` |
+| Proyek aktif | `021C`, `022C`, `025C`, `APS` (diatur di **Admin → Proyek**) |
 | Proyek di cache (dari ARKFLEET) | 000H, 001H, 005P, 017C, 021C, 022C, 023C, 025C, 026C, APS |
 | Periode anggaran | `000H` Sep 2026 (open, 2 alokasi, Rp 300 jt), `022C` Sep 2026 (open, 3 alokasi, Rp 295 jt) |
 | Alokasi 022C | AC 035 / SUPPORT Rp 25 jt · ADT 001 / HAULER Rp 150 jt · E 062 / DIGGER Rp 120 jt (toleransi 10%) |
@@ -223,15 +227,21 @@ Kolom temuan dipakai di lembar observasi §9.
 **Login:** `it.manager@pmb.demo`
 
 1. Menu **Pengguna / Role & Permission / Proyek** tampil di sidebar.
-2. `/admin/projects` → klik **Sinkronkan** (tombol sync).
-   - Diharapkan: daftar proyek dari ARKFLEET masuk; bendera aktif hanya `021C`, `025C`, `APS`.
-3. `/admin/users` → **Tambah pengguna**: nama "Uji Planner 025C", email `uji.planner@pmb.demo`,
+2. `/admin/projects` → klik **Sinkronkan dari ARKFLEET**.
+   - Diharapkan: daftar proyek dari ARKFLEET masuk; status aktif saat ini `021C`, `022C`, `025C`, `APS`.
+   - Catat: daftar proyek dan status aktif diambil dari data aplikasi, jadi tetap tampil walau ARKFLEET
+     sedang tidak bisa dihubungi (ada peringatan di atas tabel).
+3. Uji kelola proyek aktif: geser tombol **Aktif** pada proyek `023C` menjadi aktif → muncul notifikasi;
+   lalu klik **Sinkronkan dari ARKFLEET** lagi.
+   - Diharapkan: `023C` **tetap aktif** setelah sinkronisasi (pilihan manual tidak tertimpa). Setelah itu
+     kembalikan `023C` ke non-aktif.
+4. `/admin/users` → **Tambah pengguna**: nama "Uji Planner 025C", email `uji.planner@pmb.demo`,
    password ≥ 8 karakter, division `plant`, project scope `025C`, aktif.
-4. Assign role user baru: pilih role `planner` dengan project code `025C` → simpan.
-5. Uji login akun baru itu di jendela lain → berhasil, menu Plant Requests + DMBD muncul.
-6. `/admin/roles` → lihat daftar permission per role → tambah/hapus satu permission pada role
+5. Assign role user baru: pilih role `planner` dengan project code `025C` → simpan.
+6. Uji login akun baru itu di jendela lain → berhasil, menu Plant Requests + DMBD muncul.
+7. `/admin/roles` → lihat daftar permission per role → tambah/hapus satu permission pada role
    `planner`, lalu login ulang sebagai planner untuk melihat efeknya.
-7. `/sap/sync-dashboard` → halaman terbuka (untuk IT Manager, Procurement Manager, dan
+8. `/sap/sync-dashboard` → halaman terbuka (untuk IT Manager, Procurement Manager, dan
    Finance Director); tabel Sync Logs masih kosong karena belum ada aktivitas ke SAP.
 
 **Uji negatif:** buka `/admin/users` sebagai Planner → **403**. Buka `/sap/sync-dashboard`
