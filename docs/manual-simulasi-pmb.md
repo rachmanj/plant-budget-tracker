@@ -1,12 +1,18 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.4 · **Tanggal:** 17 September 2026
+**Versi dokumen:** 1.5 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
-**Versi aplikasi:** 17 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+**Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+
+> **Perubahan v1.5:** koreksi tanggal dokumen dan seluruh cap tanggal di dalamnya (semula tertulis
+> 17 September 2026 — tanggal tersebut keliru, pekerjaan dan pemeriksaan dilakukan 22 September 2026).
 
 > **Perubahan v1.4:** proyek aktif sekarang **dikelola dari halaman Admin → Proyek** (tombol aktif/
 > non-aktif per proyek), dan **sinkronisasi ARKFLEET tidak lagi menimpa** pilihan manual. Proyek aktif
 > saat ini: **021C, 022C, 025C, APS**. Skenario S-02 ditambah langkah uji kelola proyek aktif.
+
+> **Perubahan v1.3:** bagian **Verifikasi Teknis** dihapus dari dokumen ini (dipindah ke lampiran
+> teknis internal) supaya dokumen aman dibagikan ke pengguna non-IT.
 
 > **Perubahan v1.2:** **menu sidebar** untuk Approvals (dengan badge jumlah pending), Overbudget,
 > Cancellation, Interchange, dan SAP Sync sudah tersedia, dan **Plant Request draft sekarang bisa
@@ -65,7 +71,7 @@ Akun non-demo: `rachmanj@gmail.com` (role `it_manager`, milik Iwan).
 mendapat izin hanya pada konteks proyek 022C. Akun direktur, IT, dan pengadaan tidak terikat
 satu proyek sehingga izinnya berlaku untuk semua proyek.
 
-**Dua hal praktis yang sudah terbukti saat uji akses 17 Sep 2026:**
+**Dua hal praktis yang sudah terbukti saat uji akses 22 Sep 2026:**
 
 1. **Login dibatasi 5 percobaan per menit** (throttle). Jangan login berulang-ulang di satu menit —
    pakai jendela browser terpisah dan biarkan sesi tetap terbuka, kalau tidak akan muncul
@@ -152,7 +158,7 @@ selalu lewat entri ledger baru. Batas pemakaian = alokasi + carry forward, ditol
 
 ---
 
-## 5. Kondisi Data Awal (baseline 17 Sep 2026)
+## 5. Kondisi Data Awal (baseline 22 Sep 2026)
 
 | Objek | Kondisi saat ini |
 |-------|------------------|
@@ -562,19 +568,19 @@ Ringkasan keputusan di akhir simulasi:
 
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
-Daftar ini hasil pemeriksaan aplikasi (17 September 2026) supaya penguji tidak salah tafsir.
+Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
 **Sudah diperbaiki (v1.1):** B-1, B-2, B-3, B-5, B-6. **(v1.2):** B-4, B-7, B-19. Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
 |---|-------|---------|
-| B-1 | ✅ Overbudget | **Diperbaiki 17 Sep 2026** — form pengajuan (prefill + justifikasi) sudah tersedia; sebelumnya alur berhenti di halaman daftar |
-| B-2 | ✅ Cancellation | **Diperbaiki 17 Sep 2026** — tombol Ajukan Pembatalan di halaman Plant Request + tombol Agree di halaman Cancellation |
-| B-3 | ✅ Interchange | **Diperbaiki 17 Sep 2026** — form pemetaan Genuine↔OEM + tombol Sign-off Teknis |
-| B-4 | ✅ Approvals | **Diperbaiki 17 Sep 2026 (v1.2)** — menu sidebar dengan badge jumlah pending, muncul untuk role approver |
-| B-5 | ✅ Tabulation Bid | **Diperbaiki 17 Sep 2026** — tombol "Buat Bid" + form vendor lengkap (ketersediaan stok, syarat pembayaran, catatan); sebelumnya penyimpanan selalu gagal validasi |
-| B-6 | ✅ Tabulation Bid | **Diperbaiki 17 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
-| B-7 | ✅ Plant Request | **Diperbaiki 17 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
+| B-1 | ✅ Overbudget | **Diperbaiki 22 Sep 2026** — form pengajuan (prefill + justifikasi) sudah tersedia; sebelumnya alur berhenti di halaman daftar |
+| B-2 | ✅ Cancellation | **Diperbaiki 22 Sep 2026** — tombol Ajukan Pembatalan di halaman Plant Request + tombol Agree di halaman Cancellation |
+| B-3 | ✅ Interchange | **Diperbaiki 22 Sep 2026** — form pemetaan Genuine↔OEM + tombol Sign-off Teknis |
+| B-4 | ✅ Approvals | **Diperbaiki 22 Sep 2026 (v1.2)** — menu sidebar dengan badge jumlah pending, muncul untuk role approver |
+| B-5 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol "Buat Bid" + form vendor lengkap (ketersediaan stok, syarat pembayaran, catatan); sebelumnya penyimpanan selalu gagal validasi |
+| B-6 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
+| B-7 | ✅ Plant Request | **Diperbaiki 22 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
 | B-8 | Status lanjutan | Tahap setelah approval (PR dibuat, PO dibuat, barang diterima) belum bisa diubah dari aplikasi — pemantauannya masih di SAP |
 | B-9 | DMBD | Layar DMBD belum punya kolom catatan penyebab breakdown, dan daftar unit tampil sekaligus tanpa halaman |
 | B-10 | Budget | Pilihan **Unit Code** di form alokasi anggaran masih menampilkan dua contoh tetap (E-001/E-002), belum daftar unit sebenarnya; anggaran tingkat divisi (tanpa unit) juga belum bisa dipilih |
@@ -586,7 +592,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-16 | Batas akses | Menyimpan **draft** Plant Request belum dibatasi khusus ke Planner/Mechanic — akun lain yang login masih bisa membuat draft (submit tetap hanya untuk pembuatnya) |
 | B-17 | Batas akses | Halaman Approvals, Tabulation Bid, Overbudget, Cancellation, dan Interchange bisa **dibuka** semua akun yang login; yang dibatasi adalah tindakannya (menyetujui, menetapkan vendor, menyimpan) |
 | B-18 | Proyek bawaan | Akun direktur/pengadaan/IT tidak terikat proyek, jadi halaman terbuka di proyek `000H` dan layar DMBD menampilkan seluruh unit dari banyak proyek — rawan salah pilih |
-| B-19 | ✅ Menu sidebar | **Diperbaiki 17 Sep 2026 (v1.2)** — Approvals, Overbudget, Cancellation, Interchange, dan SAP Sync sudah punya menu |
+| B-19 | ✅ Menu sidebar | **Diperbaiki 22 Sep 2026 (v1.2)** — Approvals, Overbudget, Cancellation, Interchange, dan SAP Sync sudah punya menu |
 
 ---
 
@@ -668,5 +674,5 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 
 ---
 
-*Dokumen ini dibuat dari pemeriksaan aplikasi dan data pada 17 September 2026.
+*Dokumen ini dibuat dari pemeriksaan aplikasi dan data pada 22 September 2026.
 Setiap kali aplikasi diperbarui, daftar batasan (§10) perlu diperiksa ulang oleh Dea.*
