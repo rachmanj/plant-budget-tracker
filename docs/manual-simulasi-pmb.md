@@ -1,9 +1,14 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.0 · **Tanggal:** 17 September 2026
+**Versi dokumen:** 1.1 · **Tanggal:** 17 September 2026
 **Lingkungan uji:** produksi LAN `http://192.168.32.149:86` (saphire-two)
-**Kode terpasang:** commit `64d9cce` · **DB:** `plant_budget_tracker` (MySQL 8, container `mysql`)
+**Kode terpasang:** commit `684131a` · **DB:** `plant_budget_tracker` (MySQL 8, container `mysql`)
 **Sumber kebenaran bisnis:** `docs/concept.md` (EN) / `docs/concept-id.md` (ID)
+
+> **Perubahan v1.1:** lima gap yang membuat alur berhenti sudah diperbaiki dan sudah live di server
+> (commit `684131a`) — form Overbudget, tombol Create PO, tombol Buat Bid + kelengkapan form vendor,
+> tombol pembatalan & Agree, serta form Interchange + Sign-off. Skenario S-07, S-09, S-11, S-12,
+> S-13 di bawah sudah memakai alur baru.
 
 > Dokumen ini dipakai untuk **uji simulasi** (user acceptance test berbasis skenario) PMB.
 > Semua langkah di bawah sudah diverifikasi terhadap kode yang terpasang di server, bukan asumsi.
@@ -86,9 +91,9 @@ Menu sidebar muncul otomatis mengikuti izin. Yang **tidak punya menu** tetap bis
 | Interchange | `/interchange` | — | Procurement (+ sign-off Plant/AML) |
 | SAP Sync Dashboard | `/sap/sync-dashboard` | Gate `viewSapDashboard` | IT Manager, Procurement Manager, Finance Director |
 
-**Temuan awal (harap dicatat saat simulasi):** menu untuk **Approvals, Overbudget, Cancellation,
-Interchange, dan SAP Sync** belum ada di sidebar — akses hanya lewat URL langsung. Sementara
-halaman **Tabulation Bid** juga tidak punya tombol "Buat" (harus buka `/tabulation-bids/create`).
+**Catatan menu (terkini, v1.1):** menu untuk **Approvals, Overbudget, Cancellation, Interchange, dan
+SAP Sync** masih belum ada di sidebar — akses lewat URL langsung. Tombol **Buat Bid** sudah tersedia
+di halaman Tabulation Bid (muncul untuk role Buyer).
 
 ---
 
@@ -330,18 +335,21 @@ catat apakah user bisa bekerja di luar scope-nya (temuan penting untuk audit).
 
 **Login:** `buyer@pmb.demo`
 
-1. Menu **Tabulation Bid** → halaman daftar. Catat: belum ada tombol "Buat" — buka langsung
-   `/tabulation-bids/create`.
-2. Isi **SAP PR ID** (mis. `PR-100001` — data uji), lalu 2–3 baris vendor:
-   Vendor Code, Vendor Name, Price. (Peringatan: form ini **belum** memuat field Payment Terms,
-   Stock Availability, dan Remarks yang diwajibkan API `store` — catat sebagai temuan.)
-3. Klik **Simpan**.
+1. Menu **Tabulation Bid** → klik tombol **Buat Bid** (kanan atas; hanya muncul untuk Buyer).
+2. Isi **SAP PR ID** (mis. `PR-100001` — data uji). Untuk setiap vendor isi:
+   **Kode Vendor**, **Nama Vendor**, **Harga**, **Ketersediaan Stok** (Ready / Indent / Partial),
+   **Syarat Pembayaran** (opsional), **Catatan** (opsional).
+3. Baris vendor mulai dengan 2. Klik **Tambah Vendor** untuk menambah (maksimum 3) atau **Hapus**
+   pada baris ketiga untuk kembali ke 2.
+4. Klik **Simpan**.
    - Diharapkan berhasil: nomor `PMB-BID-202609-0001`, status `pending_proc_mgr`, vendor otomatis
      diurutkan menurut harga (rank 1 = termurah), dan satu approval untuk `procurement_manager`.
-4. Buka detail bid (`/tabulation-bids/{id}`) → tabel perbandingan vendor tampil.
+   - Kalau ada field yang kosong, pesan validasi muncul di bawah field (tidak lagi gagal senyap).
+5. Buka detail bid (`/tabulation-bids/{id}`) → tabel perbandingan vendor tampil, lengkap dengan
+   ketersediaan stok tiap vendor.
 
-**Uji negatif:** sebagai Buyer coba klik Award / review → tidak boleh (hanya Procurement Manager
-yang bisa review; award juga untuk Procurement Admin).
+**Uji negatif:** sebagai Buyer coba klik Award / Create PO → tidak muncul (hanya Procurement Manager
+yang bisa review & award; Create PO untuk Procurement Admin).
 
 ---
 
@@ -363,16 +371,21 @@ yang bisa review; award juga untuk Procurement Admin).
 
 **Login:** `procurement.admin@pmb.demo`
 
-1. Buka bid yang sudah di-award.
-2. Diharapkan di UI: **belum ada tombol Create PO** meski aturan mengizinkan Procurement Admin
-   (dan menolak pembuat bid itu sendiri). Catat sebagai temuan UI.
-3. Uji teknis (opsional, hanya bila Iwan menyetujui penulisan ke SAP):
-   `POST /tabulation-bids/{id}/create-po` → job `CreateSapPurchaseOrder` masuk antrean
-   `sap-writes`; bila sukses, `sap_po_id` terisi dan status bid menjadi `po_created`.
-4. Setelah itu `/sap/sync-dashboard` menampilkan log `create_po` (status success/failed).
+1. Buka bid yang sudah di-award (`/tabulation-bids/{id}`). Halaman menampilkan **vendor pemenang**
+   beserta harga, dan tombol **Create PO** (muncul hanya untuk Procurement Admin yang bukan pembuat
+   bid — pemisahan tugas).
+2. Klik **Create PO** → muncul konfirmasi: *"Tindakan ini akan membuat Purchase Order nyata di SAP B1
+   melalui antrian sinkronisasi…"*.
+3. **Peringatan:** klik **Buat PO** hanya bila Iwan sudah menyetujui penulisan ke SAP. Setelah klik:
+   job `CreateSapPurchaseOrder` masuk antrean `sap-writes`; bila sukses, `sap_po_id` terisi dan status
+   bid menjadi `po_created`.
+4. Buka `/sap/sync-dashboard` (IT Manager / Procurement Manager / Finance Director) → baris log
+   `create_po` dengan status success/failed.
+5. Kalau SAP belum siap, job gagal dan `sap_sync_failed` menjadi true dengan `sap_po_id = PENDING_SAP`
+   — catat pesan errornya di lembar temuan (ini jalur yang benar, bukan crash).
 
-**Peringatan:** langkah 3 menulis dokumen nyata ke SAP B1 (Purchase Order). Jangan dijalankan
-tanpa persetujuan eksplisit.
+**Uji negatif:** login sebagai Buyer (pembuat bid) lalu buka bid yang sama → tombol **Create PO**
+tidak muncul; memaksa URL/aksi tetap ditolak server.
 
 ---
 
@@ -389,45 +402,67 @@ tanpa persetujuan eksplisit.
 
 ---
 
-### S-11 · Overbudget (Finance Director → Operation Director)
+### S-11 · Overbudget (Planner mengajukan → Finance Director → Operation Director)
 
-1. Dari **S-04 uji negatif 1** sistem mengarahkan ke `/overbudget?plant_request_id=…&over_pct=…`.
-2. Diharapkan: muncul form pengajuan overbudget dengan data terisi otomatis
-   (alokasi, jumlah, % kelebihan) dan kolom **Justification** wajib.
-   → **Temuan yang sudah diketahui:** halaman ini saat ini hanya menampilkan tabel daftar,
-   **form pengajuannya belum dirender**. Catat sebagai temuan **kritis** karena alur overbudget
-   tidak bisa diselesaikan dari UI.
-3. Jika form tersedia (mis. setelah perbaikan), lengkapi langkah: submit → approval
-   `finance_director` → `operation_director` → status `approved`, ledger `overbudget` positif,
-   dan plant request yang tertahan berubah menjadi `pending_pm`.
+1. Dari **S-04 uji negatif 1** sistem mengarahkan ke `/overbudget/create?...` dengan data terisi
+   otomatis (plant request, alokasi, jumlah, % kelebihan).
+2. Diharapkan: muncul kartu **Ajukan Overbudget** berisi ringkasan angka + kolom **Justifikasi**
+   (wajib, minimal 10 karakter).
+3. Isi justifikasi (mis. "Harga naik karena kurs; unit E 062 harus segera RFU") → klik
+   **Ajukan Overbudget**. Diharapkan: nomor `PMB-OB-202609-0001`, status `pending_fin_dir`,
+   dan muncul approval untuk `finance_director` lalu `operation_director`.
+4. Login **Finance Director** → `/approvals` → baris `OverbudgetRequest` → **Approve**
+   (uji juga **Reject** pada request kedua: status `rejected`, tidak ada entri ledger).
+5. Login **Operation Director** → `/approvals` → **Approve**.
+   - Diharapkan setelah kedua approval: status `approved`, ledger mendapat entri **`overbudget`**
+     positif, dan plant request yang tertahan berubah dari `draft` menjadi `pending_pm`
+     (lanjut ke S-05).
+6. Buka `/overbudget` sebagai Planner → baris request terlihat dengan kolom Jumlah, Over %, Status.
+   Tombol **Ajukan Overbudget Baru** juga tersedia untuk Planner/Mechanic.
+
+**Titik verifikasi DB**
+- `SELECT request_no, status, requested_amount, over_pct FROM overbudget_requests;`
+- `SELECT entry_type, amount, ref_type FROM budget_ledgers WHERE entry_type='overbudget';`
 
 ---
 
 ### S-12 · Cancellation (Plant ↔ Procurement)
 
-1. Buka `/plant-requests/{id}` untuk request yang sudah disubmit → cari tombol **Batalkan /
-   Cancel**.
-   → **Temuan yang sudah diketahui:** belum ada tombol pembatalan di halaman Plant Request.
-2. Bila tombol tersedia (setelah perbaikan): Planner membuat permintaan batal dengan alasan →
-   status `pending`; pihak lawan (Procurement BUKA plant → Plant menyetujui, atau sebaliknya)
-   klik **Agree**.
-3. Diharapkan setelah agree: status plant request `cancelled`, **komitmen anggaran dibalik**
-   (ledger `reversal`), dan kolom `budget_reversal_amount` terisi.
-4. Aturan penting untuk diuji: bila PO sudah berstatus **sent**, Plant **tidak boleh** membatalkan
-   (harus lewat Procurement). Uji dengan memilih `po_stage = sent` → ditolak.
+1. Buka `/plant-requests/{id}` untuk request yang sudah lewat approval → tombol
+   **Ajukan Pembatalan** (muncul untuk Planner, Mechanic, Project Manager, Plant Manager, dan
+   pihak Procurement).
+2. Klik **Ajukan Pembatalan** → modal berisi **Tahap PO** (Created / Approved / Sent, default
+   Created) dan **Alasan** (wajib) → klik **Ajukan**.
+   - Diharapkan: nomor permintaan muncul di `/cancellation` dengan status `pending`,
+     `initiated_by` = plant, dan `budget_reversal_amount` = total request.
+3. Login akun **pihak lawan** (kalau plant yang mengajukan → Procurement: Buyer / Procurement
+   Manager / Procurement Admin) → `/cancellation` → kolom Aksi menampilkan tombol **Agree** →
+   klik.
+   - Diharapkan: status cancellation `approved`, plant request menjadi `cancelled`,
+     **komitmen anggaran dibalik** (ledger `reversal` positif).
+4. Uji aturan stage-gate: ajukan pembatalan dengan **Tahap PO = Sent** sebagai Plant →
+   ditolak server (pesan "Cannot cancel: PO has been sent", HTTP 422). Pembatalan PO yang sudah
+   `sent` hanya bisa lewat Procurement.
+5. Uji pembatasan: buka `/cancellation` sebagai Planner dan coba setujui permintaan yang
+   diajukan Procurement → tombol **Agree** tidak muncul (hanya pihak lawan yang boleh).
+
+**Titik verifikasi DB**
+- `SELECT plant_request_id, initiated_by, po_stage, status, budget_reversal_amount FROM cancellation_requests;`
+- `SELECT status FROM plant_requests WHERE id=…;` dan entri `reversal` terbaru di `budget_ledgers`.
 
 ---
 
 ### S-13 · Interchange (Procurement + sign-off Plant)
 
-1. Buka `/interchange` (Buyer / Procurement Manager / Procurement Admin).
-   → **Temuan yang sudah diketahui:** halaman hanya menampilkan daftar; **belum ada form
-   pemetaan Genuine ↔ OEM** dan belum ada tombol **sign-off** teknis.
-2. Bila form tersedia: isi Genuine P/N, OEM P/N, Nama Material → simpan (status SAP `Pending`).
-3. Login sebagai Plant Manager (atau AML Manager) → klik sign-off pada baris tersebut.
-   Diharapkan: `technical_signoff_by` terisi, job `SyncInterchangeToSap` masuk antrean,
-   dan penanda SAP berubah setelah job sukses.
-4. Uji negatif: pembuat mapping tidak boleh menandatangani miliknya sendiri.
+1. Buka `/interchange` sebagai **Buyer** → kartu **Tambah Mapping** tampil di atas tabel.
+2. Isi **Genuine P/N**, **OEM P/N**, **Nama Material** (semua wajib) → klik **Tambah Mapping**.
+   - Diharapkan: baris baru muncul dengan penanda SAP **Pending** dan kolom Sign-off kosong.
+3. Login sebagai **Plant Manager** (atau AML Manager) → `/interchange` → klik **Sign-off Teknis**
+   pada baris tersebut.
+   - Diharapkan: `technical_signoff_by` terisi nama penanda tangan, job `SyncInterchangeToSap`
+     masuk antrean, penanda SAP berubah setelah job sukses.
+4. Uji negatif: sebagai **Buyer** (pembuat mapping) tombol **Sign-off Teknis** tidak muncul;
+   memaksa aksi ditolak server.
 
 ---
 
@@ -503,17 +538,19 @@ Ringkasan keputusan di akhir simulasi:
 
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
-Daftar ini hasil pembacaan kode terpasang (commit `64d9cce`) supaya simulator tidak bingung:
+Daftar ini hasil pembacaan kode terpasang (commit `684131a`) supaya simulator tidak bingung.
+**Sudah diperbaiki pada v1.1** (ditandai ✅): B-1, B-2, B-3, B-5, B-6 — kelimanya live di server,
+jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
 |---|-------|---------|
-| B-1 | Overbudget | Halaman `/overbudget` hanya daftar; **form pengajuan belum dirender** (submit melebihi toleransi berhenti di sini) |
-| B-2 | Cancellation | Belum ada tombol batal di halaman Plant Request, dan belum ada tombol **Agree** di halaman Cancellation |
-| B-3 | Interchange | Belum ada form pemetaan dan tombol sign-off; hanya daftar |
+| B-1 | ✅ Overbudget | **Diperbaiki 17 Sep 2026** — form pengajuan (prefill + justifikasi) sudah tersedia; sebelumnya alur berhenti di halaman daftar |
+| B-2 | ✅ Cancellation | **Diperbaiki 17 Sep 2026** — tombol Ajukan Pembatalan di halaman Plant Request + tombol Agree di halaman Cancellation |
+| B-3 | ✅ Interchange | **Diperbaiki 17 Sep 2026** — form pemetaan Genuine↔OEM + tombol Sign-off Teknis |
 | B-4 | Approvals | Tidak ada menu sidebar — akses lewat URL `/approvals` |
-| B-5 | Tabulation Bid | Tidak ada tombol "Buat" di daftar; form belum memuat Payment Terms / Stock Availability / Remarks (padahal wajib di backend) |
-| B-6 | Tabulation Bid | Tombol **Create PO** belum ada (backend + job SAP sudah siap) |
-| B-7 | Plant Request | Tidak ada halaman Edit; SAP MR ID harus benar sejak pembuatan draft (kalau 0, draft tidak bisa di-submit); belum ada tombol Cancel |
+| B-5 | ✅ Tabulation Bid | **Diperbaiki 17 Sep 2026** — tombol "Buat Bid" + form vendor lengkap (ketersediaan stok, syarat pembayaran, catatan); sebelumnya penyimpanan selalu gagal validasi |
+| B-6 | ✅ Tabulation Bid | **Diperbaiki 17 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
+| B-7 | Plant Request | Tidak ada halaman Edit; SAP MR ID harus benar sejak pembuatan draft (kalau 0, draft tidak bisa di-submit) |
 | B-8 | Status lanjutan | `pr_created`, `po_created`, `received` ada di model tetapi belum ada jalur UI untuk mencapainya |
 | B-9 | DMBD | Belum ada kolom catatan breakdown di UI; tabel unit tampil tanpa paginasi |
 | B-10 | Budget | Dropdown **Unit Code** di form alokasi masih hardcode `E-001`/`E-002`; anggaran level "divisi" (unit kosong) belum bisa dipilih dari daftar unit nyata |
@@ -525,6 +562,7 @@ Daftar ini hasil pembacaan kode terpasang (commit `64d9cce`) supaya simulator ti
 | B-16 | Keamanan izin | `GET /plant-requests/create` dan `POST /plant-requests` (simpan draft) **tidak** dibatasi izin `plant_request.create` di server — semua user yang login bisa membuat draft (submit tetap dibatasi policy) |
 | B-17 | Keamanan izin | Halaman `/approvals`, `/tabulation-bids`, `/overbudget`, `/cancellation`, `/interchange` bisa dibuka **semua role** yang login (tidak ada gerbang izin di route); pembatasan hanya pada aksinya (decide/award/store) — terverifikasi 17 Sep 2026 |
 | B-18 | Proyek bawaan | User tanpa `project_code_scope` (director, IT, buyer, procurement) default ke proyek `000H`; halaman DMBD tanpa scope menampilkan seluruh 992 unit lintas proyek sehingga rawan salah input |
+| B-19 | Menu sidebar | Belum ada menu untuk Approvals/Overbudget/Cancellation/Interchange/SAP → penguji harus mengetik URL (sudah pernah diusulkan diperbaiki) |
 
 ---
 
