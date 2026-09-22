@@ -1,8 +1,12 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.6 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.7 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+
+> **Perubahan v1.7:** form **alokasi anggaran** kini memakai daftar unit nyata dari ARKFLEET
+> (dikelompokkan per tipe plant, SOLD/SCRAP dikecualikan) dan mendukung alokasi tingkat **divisi
+> (tanpa unit)**; alokasi ganda untuk unit/periode yang sama ditolak (gap B-10 ditutup).
 
 > **Perubahan v1.6:** layar **DMBD** kini punya kolom **Catatan Breakdown** (wajib diisi saat status
 > Breakdown) dan daftar unit **berhalaman** dengan pencarian + filter status & proyek (gap B-9 ditutup).
@@ -209,13 +213,25 @@ Kolom temuan dipakai di lembar observasi §9.
    - Diharapkan: tab periode Sep 2026 status `open`, 3 baris alokasi (AC 035, ADT 001, E 062)
      dengan kolom Alokasi / Carry Fwd / Komitmen / Aktual / Varians / Toleransi %.
 3. Klik tombol **Buat Alokasi** (kanan atas) → halaman `/budget/setting`.
-4. Isi: Proyek = `022C`, Bulan Periode = **Oktober 2026**, tambah 2 baris alokasi
-   (mis. `E 062` DIGGER Rp 100.000.000; `ADT 001` HAULER Rp 80.000.000), toleransi 10% → **Simpan Anggaran**.
-   - Diharapkan: kembali ke `/budget`, muncul tab **2026-10** berisi 2 alokasi baru.
-5. Buat permintaan plant request (dari S-04) sampai total komitmen terpakai, lalu kembali ke sini.
-6. Klik **Revisi** pada baris E 062 → ubah Alokasi menjadi Rp 90.000.000 → **Simpan**.
+4. Isi: Proyek = `022C`, Bulan Periode = **Oktober 2026**.
+   - Pilih unit pada kolom **Unit** (bisa dicari, dikelompokkan per tipe plant, label
+     `kode unit — deskripsi (status)`). Unit berstatus **SOLD/SCRAP tidak muncul** karena tidak
+     mungkin dianggarkan lagi. Tipe plant terisi otomatis bila tipenya dikenali
+     (`DIGGER`/`HAULER`/`SUPPORT`); untuk unit bertipe `HEAVY EQUIPMENT` atau `n/a`, pilih tipe plant
+     manual.
+   - Kolom **Tingkat** menunjukkan **Per unit** atau **Divisi**.
+   - Contoh: `E 062` DIGGER Rp 100.000.000; `ADT 001` HAULER Rp 80.000.000; toleransi 10%.
+5. Tambah satu baris lagi lalu pilih **— Divisi (tanpa unit) —** (mis. tipe plant SUPPORT
+   Rp 50.000.000) → baris ini menganggarkan tingkat divisi, bukan unit tertentu.
+6. Klik **Simpan Anggaran**.
+   - Diharapkan: kembali ke `/budget`, muncul tab **2026-10** berisi 3 alokasi (2 per unit + 1 divisi).
+7. Coba simpan unit yang sama dua kali (tambahkan baris `E 062` lagi) → ditolak dengan pesan
+   *"Unit ini dialokasikan lebih dari sekali dalam satu periode."* Begitu pula bila unit itu sudah
+   punya alokasi pada periode 2026-10 → *"Unit ini sudah punya alokasi pada periode tersebut."*
+8. Buat permintaan plant request (dari S-04) sampai total komitmen terpakai, lalu kembali ke sini.
+9. Klik **Revisi** pada baris E 062 → ubah Alokasi menjadi Rp 90.000.000 → **Simpan**.
    - Diharapkan: nilai berubah, kolom Varians & Penggunaan ikut berubah.
-7. Klik **Jalankan Carry Forward** pada tab periode yang masih `open`.
+10. Klik **Jalankan Carry Forward** pada tab periode yang masih `open`.
    - Diharapkan: periode menjadi `locked`, alokasi bulan berikutnya dibuat otomatis dengan
      kolom **Carry Fwd** terisi sebesar sisa anggaran.
 
@@ -581,7 +597,7 @@ Ringkasan keputusan di akhir simulasi:
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
 Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
-**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6). Semuanya sudah live
+**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7). Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
@@ -595,7 +611,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-7 | ✅ Plant Request | **Diperbaiki 22 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
 | B-8 | Status lanjutan | Tahap setelah approval (PR dibuat, PO dibuat, barang diterima) belum bisa diubah dari aplikasi — pemantauannya masih di SAP |
 | B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Catatan Breakdown** (wajib saat status Breakdown) + daftar unit berhalaman (25/50/100) dengan pencarian, filter status & filter proyek, serta ringkasan status harian |
-| B-10 | Budget | Pilihan **Unit Code** di form alokasi anggaran masih menampilkan dua contoh tetap (E-001/E-002), belum daftar unit sebenarnya; anggaran tingkat divisi (tanpa unit) juga belum bisa dipilih |
+| B-10 | ✅ Budget | **Diperbaiki 22 Sep 2026** — pilihan unit memakai daftar nyata dari ARKFLEET per proyek (bisa dicari, dikelompokkan per tipe plant; SOLD/SCRAP dikecualikan) dan alokasi tingkat **divisi (tanpa unit)** sudah tersedia, lengkap dengan pencegahan alokasi ganda |
 | B-11 | Harga | Saat menekan **Cari harga**, sistem memakai harga penawaran terakhir yang menang, bukan harga per part number; kalau tidak ditemukan, harga tampil 0,00 dengan penanda "Belum ada" |
 | B-12 | Laporan | Belum ada tombol unduh di layar laporan (unduhan hanya lewat alamat langsung), dan pembatasan siapa yang boleh mengunduh belum dijalankan penuh |
 | B-13 | SAP Sync | Hanya bisa dibuka IT Manager, Procurement Manager, dan Finance Director |
