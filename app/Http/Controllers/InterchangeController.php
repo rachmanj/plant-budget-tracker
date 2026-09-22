@@ -6,6 +6,7 @@ use App\Jobs\SyncInterchangeToSap;
 use App\Models\InterchangeMap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,9 +17,21 @@ class InterchangeController extends Controller
         $maps = InterchangeMap::query()
             ->with(['creator', 'signoffBy'])
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->through(function (InterchangeMap $map) {
+                $map->setAttribute('can', [
+                    'signoff' => Gate::allows('signoff', $map),
+                ]);
 
-        return Inertia::render('Interchange/Index', ['maps' => $maps]);
+                return $map;
+            });
+
+        return Inertia::render('Interchange/Index', [
+            'maps' => $maps,
+            'can' => [
+                'create' => Gate::allows('create', InterchangeMap::class),
+            ],
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

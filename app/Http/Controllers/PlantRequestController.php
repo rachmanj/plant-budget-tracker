@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -217,6 +218,10 @@ class PlantRequestController extends Controller
         return Inertia::render('PlantRequest/Show', [
             'request' => $plantRequest,
             'tolerance' => $tolerance,
+            'can' => [
+                'submit' => Gate::allows('submit', $plantRequest),
+                'cancel' => Gate::allows('cancel', $plantRequest),
+            ],
         ]);
     }
 

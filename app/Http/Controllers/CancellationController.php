@@ -7,6 +7,7 @@ use App\Models\PlantRequest;
 use App\Services\Cancellation\CancelRequestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,7 +22,14 @@ class CancellationController extends Controller
         $requests = CancellationRequest::query()
             ->with('plantRequest')
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->through(function (CancellationRequest $request) {
+                $request->setAttribute('can', [
+                    'agree' => Gate::allows('agree', $request),
+                ]);
+
+                return $request;
+            });
 
         return Inertia::render('Cancellation/Index', ['requests' => $requests]);
     }
