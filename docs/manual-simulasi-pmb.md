@@ -1,8 +1,14 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.9 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.10 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+
+> **Perubahan v1.10:** halaman **Plant Request** kini punya kartu **Riwayat Pengadaan** (nomor MR/PR/PO/GRPO,
+> tanggal & penerima) dan tombol **Buat PR di SAP** (Procurement Admin/IT Manager) serta **Tandai Barang
+> Diterima** (Plant Manager, Project Manager, Logistic Foreman/PIC) sehingga status lanjutan `pr_created` →
+> `po_created` → `received` sekarang punya jalur di aplikasi, bukan hanya di SAP. Filter status & kolom
+> PR/PO/GRPO ditambahkan di daftar Plant Request (gap B-8 ditutup).
 
 > **Perubahan v1.9:** **Dashboard** kini menampilkan angka nyata (pagu, terpakai, sisa, % terpakai,
 > jumlah permintaan per status, pengadaan, DMBD hari ini, tindakan menunggu) — bukan lagi tanda "—".
@@ -641,7 +647,7 @@ Ringkasan keputusan di akhir simulasi:
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
 Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
-**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9). Semuanya sudah live
+**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9); B-8 (v1.10). Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
@@ -653,7 +659,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-5 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol "Buat Bid" + form vendor lengkap (ketersediaan stok, syarat pembayaran, catatan); sebelumnya penyimpanan selalu gagal validasi |
 | B-6 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
 | B-7 | ✅ Plant Request | **Diperbaiki 22 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
-| B-8 | Status lanjutan | Tahap setelah approval (PR dibuat, PO dibuat, barang diterima) belum bisa diubah dari aplikasi — pemantauannya masih di SAP |
+| B-8 | ✅ Status lanjutan | **Diperbaiki 22 Sep 2026 (v1.10)** — kartu Riwayat Pengadaan menampilkan nomor MR/PR/PO/GRPO; tombol "Buat PR di SAP" (Procurement Admin/IT Manager) dan "Tandai Barang Diterima" (Plant Manager/Project Manager/Logistic Foreman/PIC) memajukan status `approved` → `pr_created` → `po_created` → `received` langsung dari aplikasi |
 | B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Catatan Breakdown** (wajib saat status Breakdown) + daftar unit berhalaman (25/50/100) dengan pencarian, filter status & filter proyek, serta ringkasan status harian |
 | B-10 | ✅ Budget | **Diperbaiki 22 Sep 2026** — pilihan unit memakai daftar nyata dari ARKFLEET per proyek (bisa dicari, dikelompokkan per tipe plant; SOLD/SCRAP dikecualikan) dan alokasi tingkat **divisi (tanpa unit)** sudah tersedia, lengkap dengan pencegahan alokasi ganda |
 | B-11 | ✅ Harga | **Diperbaiki 22 Sep 2026** — harga diambil **per part number** dari SAP (harga PO terakhir, lalu harga beli terakhir di item master), dengan **referensi** yang terlihat (mis. "PO 260206551 · 2026-09-22"); bila SAP tidak punya data dipakai harga historis part yang sama dari permintaan sebelumnya, dan hanya kalau semuanya kosong harga 0,00 + "Belum ada". Sekaligus diperbaiki: koneksi baca SAP yang selama ini gagal sehingga pencarian harga selalu nihil |

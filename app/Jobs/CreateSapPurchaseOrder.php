@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\PlantRequest;
 use App\Models\SapSyncLog;
 use App\Models\TabulationBid;
 use App\Services\Sap\SapCircuitBreaker;
@@ -90,6 +91,8 @@ class CreateSapPurchaseOrder implements ShouldQueue
                 $poId = (string) ($result['DocEntry'] ?? 'PENDING_SAP');
 
                 $bid->update(['sap_po_id' => $poId, 'status' => 'po_created', 'sap_sync_failed' => false]);
+                $this->advancePlantRequestStatus($bid->sap_pr_id, $poId);
+
                 $log->update([
                     'status' => 'success',
                     'request_payload' => $payload,
@@ -114,5 +117,20 @@ class CreateSapPurchaseOrder implements ShouldQueue
         } finally {
             $lock->release();
         }
+    }
+
+    private function advancePlantRequestStatus(string $sapPrNo, string $sapPoId): void
+    {
+        $plantRequest = PlantRequest::where('sap_pr_no', $sapPrNo)->first();
+
+        if (! $plantRequest) {
+            return;
+        }
+
+        if (! in_array($plantRequest->status, ['approved', 'pr_created'], true)) {
+            return;
+        }
+
+        $plantRequest->update(['status' => 'po_created', 'sap_po_id' => $sapPoId]);
     }
 }

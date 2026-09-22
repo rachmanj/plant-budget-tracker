@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Button, Card, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd';
+import { Button, Card, DatePicker, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd';
+import dayjs, { Dayjs } from 'dayjs';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import LifecycleStepper from '@/Components/LifecycleStepper';
@@ -13,17 +14,38 @@ interface Props {
         unit_code_cache: string;
         estimated_total: string;
         sap_mr_id: number;
-        sap_pr_no?: string;
+        sap_pr_no?: string | null;
+        sap_po_id?: string | null;
+        sap_grpo_no?: string | null;
+        received_at?: string | null;
+        receiver?: { name: string } | null;
         lines: Array<{ part_number: string; material_name: string; qty: number; line_total: string }>;
         approvals: Array<{ step_order: number; required_role: string; decision: string }>;
     };
     tolerance: { projected_pct: string; within_tolerance: boolean; cap: string };
-    can: { submit: boolean; cancel: boolean; update?: boolean };
+    procurement: {
+        sap_po_id?: string | null;
+        sap_pr_created_at?: string | null;
+        sap_pr_sync_status?: string | null;
+        sap_pr_sync_error?: string | null;
+    };
+    can: { submit: boolean; cancel: boolean; update?: boolean; receive?: boolean; createPr?: boolean };
 }
 
-export default function Show({ request, tolerance, can = { submit: false, cancel: false } }: Props) {
+function formatDate(value?: string | null): string {
+    return value ? dayjs(value).format('DD-MM-YYYY') : '—';
+}
+
+export default function Show({
+    request,
+    tolerance,
+    procurement = {},
+    can = { submit: false, cancel: false },
+}: Props) {
     const [cancelOpen, setCancelOpen] = useState(false);
     const [cancelForm] = Form.useForm<{ po_stage: string; reason: string }>();
+    const [receiveOpen, setReceiveOpen] = useState(false);
+    const [receiveForm] = Form.useForm<{ sap_grpo_no: string; received_at: Dayjs; note?: string }>();
 
     const openCancelModal = () => {
         cancelForm.setFieldsValue({ po_stage: 'created', reason: '' });
@@ -36,11 +58,32 @@ export default function Show({ request, tolerance, can = { submit: false, cancel
         });
     };
 
+    const openReceiveModal = () => {
+        receiveForm.setFieldsValue({ sap_grpo_no: '', received_at: dayjs(), note: '' });
+        setReceiveOpen(true);
+    };
+
+    const submitReceive = (values: { sap_grpo_no: string; received_at: Dayjs; note?: string }) => {
+        router.post(
+            `/plant-requests/${request.id}/receive`,
+            {
+                sap_grpo_no: values.sap_grpo_no,
+                received_at: values.received_at.format('YYYY-MM-DD'),
+                note: values.note,
+            },
+            { onSuccess: () => setReceiveOpen(false) }
+        );
+    };
+
+    const createPr = () => {
+        router.post(`/plant-requests/${request.id}/create-pr`);
+    };
+
     return (
         <AppLayout title={request.request_no}>
             <Head title={request.request_no} />
             <Card title={request.request_no}>
-                <LifecycleStepper status={request.status} sapPrNo={request.sap_pr_no} />
+                <LifecycleStepper status={request.status} sapPrNo={request.sap_pr_no} sapPoId={procurement.sap_po_id ?? request.sap_po_id} />
                 <Descriptions style={{ marginTop: 16 }} column={2}>
                     <Descriptions.Item label="Unit">{request.unit_code_cache}</Descriptions.Item>
                     <Descriptions.Item label="Status">
@@ -79,6 +122,14 @@ export default function Show({ request, tolerance, can = { submit: false, cancel
                             Submit
                         </Button>
                     )}
+                    {can.createPr && (
+                        <Button onClick={createPr}>Buat PR di SAP</Button>
+                    )}
+                    {can.receive && (
+                        <Button type="primary" onClick={openReceiveModal}>
+                            Tandai Barang Diterima
+                        </Button>
+                    )}
                     {can.cancel && (
                         <Button danger onClick={openCancelModal}>
                             Ajukan Pembatalan
@@ -86,6 +137,29 @@ export default function Show({ request, tolerance, can = { submit: false, cancel
                     )}
                 </div>
             </Card>
+
+            <Card title="Riwayat Pengadaan" style={{ marginTop: 16 }}>
+                <Descriptions column={2} bordered size="small">
+                    <Descriptions.Item label="Nomor MR">{request.sap_mr_id ?? '—'}</Descriptions.Item>
+                    <Descriptions.Item label="Nomor PR">
+                        {request.sap_pr_no
+                            ? `${request.sap_pr_no}${procurement.sap_pr_created_at ? ` (${formatDate(procurement.sap_pr_created_at)})` : ''}`
+                            : '—'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Nomor PO">
+                        {procurement.sap_po_id ?? request.sap_po_id ?? '—'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Nomor GRPO">{request.sap_grpo_no ?? '—'}</Descriptions.Item>
+                    <Descriptions.Item label="Tanggal Terima">{formatDate(request.received_at)}</Descriptions.Item>
+                    <Descriptions.Item label="Diterima Oleh">{request.receiver?.name ?? '—'}</Descriptions.Item>
+                </Descriptions>
+                {procurement.sap_pr_sync_status === 'failed' && (
+                    <Tag color="error" style={{ marginTop: 12 }}>
+                        Sinkronisasi PR ke SAP gagal: {procurement.sap_pr_sync_error ?? 'Alasan tidak diketahui'}
+                    </Tag>
+                )}
+            </Card>
+
             <Modal
                 title="Ajukan Pembatalan"
                 open={cancelOpen}
@@ -119,6 +193,35 @@ export default function Show({ request, tolerance, can = { submit: false, cancel
                         Plant tidak dapat membatalkan setelah PO berstatus Sent — permintaan akan ditolak
                         server.
                     </Tag>
+                </Form>
+            </Modal>
+
+            <Modal
+                title="Tandai Barang Diterima"
+                open={receiveOpen}
+                onCancel={() => setReceiveOpen(false)}
+                onOk={() => receiveForm.submit()}
+                okText="Simpan"
+                cancelText="Batal"
+            >
+                <Form form={receiveForm} layout="vertical" onFinish={submitReceive}>
+                    <Form.Item
+                        name="sap_grpo_no"
+                        label="Nomor GRPO"
+                        rules={[{ required: true, message: 'Nomor GRPO wajib diisi' }]}
+                    >
+                        <Input placeholder="Contoh: GRPO-1023" />
+                    </Form.Item>
+                    <Form.Item
+                        name="received_at"
+                        label="Tanggal Terima"
+                        rules={[{ required: true, message: 'Tanggal terima wajib diisi' }]}
+                    >
+                        <DatePicker style={{ width: '100%' }} format="DD-MM-YYYY" disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
+                    </Form.Item>
+                    <Form.Item name="note" label="Catatan (opsional)">
+                        <Input.TextArea rows={3} placeholder="Catatan tambahan mengenai penerimaan barang" />
+                    </Form.Item>
                 </Form>
             </Modal>
         </AppLayout>

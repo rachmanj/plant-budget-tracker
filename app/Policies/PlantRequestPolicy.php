@@ -33,4 +33,17 @@ class PlantRequestPolicy
     {
         return $user->can('cancellation.plant') || $user->can('cancellation.procurement');
     }
+
+    public function receive(User $user, PlantRequest $request): bool
+    {
+        return $user->can('plant_request.receive')
+            && in_array($request->status, ['approved', 'pr_created', 'po_created'], true);
+    }
+
+    public function createPr(User $user, PlantRequest $request): bool
+    {
+        return ($user->hasRole('procurement_admin') || $user->hasRole('it_manager'))
+            && $request->status === 'approved'
+            && ! $request->sap_pr_no;
+    }
 }

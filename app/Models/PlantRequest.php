@@ -20,11 +20,15 @@ class PlantRequest extends Model
         'dmbd_entry_id',
         'sap_mr_id',
         'sap_pr_no',
+        'sap_po_id',
+        'sap_grpo_no',
         'status',
         'estimated_total',
         'budget_utilization_pct',
         'requested_by',
         'submitted_at',
+        'received_at',
+        'received_by',
     ];
 
     protected function casts(): array
@@ -33,6 +37,7 @@ class PlantRequest extends Model
             'estimated_total' => 'decimal:2',
             'budget_utilization_pct' => 'decimal:2',
             'submitted_at' => 'datetime',
+            'received_at' => 'datetime',
         ];
     }
 
@@ -54,6 +59,11 @@ class PlantRequest extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function receiver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by');
     }
 
     public function approvals(): MorphMany

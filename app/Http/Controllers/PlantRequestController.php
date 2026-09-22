@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ReceivePlantRequestRequest;
+use App\Jobs\CreateSapPurchaseRequest;
 use App\Models\BudgetAllocation;
 use App\Models\BudgetPeriod;
 use App\Models\PlantRequest;
 use App\Models\ProjectCache;
+use App\Models\SapSyncLog;
+use App\Models\TabulationBid;
 use App\Services\Approval\ApprovalEngine;
 use App\Services\Arkfleet\EquipmentCache;
 use App\Services\Budget\BudgetEngine;
 use App\Services\Pricing\PricingEstimator;
 use App\Support\ApprovalChains;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -261,20 +266,39 @@ class PlantRequestController extends Controller
 
     public function show(PlantRequest $plantRequest): Response
     {
-        $plantRequest->load(['lines', 'allocation.period', 'approvals.approver', 'comments.author', 'requester']);
+        $plantRequest->load(['lines', 'allocation.period', 'approvals.approver', 'comments.author', 'requester', 'receiver']);
 
         $tolerance = $this->budgetEngine->validateAgainstTolerance(
             $plantRequest->allocation,
             (string) $plantRequest->estimated_total
         );
 
+        $bid = $plantRequest->sap_pr_no
+            ? TabulationBid::query()->where('sap_pr_id', $plantRequest->sap_pr_no)->latest()->first()
+            : null;
+
+        $prSyncLog = SapSyncLog::query()
+            ->where('operation', 'create_pr')
+            ->where('ref_type', 'plant_request')
+            ->where('ref_id', $plantRequest->id)
+            ->latest()
+            ->first();
+
         return Inertia::render('PlantRequest/Show', [
             'request' => $plantRequest,
             'tolerance' => $tolerance,
+            'procurement' => [
+                'sap_po_id' => $plantRequest->sap_po_id ?: $bid?->sap_po_id,
+                'sap_pr_created_at' => $prSyncLog?->completed_at,
+                'sap_pr_sync_status' => $prSyncLog?->status,
+                'sap_pr_sync_error' => $prSyncLog?->error_message,
+            ],
             'can' => [
                 'submit' => Gate::allows('submit', $plantRequest),
                 'cancel' => Gate::allows('cancel', $plantRequest),
                 'update' => Gate::allows('update', $plantRequest),
+                'receive' => Gate::allows('receive', $plantRequest),
+                'createPr' => Gate::allows('createPr', $plantRequest),
             ],
         ]);
     }
@@ -318,6 +342,57 @@ class PlantRequestController extends Controller
 
         return redirect()->route('plant-requests.show', $plantRequest)
             ->with('success', 'Plant request submitted for approval.');
+    }
+
+    public function receive(ReceivePlantRequestRequest $request, PlantRequest $plantRequest): RedirectResponse
+    {
+        if ($plantRequest->status === 'received') {
+            abort(422, 'Plant request ini sudah ditandai diterima sebelumnya.');
+        }
+
+        if (! Gate::allows('receive', $plantRequest)) {
+            abort(403, 'Plant request belum berada pada tahap yang bisa ditandai diterima, atau Anda tidak memiliki izin untuk melakukannya.');
+        }
+
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($plantRequest, $validated, $request) {
+            $plantRequest->update([
+                'status' => 'received',
+                'sap_grpo_no' => $validated['sap_grpo_no'],
+                'received_at' => $validated['received_at'],
+                'received_by' => $request->user()->id,
+            ]);
+
+            // Nilai aktual sudah/akan diposting ke ledger oleh job ReconcileGrpoToLedger
+            // berdasarkan dokumen GRPO SAP. Jangan posting ulang di sini agar nilainya
+            // tidak dihitung dua kali (double counting) pada budget_ledgers.
+            $plantRequest->comments()->create([
+                'category' => 'general',
+                'body' => sprintf(
+                    'Barang diterima — GRPO %s tanggal %s.%s',
+                    $validated['sap_grpo_no'],
+                    Carbon::parse($validated['received_at'])->format('d-m-Y'),
+                    ! empty($validated['note']) ? ' Catatan: '.$validated['note'] : ''
+                ),
+                'author_id' => $request->user()->id,
+            ]);
+        });
+
+        return redirect()->route('plant-requests.show', $plantRequest)
+            ->with('success', 'Penerimaan barang berhasil dicatat.');
+    }
+
+    public function createPr(Request $request, PlantRequest $plantRequest): RedirectResponse
+    {
+        if (! Gate::allows('createPr', $plantRequest)) {
+            abort(403, 'Hanya Procurement Admin atau IT Manager yang dapat memicu pembuatan PR di SAP untuk plant request yang sudah disetujui.');
+        }
+
+        CreateSapPurchaseRequest::dispatch($plantRequest->id);
+
+        return redirect()->route('plant-requests.show', $plantRequest)
+            ->with('success', 'Permintaan PR dikirim ke SAP.');
     }
 
     public function estimatePart(Request $request): JsonResponse

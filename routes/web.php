@@ -56,6 +56,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/plant-requests/{plantRequest}', [PlantRequestController::class, 'show'])->name('plant-requests.show');
         Route::post('/plant-requests/{plantRequest}/submit', [PlantRequestController::class, 'submit'])->name('plant-requests.submit');
         Route::post('/plant-requests/{plantRequest}/cancel', [CancellationController::class, 'store'])->name('plant-requests.cancel');
+        Route::post('/plant-requests/{plantRequest}/receive', [PlantRequestController::class, 'receive'])->name('plant-requests.receive');
+        Route::post('/plant-requests/{plantRequest}/create-pr', [PlantRequestController::class, 'createPr'])->name('plant-requests.create-pr');
 
         Route::get('/dmbd', [DmbdController::class, 'index'])->name('dmbd.index');
         Route::post('/dmbd', [DmbdController::class, 'store'])->name('dmbd.store');
