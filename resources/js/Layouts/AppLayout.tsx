@@ -150,7 +150,25 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (can.includes('reports.view')) {
         menuItems.push({
             key: 'reports',
-            label: <Link href="/reports/budget-consumption">Reports</Link>,
+            label: <Link href="/reports">Reports</Link>,
+            children: [
+                {
+                    key: 'reports-index',
+                    label: <Link href="/reports">Daftar Laporan</Link>,
+                },
+                {
+                    key: 'reports-budget-consumption',
+                    label: <Link href="/reports/budget-consumption">Konsumsi Anggaran</Link>,
+                },
+                {
+                    key: 'reports-vendor-performance',
+                    label: <Link href="/reports/vendor-performance">Kinerja Vendor</Link>,
+                },
+                {
+                    key: 'reports-equipment-cost',
+                    label: <Link href="/reports/equipment-cost">Biaya Peralatan</Link>,
+                },
+            ],
         });
     }
 
