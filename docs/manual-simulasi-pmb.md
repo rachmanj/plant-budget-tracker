@@ -1,9 +1,8 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.2 · **Tanggal:** 17 September 2026
-**Lingkungan uji:** produksi LAN `http://192.168.32.149:86` (saphire-two)
-**Kode terpasang:** commit `1706f6d` · **DB:** `plant_budget_tracker` (MySQL 8, container `mysql`)
-**Sumber kebenaran bisnis:** `docs/concept.md` (EN) / `docs/concept-id.md` (ID)
+**Versi dokumen:** 1.3 · **Tanggal:** 17 September 2026
+**Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
+**Versi aplikasi:** 17 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
 
 > **Perubahan v1.2:** **menu sidebar** untuk Approvals (dengan badge jumlah pending), Overbudget,
 > Cancellation, Interchange, dan SAP Sync sudah tersedia, dan **Plant Request draft sekarang bisa
@@ -59,8 +58,8 @@ Semua akun demo di bawah password: `password` (hanya untuk simulasi internal).
 Akun non-demo: `rachmanj@gmail.com` (role `it_manager`, milik Iwan).
 
 **Catatan penting:** role disimpan per "team" = `project_code`. User dengan scope 022C hanya
-mendapat izin pada konteks proyek 022C (spatie permission **Teams**). Role global (director, IT,
-procurement) di-assign tanpa team sehingga berlaku semua proyek.
+mendapat izin hanya pada konteks proyek 022C. Akun direktur, IT, dan pengadaan tidak terikat
+satu proyek sehingga izinnya berlaku untuk semua proyek.
 
 **Dua hal praktis yang sudah terbukti saat uji akses 17 Sep 2026:**
 
@@ -94,7 +93,7 @@ Menu sidebar muncul otomatis mengikuti izin. Yang **tidak punya menu** tetap bis
 | Overbudget | `/overbudget` | izin `plant_request.create` atau `overbudget.approve.*` | Planner/Mechanic + Fin Dir + Ops Dir |
 | Cancellation | `/cancellation` | izin `cancellation.plant` / `cancellation.procurement` | Plant + Procurement |
 | Interchange | `/interchange` | izin `interchange.manage` atau role `plant_manager`/`aml_manager` | Procurement (+ sign-off Plant/AML) |
-| SAP Sync Dashboard | `/sap/sync-dashboard` | Gate `viewSapDashboard` | IT Manager, Procurement Manager, Finance Director |
+| SAP Sync Dashboard | `/sap/sync-dashboard` | khusus peran tertentu | IT Manager, Procurement Manager, Finance Director |
 
 **Catatan menu (v1.2):** semua halaman kerja kini punya menu di sidebar — **Approvals** (badge jumlah
 pending, hanya untuk role approver), **Overbudget**, **Cancellation**, **Interchange**, dan **SAP Sync**
@@ -174,9 +173,9 @@ Konsekuensi: simulasi dimulai dari nol transaksi. Semua nomor dokumen akan berur
 | P-1 | Pastikan aplikasi hidup | buka `http://192.168.32.149:86` | redirect ke `/login`, halaman tampil |
 | P-2 | Pastikan data unit tersedia | login Planner → `/dmbd` | tabel terisi **194 unit** untuk proyek 022C (dari ARKFLEET). Kalau kosong → integrasi ARKFLEET bermasalah |
 | P-3 | Pastikan anggaran ada | login Finance Director → `/budget` pilih 022C | tab Sep 2026 dengan 3 alokasi |
-| P-4 | Pastikan queue worker hidup | (teknis) `docker ps` → `queue-plantbudget` Up | job DMBD/sync tidak menumpuk |
+| P-4 | Pastikan proses latar belakang hidup | minta Dea memastikan di sisi server | perubahan DMBD & sinkronisasi berjalan, tidak menumpuk |
 | P-5 | Siapkan akun per peran | tabel §2 | cukup buka 3–4 browser berbeda (mode incognito) agar sesi tidak tertukar |
-| P-6 | Catat baseline | jalankan SQL §11.1 sebelum mulai | angka awal tercatat untuk pembanding |
+| P-6 | Catat angka awal | catat anggaran & jumlah dokumen yang ada sebelum mulai (lihat layar, atau minta Dea cetak ringkasannya) | angka awal tercatat untuk pembanding |
 
 **Saran teknis:** jalankan simulasi dengan minimal 4 jendela browser: Planner, PM, Plant Manager,
 Procurement (Buyer/Manager). Approval dua tingkat tidak bisa dilakukan satu akun.
@@ -207,10 +206,12 @@ Kolom temuan dipakai di lembar observasi §9.
    - Diharapkan: periode menjadi `locked`, alokasi bulan berikutnya dibuat otomatis dengan
      kolom **Carry Fwd** terisi sebesar sisa anggaran.
 
-**Titik verifikasi DB**
-- `SELECT entry_type, amount, memo FROM budget_ledgers ORDER BY id DESC LIMIT 10;`
-  → revisi menghasilkan pasangan entri `reversal` (negatif) lalu `allocation` (positif).
-- `SELECT project_code, period_month, status FROM budget_periods;` → periode lama jadi `locked`.
+**Cara memastikan (tanpa alat teknis)**
+- Tabel **Anggaran** menampilkan angka Komitmen / Aktual / Varians yang berubah setelah revisi.
+- Periode yang sudah di-carry forward tampil dengan penanda status **locked** pada tab bulannya,
+  dan tombol revisi tidak muncul lagi.
+- Bila ingin melihat jejak perubahan angkanya (reversal lalu alokasi baru), minta Dea menampilkan
+  riwayat anggaran.
 
 **Uji negatif**
 - Coba buka `/budget/setting` dengan akun Planner → harus **403** (bukan 404).
@@ -230,8 +231,8 @@ Kolom temuan dipakai di lembar observasi §9.
 5. Uji login akun baru itu di jendela lain → berhasil, menu Plant Requests + DMBD muncul.
 6. `/admin/roles` → lihat daftar permission per role → tambah/hapus satu permission pada role
    `planner`, lalu login ulang sebagai planner untuk melihat efeknya.
-7. `/sap/sync-dashboard` → halaman terbuka (Gate `viewSapDashboard` = IT Manager, Procurement
-   Manager, Finance Director); tabel Sync Logs kosong karena belum ada aktivitas SAP.
+7. `/sap/sync-dashboard` → halaman terbuka (untuk IT Manager, Procurement Manager, dan
+   Finance Director); tabel Sync Logs masih kosong karena belum ada aktivitas ke SAP.
 
 **Uji negatif:** buka `/admin/users` sebagai Planner → **403**. Buka `/sap/sync-dashboard`
 sebagai Planner atau Plant Manager → **403** (yang boleh: IT Manager, Procurement Manager,
@@ -254,10 +255,10 @@ Finance Director).
    diharapkan gagal karena role `mechanic` tidak punya izin `dmbd.update` (perhatikan pesan yang
    muncul — catat sebagai temuan UI).
 
-**Titik verifikasi DB**
-- `SELECT unit_code_cache, report_date, operational_status, reported_by FROM dmbd_entries;`
-- Setelah beberapa saat: `SELECT operation, status FROM sap_sync_logs;` atau job DMBD di queue
-  (sinkronisasi balik ke ARKFLEET).
+**Cara memastikan (tanpa alat teknis)**
+- Buka ulang halaman **DMBD**: status yang baru diubah tetap tersimpan untuk tanggal hari ini.
+- Aturan satu unit satu status per hari: mengubah ulang unit yang sama akan menimpa, bukan menambah baris.
+- Sinkronisasi balik ke ARKFLEET berjalan di latar belakang; minta Dea memeriksa bila perlu.
 
 ---
 
@@ -285,11 +286,11 @@ Finance Director).
    - Diharapkan: status berubah `draft` → `pending_pm`, muncul baris approval step 1
      (`project_manager`) dan step 2 (`plant_manager`) dengan keputusan `pending`.
 
-**Titik verifikasi DB**
-- `SELECT id, request_no, status, estimated_total, budget_utilization_pct FROM plant_requests;`
-- `SELECT entry_type, amount, ref_type, ref_id FROM budget_ledgers ORDER BY id DESC LIMIT 3;`
-  → muncul `commitment` negatif sebesar total request.
-- `SELECT step_order, required_role, decision FROM request_approvals ORDER BY id;` → 2 baris pending.
+**Cara memastikan (tanpa alat teknis)**
+- Daftar **Plant Requests** menampilkan nomor `PMB-REQ-…`, unit, total estimasi, dan status terbaru.
+- Halaman **Anggaran** untuk proyek yang sama menunjukkan kolom Komitmen bertambah sebesar total request.
+- Halaman detail request menampilkan dua baris persetujuan (Project Manager lalu Plant Manager)
+  dengan status menunggu.
 
 **Uji negatif 1 — melewati batas 110%**
 Buat request baru pada alokasi **AC 035** (Rp 25 jt) dengan total ≈ Rp 30 jt lalu **Submit**.
@@ -431,9 +432,10 @@ tidak muncul; memaksa URL/aksi tetap ditolak server.
 6. Buka `/overbudget` sebagai Planner → baris request terlihat dengan kolom Jumlah, Over %, Status.
    Tombol **Ajukan Overbudget Baru** juga tersedia untuk Planner/Mechanic.
 
-**Titik verifikasi DB**
-- `SELECT request_no, status, requested_amount, over_pct FROM overbudget_requests;`
-- `SELECT entry_type, amount, ref_type FROM budget_ledgers WHERE entry_type='overbudget';`
+**Cara memastikan (tanpa alat teknis)**
+- Halaman **Overbudget** menampilkan nomor `PMB-OB-…`, jumlah, % kelebihan, dan status terbaru.
+- Setelah kedua approval, halaman **Anggaran** menunjukkan tambahan anggaran, dan plant request yang
+  tertahan berubah menjadi menunggu Project Manager.
 
 ---
 
@@ -457,9 +459,10 @@ tidak muncul; memaksa URL/aksi tetap ditolak server.
 5. Uji pembatasan: buka `/cancellation` sebagai Planner dan coba setujui permintaan yang
    diajukan Procurement → tombol **Agree** tidak muncul (hanya pihak lawan yang boleh).
 
-**Titik verifikasi DB**
-- `SELECT plant_request_id, initiated_by, po_stage, status, budget_reversal_amount FROM cancellation_requests;`
-- `SELECT status FROM plant_requests WHERE id=…;` dan entri `reversal` terbaru di `budget_ledgers`.
+**Cara memastikan (tanpa alat teknis)**
+- Halaman **Cancellation** menampilkan baris permintaan (pengaju, tahap PO, jumlah pembatalan, status).
+- Setelah disetujui: status Plant Request menjadi **cancelled**, dan kolom Komitmen di halaman
+  Anggaran turun sesuai nilai pembatalan.
 
 ---
 
@@ -487,7 +490,7 @@ tidak muncul; memaksa URL/aksi tetap ditolak server.
 5. Uji ekspor (URL langsung): `/reports/budget-consumption/export/pdf` dan `.../export/csv`.
    - Diharapkan: PDF/CSV terunduh.
    - **Temuan:** tombol ekspor belum ada di UI, dan izin `reports.export` **belum ditegakkan**
-     pada endpoint ekspor (role dengan `reports.view` saja bisa mengunduh). Catat untuk perbaikan.
+     pada alamat unduhannya (akun yang bisa melihat laporan juga bisa mengunduh). Catat untuk perbaikan.
 
 ---
 
@@ -549,7 +552,7 @@ Ringkasan keputusan di akhir simulasi:
 
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
-Daftar ini hasil pembacaan kode terpasang (commit `1706f6d`) supaya simulator tidak bingung.
+Daftar ini hasil pemeriksaan aplikasi (17 September 2026) supaya penguji tidak salah tafsir.
 **Sudah diperbaiki (v1.1):** B-1, B-2, B-3, B-5, B-6. **(v1.2):** B-4, B-7, B-19. Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
@@ -562,108 +565,39 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-5 | ✅ Tabulation Bid | **Diperbaiki 17 Sep 2026** — tombol "Buat Bid" + form vendor lengkap (ketersediaan stok, syarat pembayaran, catatan); sebelumnya penyimpanan selalu gagal validasi |
 | B-6 | ✅ Tabulation Bid | **Diperbaiki 17 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
 | B-7 | ✅ Plant Request | **Diperbaiki 17 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
-| B-8 | Status lanjutan | `pr_created`, `po_created`, `received` ada di model tetapi belum ada jalur UI untuk mencapainya |
-| B-9 | DMBD | Belum ada kolom catatan breakdown di UI; tabel unit tampil tanpa paginasi |
-| B-10 | Budget | Dropdown **Unit Code** di form alokasi masih hardcode `E-001`/`E-002`; anggaran level "divisi" (unit kosong) belum bisa dipilih dari daftar unit nyata |
-| B-11 | Harga | Pencarian harga dari Tabulation Bid mengambil **harga award terakhir**, bukan harga per part number; kalau tidak ada di SAP → harga 0,00 (sumber "Belum ada") |
-| B-12 | Reports | Belum ada tombol ekspor di UI; izin `reports.export` belum ditegakkan di endpoint ekspor |
-| B-13 | SAP Dashboard | Dibatasi Gate `viewSapDashboard` → hanya `it_manager`, `procurement_manager`, `finance_director` |
-| B-14 | Beta | `/components` & `/cannibal-requests` 404 selama flag `FEATURE_CANNIBAL_BETA` nonaktif |
+| B-8 | Status lanjutan | Tahap setelah approval (PR dibuat, PO dibuat, barang diterima) belum bisa diubah dari aplikasi — pemantauannya masih di SAP |
+| B-9 | DMBD | Layar DMBD belum punya kolom catatan penyebab breakdown, dan daftar unit tampil sekaligus tanpa halaman |
+| B-10 | Budget | Pilihan **Unit Code** di form alokasi anggaran masih menampilkan dua contoh tetap (E-001/E-002), belum daftar unit sebenarnya; anggaran tingkat divisi (tanpa unit) juga belum bisa dipilih |
+| B-11 | Harga | Saat menekan **Cari harga**, sistem memakai harga penawaran terakhir yang menang, bukan harga per part number; kalau tidak ditemukan, harga tampil 0,00 dengan penanda "Belum ada" |
+| B-12 | Laporan | Belum ada tombol unduh di layar laporan (unduhan hanya lewat alamat langsung), dan pembatasan siapa yang boleh mengunduh belum dijalankan penuh |
+| B-13 | SAP Sync | Hanya bisa dibuka IT Manager, Procurement Manager, dan Finance Director |
+| B-14 | Beta | Modul **Components** dan **Cannibal** (fitur tahap Beta) belum diaktifkan, jadi halamannya belum bisa dibuka |
 | B-15 | Dashboard | Kartu statistik masih menampilkan nilai "—" (belum ada angka nyata) |
-| B-16 | Keamanan izin | `GET /plant-requests/create` dan `POST /plant-requests` (simpan draft) **tidak** dibatasi izin `plant_request.create` di server — semua user yang login bisa membuat draft (submit tetap dibatasi policy) |
-| B-17 | Keamanan izin | Halaman `/approvals`, `/tabulation-bids`, `/overbudget`, `/cancellation`, `/interchange` bisa dibuka **semua role** yang login (tidak ada gerbang izin di route); pembatasan hanya pada aksinya (decide/award/store) — terverifikasi 17 Sep 2026 |
-| B-18 | Proyek bawaan | User tanpa `project_code_scope` (director, IT, buyer, procurement) default ke proyek `000H`; halaman DMBD tanpa scope menampilkan seluruh 992 unit lintas proyek sehingga rawan salah input |
+| B-16 | Batas akses | Menyimpan **draft** Plant Request belum dibatasi khusus ke Planner/Mechanic — akun lain yang login masih bisa membuat draft (submit tetap hanya untuk pembuatnya) |
+| B-17 | Batas akses | Halaman Approvals, Tabulation Bid, Overbudget, Cancellation, dan Interchange bisa **dibuka** semua akun yang login; yang dibatasi adalah tindakannya (menyetujui, menetapkan vendor, menyimpan) |
+| B-18 | Proyek bawaan | Akun direktur/pengadaan/IT tidak terikat proyek, jadi halaman terbuka di proyek `000H` dan layar DMBD menampilkan seluruh unit dari banyak proyek — rawan salah pilih |
 | B-19 | ✅ Menu sidebar | **Diperbaiki 17 Sep 2026 (v1.2)** — Approvals, Overbudget, Cancellation, Interchange, dan SAP Sync sudah punya menu |
 
 ---
 
-## 11. Verifikasi Teknis
-
-### 11.1 Baseline (jalankan sebelum simulasi)
-
-```sql
--- ringkasan anggaran
-SELECT p.project_code, p.period_month, p.status, COUNT(a.id) AS alokasi,
-       SUM(a.allocated_amount) AS total
-FROM budget_periods p LEFT JOIN budget_allocations a ON a.budget_period_id = p.id
-GROUP BY p.id ORDER BY p.project_code, p.period_month;
-
--- jumlah transaksi (harus 0 sebelum mulai)
-SELECT (SELECT COUNT(*) FROM plant_requests) AS plant_requests,
-       (SELECT COUNT(*) FROM tabulation_bids) AS bids,
-       (SELECT COUNT(*) FROM dmbd_entries) AS dmbd,
-       (SELECT COUNT(*) FROM budget_ledgers) AS ledger;
-```
-
-Akses dari luar server:
-
-```bash
-mysql -h 192.168.32.149 -P 3306 -u dds_acc -p'dds_acc2026%' plant_budget_tracker
-```
-
-### 11.2 Setelah setiap skenario penting
-
-```sql
--- 1. status & komitmen plant request
-SELECT request_no, status, estimated_total, budget_utilization_pct FROM plant_requests ORDER BY id;
-
--- 2. jejak anggaran (ledger) — inti kontrol PMB
-SELECT l.id, l.entry_type, l.amount, l.ref_type, l.ref_id, l.memo, u.name AS oleh
-FROM budget_ledgers l LEFT JOIN users u ON u.id = l.posted_by ORDER BY l.id DESC LIMIT 20;
-
--- 3. alur approval
-SELECT approvable_type, approvable_id, step_order, required_role, decision, approver_id
-FROM request_approvals ORDER BY id;
-
--- 4. bid & award
-SELECT b.bid_no, b.status, a.tabulation_bid_vendor_id, v.vendor_name, v.price
-FROM tabulation_bids b
-LEFT JOIN tabulation_bid_awards a ON a.tabulation_bid_id = b.id
-LEFT JOIN tabulation_bid_vendors v ON v.id = a.tabulation_bid_vendor_id;
-
--- 5. DMBD harian
-SELECT unit_code_cache, report_date, operational_status FROM dmbd_entries ORDER BY id DESC LIMIT 10;
-
--- 6. integrasi SAP
-SELECT operation, correlation_key, status, error_message FROM sap_sync_logs ORDER BY id DESC LIMIT 10;
-```
-
-### 11.3 Antrean & worker
-
-```bash
-ssh ark-adm@192.168.32.149
-docker ps --format '{{.Names}} | {{.Status}}' | grep plantbudget
-docker exec mysql mysql -uroot -p'@R4tF1sh*' plant_budget_tracker \
-  -e "SELECT COUNT(*) AS sisa_job FROM jobs; SELECT COUNT(*) AS gagal FROM failed_jobs;"
-```
-
-### 11.4 Log aplikasi
-
-```bash
-ssh ark-adm@192.168.32.149
-tail -n 100 /home/ark-adm/docker-apps/www/php82/plant-budget-tracker/storage/logs/laravel.log
-```
-
----
-
-## 12. Troubleshooting
+## 11. Troubleshooting
 
 | Gejala | Sebab yang paling mungkin | Tindakan |
 |--------|---------------------------|----------|
-| Login gagal / "Terlalu banyak percobaan" | throttle 5 percobaan/menit pada login | tunggu 1 menit, ulangi; hindari login berulang dalam satu menit |
-| Halaman anggaran/plant request menampilkan proyek **000H** atau unit lintas proyek (992 unit) | user tidak punya `project_code_scope` (director/IT/procurement) | pilih proyek yang dituju di dropdown Proyek, atau tambahkan `?project_code=022C` |
-| Dropdown unit kosong atau pesan "Data unit belum tersedia (cek koneksi ARKFLEET)" | API ARKFLEET (`http://192.168.32.15/ark-fleet/api`) tidak terjangkau | uji dari server: `curl -s http://192.168.32.15/ark-fleet/api/equipments?project_code=022C` → laporkan ke IT |
-| Halaman putih / error 419 | sesi kedaluwarsa (cookie) | refresh, login ulang |
-| 403 saat membuka halaman yang seharusnya boleh | role di-assign untuk team proyek lain (scope) | cek kolom `project_code_scope` user; lihat skill/dokumen RBAC |
-| Submit plant request ditolak | SAP MR ID masih 0, atau total melebihi 110% | isi MR ID lewat pembuatan ulang draft; kalau melebihi → alur overbudget |
-| Periode anggaran tidak bisa direvisi | periode sudah `locked` (setelah carry forward) atau bulan lampau | hanya bulan berjalan & ke depan yang bisa direvisi Finance Director |
-| Tombol/halaman tidak ada (Overbudget, Cancel, Interchange, Create PO) | memang belum tersedia di UI | catat di lembar temuan, jangan dianggap kesalahan user |
+| Login gagal / muncul peringatan "terlalu banyak percobaan" | sistem membatasi 5 kali login per menit | tunggu 1 menit, lalu login lagi — jangan login berulang cepat |
+| Halaman anggaran/plant request menampilkan proyek **000H** atau unit dari banyak proyek | akun direktur/pengadaan tidak terikat satu proyek | pilih proyek yang dituju pada dropdown **Proyek** di halaman Anggaran |
+| Daftar unit kosong / muncul pesan "Data unit belum tersedia (cek koneksi ARKFLEET)" | koneksi ke sistem ARKFLEET (master unit) sedang bermasalah | laporkan ke Dea/IT; unit tidak bisa dipilih sampai koneksi pulih |
+| Halaman putih atau muncul "Page expired" | sesi login kedaluwarsa | refresh halaman, login ulang |
+| Muncul "403" / akses ditolak padahal seharusnya boleh | akun tidak punya izin untuk proyek tersebut | laporkan ke Dea — periksa penempatan proyek akun Anda |
+| Submit Plant Request tidak jalan | nomor **SAP MR ID** masih 0, atau total melebihi batas 110% | buka detail draft → **Ubah Draft** → isi MR ID; kalau total melebihi batas, sistem mengarahkan ke alur Overbudget |
+| Periode anggaran tidak bisa direvisi | periode tersebut sudah ditutup (locked) atau bulan lalu | hanya bulan berjalan & bulan ke depan yang bisa direvisi Finance Director |
+| Tombol yang dicari tidak muncul | tombol memang hanya tampil untuk peran tertentu/pada status tertentu | cek tabel §3 (peran) dan status dokumen di §12.1, lalu catat di lembar temuan bila menurut Anda seharusnya muncul |
 
 ---
 
-## 13. Referensi Cepat
+## 12. Referensi Cepat
 
-### 13.1 Status dokumen
+### 12.1 Status dokumen
 
 | Dokumen | Status | Arti |
 |---------|--------|------|
@@ -678,7 +612,7 @@ tail -n 100 /home/ark-adm/docker-apps/www/php82/plant-budget-tracker/storage/log
 | Cancellation | `pending` → `approved` / `rejected` | |
 | DMBD | `rfu` / `standby` / `breakdown` | kondisi unit harian |
 
-### 13.2 URL penting
+### 12.2 URL penting
 
 | Fungsi | URL |
 |--------|-----|
@@ -696,7 +630,7 @@ tail -n 100 /home/ark-adm/docker-apps/www/php82/plant-budget-tracker/storage/log
 | Admin | `/admin/users` · `/admin/roles` · `/admin/projects` |
 | SAP | `/sap/sync-dashboard` |
 
-### 13.3 Aturan bisnis yang wajib dipegang penguji
+### 12.3 Aturan bisnis yang wajib dipegang penguji
 
 1. **Anggaran = ledger.** Tidak ada perubahan saldo langsung; koreksi = reversal + entri baru.
 2. **Batas pemakaian 110%** (alokasi + carry forward, toleransi 10%) dihitung saat submit.
@@ -724,5 +658,5 @@ tail -n 100 /home/ark-adm/docker-apps/www/php82/plant-budget-tracker/storage/log
 
 ---
 
-*Dokumen ini dibuat dari pembacaan kode commit `64d9cce` + inspeksi data produksi 17 Sep 2026.
-Setiap kali aplikasi dideploy ulang, verifikasi ulang daftar batasan (§10).*
+*Dokumen ini dibuat dari pemeriksaan aplikasi dan data pada 17 September 2026.
+Setiap kali aplikasi diperbarui, daftar batasan (§10) perlu diperiksa ulang oleh Dea.*
