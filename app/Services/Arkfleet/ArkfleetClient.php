@@ -153,6 +153,18 @@ class ArkfleetClient
             ));
         }
 
+        if (isset($filters['search']) && trim((string) $filters['search']) !== '') {
+            $needle = mb_strtolower(trim((string) $filters['search']));
+            $items = array_values(array_filter(
+                $items,
+                function (array $item) use ($needle) {
+                    $haystack = mb_strtolower(($item['unit_code'] ?? '').' '.($item['description'] ?? ''));
+
+                    return str_contains($haystack, $needle);
+                }
+            ));
+        }
+
         return $items;
     }
 
