@@ -14,6 +14,8 @@ class InterchangeController extends Controller
 {
     public function index(): Response
     {
+        $this->authorize('viewAny', InterchangeMap::class);
+
         $maps = InterchangeMap::query()
             ->with(['creator', 'signoffBy'])
             ->latest()

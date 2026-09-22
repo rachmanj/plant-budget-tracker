@@ -4,7 +4,6 @@ namespace Tests\Feature\Interchange;
 
 use App\Jobs\SyncInterchangeToSap;
 use App\Models\InterchangeMap;
-use App\Models\User;
 use App\Policies\InterchangeMapPolicy;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,7 +47,6 @@ class InterchangePolicyTest extends TestCase
         $planner = $this->makeUserWithRole('planner');
         setPermissionsTeamId('MBL');
 
-        $this->assertFalse((new InterchangeMapPolicy())->create($planner));
         $this->assertFalse(Gate::forUser($planner)->allows('create', InterchangeMap::class));
 
         $this->actingAsProject($planner)
@@ -77,7 +75,7 @@ class InterchangePolicyTest extends TestCase
         setPermissionsTeamId('MBL');
         $this->assertTrue($policy->signoff($plantMgr, $map));
         setPermissionsTeamId('MBL');
-        $this->assertFalse($policy->signoff($buyer, $map));
+        $this->assertFalse(Gate::forUser($buyer)->allows('signoff', $map));
 
         $this->actingAsProject($plantMgr)
             ->post("/interchange/{$map->id}/signoff")
@@ -90,19 +88,19 @@ class InterchangePolicyTest extends TestCase
         Queue::assertPushed(SyncInterchangeToSap::class);
     }
 
-    public function test_aml_manager_can_signoff_interchange(): void
+    public function test_aml_manager_can_view_any_and_signoff_interchange(): void
     {
         $buyer = $this->makeUserWithRole('buyer');
-        $amlMgr = User::factory()->create([
-            'is_active' => true,
-            'project_code_scope' => 'MBL',
-        ]);
-        setPermissionsTeamId('MBL');
-        $amlMgr->assignRole('aml_manager');
+        $amlMgr = $this->makeUserWithRole('aml_manager');
+        $mechanic = $this->makeUserWithRole('mechanic');
 
         $map = InterchangeMap::factory()->create(['created_by' => $buyer->id]);
 
+        $policy = new InterchangeMapPolicy();
         setPermissionsTeamId('MBL');
-        $this->assertTrue((new InterchangeMapPolicy())->signoff($amlMgr, $map));
+        $this->assertTrue($policy->viewAny($amlMgr));
+        $this->assertTrue(Gate::forUser($amlMgr)->allows('viewAny', InterchangeMap::class));
+        $this->assertFalse(Gate::forUser($mechanic)->allows('viewAny', InterchangeMap::class));
+        $this->assertTrue($policy->signoff($amlMgr, $map));
     }
 }

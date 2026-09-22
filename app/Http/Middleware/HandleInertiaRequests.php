@@ -2,8 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\CancellationRequest;
+use App\Models\InterchangeMap;
+use App\Models\OverbudgetRequest;
+use App\Models\PlantRequest;
 use App\Models\RequestApproval;
-use App\Support\ApprovalChains;
+use App\Models\TabulationBid;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -26,6 +30,12 @@ class HandleInertiaRequests extends \Inertia\Middleware
         $nav = [
             'pendingApprovals' => 0,
             'isApprover' => false,
+            'canViewApprovals' => false,
+            'canViewTabulationBids' => false,
+            'canViewOverbudget' => false,
+            'canViewCancellation' => false,
+            'canViewInterchange' => false,
+            'canCreatePlantRequest' => false,
             'viewSapDashboard' => false,
             'roles' => [],
         ];
@@ -33,17 +43,22 @@ class HandleInertiaRequests extends \Inertia\Middleware
         if ($user) {
             $roleNames = $user->getRoleNames();
             $rolesArray = $roleNames->all();
-            $approverRoles = ApprovalChains::approverRoles();
-            $isApprover = (bool) array_intersect($rolesArray, $approverRoles);
+            $canViewApprovals = Gate::allows('viewAny', RequestApproval::class);
 
             $nav = [
-                'pendingApprovals' => $isApprover
+                'pendingApprovals' => $canViewApprovals
                     ? RequestApproval::query()
                         ->where('decision', 'pending')
                         ->whereIn('required_role', $roleNames)
                         ->count()
                     : 0,
-                'isApprover' => $isApprover,
+                'isApprover' => $canViewApprovals,
+                'canViewApprovals' => $canViewApprovals,
+                'canViewTabulationBids' => Gate::allows('viewAny', TabulationBid::class),
+                'canViewOverbudget' => Gate::allows('viewAny', OverbudgetRequest::class),
+                'canViewCancellation' => Gate::allows('viewAny', CancellationRequest::class),
+                'canViewInterchange' => Gate::allows('viewAny', InterchangeMap::class),
+                'canCreatePlantRequest' => Gate::allows('create', PlantRequest::class),
                 'viewSapDashboard' => Gate::allows('viewSapDashboard'),
                 'roles' => $rolesArray,
             ];

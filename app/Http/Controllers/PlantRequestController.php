@@ -51,6 +51,8 @@ class PlantRequestController extends Controller
 
     public function create(Request $request): Response
     {
+        $this->authorize('create', PlantRequest::class);
+
         $user = $request->user();
         $projectCode = $request->input('project_code')
             ?? session('current_project')
@@ -178,6 +180,8 @@ class PlantRequestController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', PlantRequest::class);
+
         $validated = $request->validate([
             'budget_allocation_id' => 'required|exists:budget_allocations,id',
             'equipment_id' => 'required|integer',

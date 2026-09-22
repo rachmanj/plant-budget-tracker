@@ -22,6 +22,8 @@ class TabulationBidController extends Controller
 
     public function index(): Response
     {
+        $this->authorize('viewAny', TabulationBid::class);
+
         $bids = TabulationBid::query()
             ->with(['buyer', 'vendors', 'award'])
             ->latest()
@@ -32,6 +34,8 @@ class TabulationBidController extends Controller
 
     public function create(): Response
     {
+        $this->authorize('create', TabulationBid::class);
+
         return Inertia::render('TabulationBid/Create');
     }
 

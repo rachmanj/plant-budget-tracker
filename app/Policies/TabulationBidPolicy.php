@@ -2,16 +2,39 @@
 
 namespace App\Policies;
 
-use App\Models\RequestApproval;
 use App\Models\TabulationBid;
 use App\Models\User;
-use App\Services\Approval\ApprovalEngine;
+use App\Policies\Concerns\ChecksModuleAccess;
+use Illuminate\Auth\Access\Response;
 
 class TabulationBidPolicy
 {
-    public function create(User $user): bool
+    use ChecksModuleAccess;
+
+    /** @var list<string> */
+    private const VIEW_ANY_ROLES = [
+        'buyer',
+        'procurement_manager',
+        'procurement_admin',
+        'president_director',
+    ];
+
+    public function viewAny(User $user): Response|bool
     {
-        return $user->hasRole('buyer');
+        if ($this->canAccessModule($user, self::VIEW_ANY_ROLES)) {
+            return true;
+        }
+
+        return Response::deny('Anda tidak memiliki izin untuk mengakses halaman Tabulation Bid.');
+    }
+
+    public function create(User $user): Response|bool
+    {
+        if ($user->hasRole('buyer')) {
+            return true;
+        }
+
+        return Response::deny('Hanya Buyer yang dapat membuat Tabulation Bid.');
     }
 
     public function view(User $user, TabulationBid $bid): bool
@@ -19,22 +42,34 @@ class TabulationBidPolicy
         return true;
     }
 
-    public function review(User $user, TabulationBid $bid): bool
+    public function review(User $user, TabulationBid $bid): Response|bool
     {
-        return $user->hasRole('procurement_manager') && $bid->status === 'pending_proc_mgr';
+        if ($user->hasRole('procurement_manager') && $bid->status === 'pending_proc_mgr') {
+            return true;
+        }
+
+        return Response::deny('Anda tidak memiliki izin untuk meninjau Tabulation Bid ini.');
     }
 
-    public function award(User $user, TabulationBid $bid): bool
+    public function award(User $user, TabulationBid $bid): Response|bool
     {
-        return ($user->hasRole('procurement_manager') || $user->hasRole('procurement_admin'))
-            && $bid->status === 'forwarded_admin';
+        if (($user->hasRole('procurement_manager') || $user->hasRole('procurement_admin'))
+            && $bid->status === 'forwarded_admin') {
+            return true;
+        }
+
+        return Response::deny('Anda tidak memiliki izin untuk memberikan award pada Tabulation Bid ini.');
     }
 
-    public function createPo(User $user, TabulationBid $bid): bool
+    public function createPo(User $user, TabulationBid $bid): Response|bool
     {
-        return $user->hasRole('procurement_admin')
+        if ($user->hasRole('procurement_admin')
             && $user->id !== $bid->created_by
             && $bid->award()->exists()
-            && $bid->status === 'forwarded_admin';
+            && $bid->status === 'forwarded_admin') {
+            return true;
+        }
+
+        return Response::deny('Anda tidak memiliki izin untuk membuat PO dari Tabulation Bid ini.');
     }
 }

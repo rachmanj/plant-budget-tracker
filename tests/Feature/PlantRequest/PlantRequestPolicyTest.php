@@ -41,7 +41,6 @@ class PlantRequestPolicyTest extends TestCase
         $buyer = $this->makeUserWithRole('buyer');
         setPermissionsTeamId('MBL');
 
-        $this->assertFalse((new PlantRequestPolicy())->create($buyer));
         $this->assertFalse(Gate::forUser($buyer)->allows('create', PlantRequest::class));
     }
 

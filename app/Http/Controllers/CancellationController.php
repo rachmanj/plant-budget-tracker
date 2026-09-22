@@ -19,6 +19,8 @@ class CancellationController extends Controller
 
     public function index(): Response
     {
+        $this->authorize('viewAny', CancellationRequest::class);
+
         $requests = CancellationRequest::query()
             ->with('plantRequest')
             ->latest()

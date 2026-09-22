@@ -30,6 +30,12 @@ interface AuthUser {
 interface NavProps {
     pendingApprovals: number;
     isApprover: boolean;
+    canViewApprovals: boolean;
+    canViewTabulationBids: boolean;
+    canViewOverbudget: boolean;
+    canViewCancellation: boolean;
+    canViewInterchange: boolean;
+    canCreatePlantRequest: boolean;
     viewSapDashboard: boolean;
     roles: string[];
 }
@@ -57,7 +63,6 @@ interface AppLayoutProps {
 export default function AppLayout({ children, title }: AppLayoutProps) {
     const { auth, nav, features } = usePage<PageProps>().props;
     const can = auth.can ?? [];
-    const navRoles = nav?.roles ?? auth.user?.roles ?? [];
     const { isDark, toggleTheme } = useTheme();
     const { token } = theme.useToken();
 
@@ -77,7 +82,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         });
     }
 
-    if (can.includes('plant_request.create')) {
+    if (nav?.canCreatePlantRequest) {
         menuItems.push({
             key: 'plant-requests',
             label: <Link href="/plant-requests">Plant Requests</Link>,
@@ -91,7 +96,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         });
     }
 
-    if (nav?.isApprover) {
+    if (nav?.canViewApprovals) {
         menuItems.push({
             key: 'approvals',
             label: (
@@ -104,29 +109,21 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         });
     }
 
-    if (
-        can.includes('plant_request.create')
-        || can.includes('overbudget.approve.fin_dir')
-        || can.includes('overbudget.approve.ops_dir')
-    ) {
+    if (nav?.canViewOverbudget) {
         menuItems.push({
             key: 'overbudget',
             label: <Link href="/overbudget">Overbudget</Link>,
         });
     }
 
-    if (can.includes('cancellation.plant') || can.includes('cancellation.procurement')) {
+    if (nav?.canViewCancellation) {
         menuItems.push({
             key: 'cancellation',
             label: <Link href="/cancellation">Cancellation</Link>,
         });
     }
 
-    if (
-        can.includes('interchange.manage')
-        || navRoles.includes('plant_manager')
-        || navRoles.includes('aml_manager')
-    ) {
+    if (nav?.canViewInterchange) {
         menuItems.push({
             key: 'interchange',
             label: <Link href="/interchange">Interchange</Link>,
@@ -140,7 +137,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         });
     }
 
-    if (can.includes('tabulation_bid.create') || can.includes('tabulation_bid.review')) {
+    if (nav?.canViewTabulationBids) {
         menuItems.push({
             key: 'tabulation-bids',
             label: <Link href="/tabulation-bids">Tabulation Bid</Link>,

@@ -4,12 +4,17 @@ namespace App\Policies;
 
 use App\Models\PlantRequest;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class PlantRequestPolicy
 {
-    public function create(User $user): bool
+    public function create(User $user): Response|bool
     {
-        return $user->hasRole('planner') || $user->hasRole('mechanic');
+        if ($user->hasRole('planner') || $user->hasRole('mechanic')) {
+            return true;
+        }
+
+        return Response::deny('Anda tidak memiliki izin untuk membuat plant request. Hanya Planner dan Mechanic yang dapat membuat draft.');
     }
 
     public function view(User $user, PlantRequest $request): bool

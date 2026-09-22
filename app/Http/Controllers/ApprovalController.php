@@ -17,6 +17,8 @@ class ApprovalController extends Controller
 
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', RequestApproval::class);
+
         $user = $request->user();
         $roleNames = $user->getRoleNames();
 

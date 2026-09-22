@@ -22,6 +22,8 @@ class OverbudgetController extends Controller
 
     public function index(): Response
     {
+        $this->authorize('viewAny', OverbudgetRequest::class);
+
         $requests = OverbudgetRequest::query()
             ->with(['allocation.period', 'plantRequest'])
             ->latest()
@@ -32,6 +34,8 @@ class OverbudgetController extends Controller
 
     public function create(Request $request): Response
     {
+        $this->authorize('create', OverbudgetRequest::class);
+
         return Inertia::render('Overbudget/Index', [
             'prefill' => $request->only([
                 'plant_request_id', 'budget_allocation_id', 'requested_amount', 'over_pct',
@@ -42,6 +46,8 @@ class OverbudgetController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', OverbudgetRequest::class);
+
         $validated = $request->validate([
             'budget_allocation_id' => 'required|exists:budget_allocations,id',
             'plant_request_id' => 'nullable|exists:plant_requests,id',

@@ -4,23 +4,41 @@ namespace App\Policies;
 
 use App\Models\RequestApproval;
 use App\Models\User;
+use App\Policies\Concerns\ChecksModuleAccess;
 use App\Services\Approval\ApprovalEngine;
+use App\Support\ApprovalChains;
+use Illuminate\Auth\Access\Response;
 
 class RequestApprovalPolicy
 {
-    public function decide(User $user, RequestApproval $approval): bool
+    use ChecksModuleAccess;
+
+    public function viewAny(User $user): Response|bool
+    {
+        if ($this->canAccessModule($user, ApprovalChains::approverRoles())) {
+            return true;
+        }
+
+        return Response::deny('Anda tidak memiliki izin untuk mengakses halaman Persetujuan.');
+    }
+
+    public function decide(User $user, RequestApproval $approval): Response|bool
     {
         if ($approval->decision !== 'pending') {
-            return false;
+            return Response::deny('Persetujuan ini sudah diputuskan.');
         }
 
         $engine = app(ApprovalEngine::class);
         $current = $engine->currentStep($approval->approvable);
 
         if (! $current || $current->id !== $approval->id) {
-            return false;
+            return Response::deny('Langkah persetujuan ini bukan giliran Anda.');
         }
 
-        return $user->hasRole($approval->required_role);
+        if ($user->hasRole($approval->required_role)) {
+            return true;
+        }
+
+        return Response::deny('Anda tidak memiliki izin untuk memutuskan persetujuan ini.');
     }
 }
