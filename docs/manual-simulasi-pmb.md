@@ -1,9 +1,14 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.13 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.14 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
 
+> **Perubahan v1.14:** **konteks proyek**. Akun tanpa ikatan proyek tidak lagi terbuka di `000H`: kini
+> default-nya **proyek aktif pertama** dan ada **pemilih proyek** di header yang berlaku untuk semua
+> halaman (Anggaran, Permintaan, DMBD, Laporan). Akun yang terikat proyek tetap terkunci. Ini menutup
+> batasan terakhir (B-18) — seluruh 19 batasan sudah selesai.
+>
 > **Perubahan v1.13:** **batas akses per peran**. Menu dan halaman Approvals, Tabulation Bid,
 > Overbudget, Pembatalan, dan Interchange kini hanya terbuka untuk peran yang memang terlibat, dan
 > pembuatan draf Plant Request khusus Planner/Mechanic. Peran lain tidak melihat menunya sama sekali;
@@ -621,7 +626,11 @@ benar-benar terlihat oleh approver.
    terpakai = komitmen + aktual). Bila berbeda, catat di lembar observasi.
 5. Klik salah satu kartu angka → berpindah ke halaman terkait (Anggaran, Permintaan, DMBD, Pengadaan,
    Overbudget, Pembatalan, Interchange).
-6. Bila ARKFLEET sedang tidak bisa dihubungi, bagian DMBD menampilkan pesan
+6. **Uji konteks proyek (v1.14).** Login `finance.director@pmb.demo` → halaman terbuka di proyek
+   **021C** (bukan 000H) dan di header ada **pemilih proyek aktif**. Ganti ke **022C** → semua halaman
+   (Dashboard, Anggaran, DMBD, Laporan) ikut pindah ke 022C. Login `planner@pmb.demo` (terikat 022C) →
+   pemilih proyek **tidak muncul** dan proyeknya tetap 022C.
+7. Bila ARKFLEET sedang tidak bisa dihubungi, bagian DMBD menampilkan pesan
    *Data unit sedang tidak tersedia* — bukan angka palsu, dan halaman tetap terbuka.
 
 ---
@@ -668,7 +677,7 @@ Ringkasan keputusan di akhir simulasi:
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
 Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
-**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9); B-8 (v1.10); B-12 (v1.12); B-16 & B-17 (v1.13). Semuanya sudah live
+**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9); B-8 (v1.10); B-12 (v1.12); B-16 & B-17 (v1.13); B-18 (v1.14). Yang sengaja dibiarkan: **B-13** (SAP Sync memang terbatas 3 peran) dan **B-14** (modul Components/Cannibal masih tahap Beta, hanya aktif bila fitur dinyalakan). Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
@@ -690,7 +699,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-15 | ✅ Dashboard | **Diperbaiki 22 Sep 2026** — kartu "—" diganti angka nyata: pagu/terpakai/sisa/% terpakai bulan ini, jumlah permintaan per status, peringatan *Perlu keputusan Anda* untuk approver, pengadaan (bid menunggu review/PO), DMBD hari ini, dan tindakan menunggu. Angka dihitung dengan rumus yang sama seperti halaman Anggaran; kartu bisa diklik ke halaman terkait |
 | B-16 | ✅ Batas akses | **Diperbaiki 22 Sep 2026** — membuat draf Plant Request kini hanya bisa dilakukan **Planner** dan **Mechanic** (menunya pun hanya muncul untuk mereka). Akun lain yang membuka alamat pembuatan draf akan ditolak dengan pesan yang jelas |
 | B-17 | ✅ Batas akses | **Diperbaiki 22 Sep 2026** — kelima halaman itu kini **hanya bisa dibuka peran yang terlibat** (lihat tabel menu per peran di bawah); role lain tidak melihat menunya dan alamatnya ditolak. Hak aksi tetap seperti sebelumnya |ibatasi adalah tindakannya (menyetujui, menetapkan vendor, menyimpan) |
-| B-18 | Proyek bawaan | Akun direktur/pengadaan/IT tidak terikat proyek, jadi halaman terbuka di proyek `000H` dan layar DMBD menampilkan seluruh unit dari banyak proyek — rawan salah pilih |
+| B-18 | ✅ Proyek bawaan | **Diperbaiki 22 Sep 2026 (v1.14)** — akun tanpa ikatan proyek (direktur/pengadaan/IT) kini terbuka di **proyek aktif pertama** (saat ini **021C**, bukan 000H), dan di header muncul **pemilih proyek aktif** (021C/022C/025C/APS) yang berlaku untuk semua halaman. Layar DMBD ikut proyek terpilih (021C = 99 unit, bukan lagi 992 unit lintas proyek). Akun yang terikat proyek tetap terkunci — pemilihnya tidak muncul dan percobaan mengganti ditolak. Catatan: pilihan **Semua Proyek** di DMBD tetap ada, tetapi hanya untuk akun yang boleh berganti proyek |
 | B-19 | ✅ Menu sidebar | **Diperbaiki 22 Sep 2026 (v1.2)** — Approvals, Overbudget, Cancellation, Interchange, dan SAP Sync sudah punya menu |
 
 ### Tabel menu per peran (setelah v1.13) — dipakai saat simulasi
