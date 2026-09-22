@@ -6,6 +6,7 @@ use App\Jobs\SyncDmbdStatusToArkfleet;
 use App\Models\DmbdEntry;
 use App\Models\ProjectCache;
 use App\Services\Arkfleet\EquipmentCache;
+use App\Support\ProjectContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -25,13 +26,9 @@ class DmbdController extends Controller
 
     public function index(Request $request): Response
     {
-        $user = $request->user();
         $today = now()->toDateString();
 
-        $projectCode = $request->input('project_code')
-            ?? session('current_project')
-            ?? $user->project_code_scope
-            ?? ProjectCache::query()->where('is_active', true)->value('project_code');
+        $projectCode = ProjectContext::resolve($request);
 
         $search = trim((string) $request->input('search', ''));
         $statusFilter = $request->input('status');

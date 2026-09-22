@@ -22,6 +22,12 @@ class BudgetSettingEquipmentTest extends TestCase
 
     public function test_setting_sends_equipment_only_for_selected_project_excluding_sold_and_scrap(): void
     {
+        \App\Models\ProjectCache::create([
+            'project_code' => 'MBL',
+            'project_name' => 'MBL',
+            'is_active' => true,
+        ]);
+
         $finance = $this->makeFinanceDirector();
 
         $this->mock(EquipmentCache::class, function ($mock) {

@@ -1,5 +1,5 @@
 import { usePage, Link, router } from '@inertiajs/react';
-import { Layout, Menu, Avatar, Badge, Dropdown, Typography, Button, theme } from 'antd';
+import { Layout, Menu, Avatar, Badge, Dropdown, Typography, Button, theme, Select, Tag, Space } from 'antd';
 import {
     DashboardOutlined,
     TeamOutlined,
@@ -38,6 +38,10 @@ interface NavProps {
     canCreatePlantRequest: boolean;
     viewSapDashboard: boolean;
     roles: string[];
+    canSwitchProject?: boolean;
+    currentProject?: string;
+    currentProjectName?: string;
+    activeProjects?: { project_code: string; project_name: string }[];
 }
 
 interface PageProps {
@@ -227,6 +231,37 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                         {title ?? 'Plant Budget Tracker'}
                     </Typography.Title>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        {nav?.canSwitchProject ? (
+                            <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
+                                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                    Konteks proyek (semua halaman)
+                                </Typography.Text>
+                                <Select
+                                    showSearch
+                                    optionFilterProp="label"
+                                    style={{ minWidth: 220 }}
+                                    value={nav.currentProject || undefined}
+                                    options={(nav.activeProjects ?? []).map((p) => ({
+                                        value: p.project_code,
+                                        label: `${p.project_code} — ${p.project_name}`,
+                                    }))}
+                                    onChange={(code) =>
+                                        router.post('/project-context', { project_code: code }, { preserveScroll: true })
+                                    }
+                                />
+                            </Space>
+                        ) : (
+                            nav?.currentProject &&
+                            nav.currentProject !== 'all' && (
+                                <Tag color="#0d9488">
+                                    {nav.currentProject}
+                                    {nav.currentProjectName &&
+                                    nav.currentProjectName !== nav.currentProject
+                                        ? ` — ${nav.currentProjectName}`
+                                        : ''}
+                                </Tag>
+                            )
+                        )}
                         <Button
                             type="text"
                             icon={isDark ? <BulbOutlined /> : <BulbFilled />}

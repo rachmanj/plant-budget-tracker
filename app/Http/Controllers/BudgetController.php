@@ -12,6 +12,7 @@ use App\Services\Arkfleet\EquipmentCache;
 use App\Services\Budget\BudgetEngine;
 use App\Services\Budget\VarianceCalculator;
 use App\Support\PlantTypeResolver;
+use App\Support\ProjectContext;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,11 +33,7 @@ class BudgetController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $projectCode = $request->input('project_code')
-            ?? session('current_project')
-            ?? $user->project_code_scope
-            ?? ProjectCache::query()->value('project_code')
-            ?? 'MBL';
+        $projectCode = ProjectContext::resolve($request);
 
         $periods = BudgetPeriod::query()
             ->rollingWindow($projectCode)
@@ -89,10 +86,7 @@ class BudgetController extends Controller
 
         $user = $request->user();
 
-        $projectCode = $request->input('project_code')
-            ?? session('current_project')
-            ?? $user->project_code_scope
-            ?? ProjectCache::query()->where('is_active', true)->orderBy('project_code')->value('project_code');
+        $projectCode = ProjectContext::resolve($request);
 
         $projects = ProjectCache::query()
             ->orderBy('project_code')

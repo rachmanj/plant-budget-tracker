@@ -15,6 +15,7 @@ use App\Services\Arkfleet\EquipmentCache;
 use App\Services\Budget\BudgetEngine;
 use App\Services\Pricing\PricingEstimator;
 use App\Support\ApprovalChains;
+use App\Support\ProjectContext;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -53,12 +54,7 @@ class PlantRequestController extends Controller
     {
         $this->authorize('create', PlantRequest::class);
 
-        $user = $request->user();
-        $projectCode = $request->input('project_code')
-            ?? session('current_project')
-            ?? $user->project_code_scope
-            ?? ProjectCache::query()->value('project_code')
-            ?? 'MBL';
+        $projectCode = ProjectContext::resolve($request);
 
         $equipmentResult = $this->equipmentCache->list(['project_code' => $projectCode]);
         $equipment = $this->mapEquipmentList($equipmentResult);
@@ -77,12 +73,8 @@ class PlantRequestController extends Controller
 
         $plantRequest->load(['lines', 'allocation.period']);
 
-        $user = $request->user();
         $projectCode = $plantRequest->allocation?->period?->project_code
-            ?? session('current_project')
-            ?? $user->project_code_scope
-            ?? ProjectCache::query()->value('project_code')
-            ?? 'MBL';
+            ?: ProjectContext::resolve($request);
 
         $equipmentResult = $this->equipmentCache->list(['project_code' => $projectCode]);
         $equipment = $this->mapEquipmentList($equipmentResult);
@@ -115,11 +107,7 @@ class PlantRequestController extends Controller
         ]);
 
         $user = $request->user();
-        $projectCode = $request->input('project_code')
-            ?? session('current_project')
-            ?? $user->project_code_scope
-            ?? ProjectCache::query()->value('project_code')
-            ?? 'MBL';
+        $projectCode = ProjectContext::resolve($request);
 
         $allocation = BudgetAllocation::query()
             ->with('period')
@@ -198,11 +186,7 @@ class PlantRequestController extends Controller
         ]);
 
         $user = $request->user();
-        $projectCode = $request->input('project_code')
-            ?? session('current_project')
-            ?? $user->project_code_scope
-            ?? ProjectCache::query()->value('project_code')
-            ?? 'MBL';
+        $projectCode = ProjectContext::resolve($request);
 
         $allocation = BudgetAllocation::query()
             ->with('period')

@@ -6,8 +6,10 @@ use App\Models\CancellationRequest;
 use App\Models\InterchangeMap;
 use App\Models\OverbudgetRequest;
 use App\Models\PlantRequest;
+use App\Models\ProjectCache;
 use App\Models\RequestApproval;
 use App\Models\TabulationBid;
+use App\Support\ProjectContext;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -38,12 +40,18 @@ class HandleInertiaRequests extends \Inertia\Middleware
             'canCreatePlantRequest' => false,
             'viewSapDashboard' => false,
             'roles' => [],
+            'canSwitchProject' => false,
+            'currentProject' => '',
+            'currentProjectName' => '',
+            'activeProjects' => [],
         ];
 
         if ($user) {
             $roleNames = $user->getRoleNames();
             $rolesArray = $roleNames->all();
             $canViewApprovals = Gate::allows('viewAny', RequestApproval::class);
+
+            $currentProject = ProjectContext::resolve($request);
 
             $nav = [
                 'pendingApprovals' => $canViewApprovals
@@ -61,6 +69,19 @@ class HandleInertiaRequests extends \Inertia\Middleware
                 'canCreatePlantRequest' => Gate::allows('create', PlantRequest::class),
                 'viewSapDashboard' => Gate::allows('viewSapDashboard'),
                 'roles' => $rolesArray,
+                'canSwitchProject' => ProjectContext::allowSwitch($user),
+                'currentProject' => $currentProject,
+                'currentProjectName' => self::projectNameForCode($currentProject),
+                'activeProjects' => ProjectCache::query()
+                    ->where('is_active', true)
+                    ->orderBy('project_code')
+                    ->get(['project_code', 'project_name'])
+                    ->map(fn (ProjectCache $p) => [
+                        'project_code' => $p->project_code,
+                        'project_name' => $p->project_name,
+                    ])
+                    ->values()
+                    ->all(),
             ];
         }
 
@@ -94,5 +115,16 @@ class HandleInertiaRequests extends \Inertia\Middleware
         ]);
 
         return parent::handle($request, $next);
+    }
+
+    private static function projectNameForCode(string $projectCode): string
+    {
+        if ($projectCode === '' || $projectCode === 'all') {
+            return $projectCode;
+        }
+
+        return ProjectCache::query()
+            ->where('project_code', $projectCode)
+            ->value('project_name') ?? $projectCode;
     }
 }

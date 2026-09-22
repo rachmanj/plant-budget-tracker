@@ -14,6 +14,7 @@ use App\Http\Controllers\DmbdController;
 use App\Http\Controllers\InterchangeController;
 use App\Http\Controllers\OverbudgetController;
 use App\Http\Controllers\PlantRequestController;
+use App\Http\Controllers\ProjectContextController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Sap\SyncDashboardController;
 use App\Http\Controllers\Sap\TestConnectionController;
@@ -31,6 +32,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+
+    Route::post('/project-context', [ProjectContextController::class, 'update'])->name('project-context.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

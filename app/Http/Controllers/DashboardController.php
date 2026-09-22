@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProjectCache;
 use App\Services\Dashboard\DashboardMetrics;
+use App\Support\ProjectContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -36,10 +36,7 @@ class DashboardController extends Controller
             $widgets[] = ['key' => 'reports', 'title' => 'Laporan', 'description' => 'Analitik & laporan (Phase 7)'];
         }
 
-        $projectCode = $request->input('project_code')
-            ?? session('current_project')
-            ?? $user->project_code_scope
-            ?? ProjectCache::query()->value('project_code');
+        $projectCode = ProjectContext::resolve($request);
 
         return Inertia::render('Dashboard', [
             'widgets' => $widgets,

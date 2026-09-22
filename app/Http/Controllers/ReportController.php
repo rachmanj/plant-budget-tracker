@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProjectCache;
 use App\Services\Reporting\BudgetConsumptionReport;
+use App\Support\ProjectContext;
 use App\Services\Reporting\EquipmentCostReport;
 use App\Services\Reporting\VendorPerformanceReport;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -128,13 +128,7 @@ class ReportController extends Controller
 
     private function resolveProjectCode(Request $request): string
     {
-        $user = $request->user();
-
-        return $request->input('project_code')
-            ?? session('current_project')
-            ?? $user?->project_code_scope
-            ?? ProjectCache::query()->value('project_code')
-            ?? '';
+        return ProjectContext::resolve($request);
     }
 
     private function authorizeReportExport(string $reportType): void
