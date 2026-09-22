@@ -1,8 +1,12 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.8 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.9 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+
+> **Perubahan v1.9:** **Dashboard** kini menampilkan angka nyata (pagu, terpakai, sisa, % terpakai,
+> jumlah permintaan per status, pengadaan, DMBD hari ini, tindakan menunggu) — bukan lagi tanda "—".
+> Kartu bisa diklik, dan approver melihat peringatan **Perlu keputusan Anda** beserta jumlahnya (gap B-15 ditutup).
 
 > **Perubahan v1.8:** pencarian harga part number kini benar-benar **per part** dari SAP
 > (harga PO terakhir → harga beli terakhir item master → harga historis permintaan sebelumnya),
@@ -213,7 +217,12 @@ Kolom temuan dipakai di lembar observasi §9.
 
 **Login:** `finance.director@pmb.demo`
 
-1. Buka `/dashboard` → nama user + tag role `finance_director`.
+1. Buka `/dashboard` → sapaan nama user, tanggal hari ini, tag proyek aktif, dan angka nyata:
+   - **Anggaran September 2026** untuk proyek **000H**: Pagu **Rp 300,0 jt**, Terpakai **Rp 0**,
+     Sisa **Rp 300,0 jt**, % Terpakai **0,0%** (= 2 baris alokasi).
+   - Bagian **Permintaan**, **Pengadaan**, dan **Tindakan Menunggu** (semua bernilai 0 sebelum ada
+     transaksi). Kartu bisa diklik ke halaman terkait.
+   - Catat angka Pagu ini untuk dibandingkan dengan halaman `/budget` pada langkah 2 — harus sama.
 2. Buka `/budget` → pilih proyek **022C** pada dropdown Proyek.
    - Diharapkan: tab periode Sep 2026 status `open`, 3 baris alokasi (AC 035, ADT 001, E 062)
      dengan kolom Alokasi / Carry Fwd / Komitmen / Aktual / Varians / Toleransi %.
@@ -563,6 +572,33 @@ dan `/cannibal-requests` menjawab **404**).
 
 ---
 
+### S-16 · Dashboard — angka nyata & peringatan keputusan (semua role)
+
+Tujuan: memastikan angka di Dashboard **sama** dengan halaman Anggaran, dan peringatan keputusan
+benar-benar terlihat oleh approver.
+
+1. Login `finance.director@pmb.demo` → `/dashboard`.
+   - Diharapkan: Pagu **Rp 300,0 jt**, Terpakai **Rp 0**, Sisa **Rp 300,0 jt**, % Terpakai **0,0%**
+     (periode September 2026, proyek **000H**).
+   - Bagian **DMBD Hari Ini** **tidak muncul** untuk role ini (tidak berhak) — ini benar, bukan error.
+2. Login `project.manager@pmb.demo` → proyek **022C** → Pagu **Rp 295,0 jt** (3 alokasi),
+   **DMBD Hari Ini** menampilkan **194 unit aktif**.
+   - Karena role ini adalah *approver*, bagian **Permintaan** tetap muncul walaupun tidak berhak
+     membuat permintaan; bila ada permintaan menunggu, akan tampil kotak
+     **Perlu keputusan Anda: N** yang bisa diklik menuju halaman Approvals.
+3. Login `planner@pmb.demo` → bagian **Permintaan** muncul dengan hitungan draf/menunggu/disetujui;
+   bagian DMBD menampilkan hitungan **Ready for Use / Standby / Breakdown** hari ini
+   (0 sebelum ada catatan harian).
+4. Bandingkan **Pagu / Terpakai / Sisa** di Dashboard dengan halaman **Anggaran** proyek yang sama:
+   harus **sama persis** (keduanya memakai rumus resmi yang sama: pagu = alokasi + carry forward;
+   terpakai = komitmen + aktual). Bila berbeda, catat di lembar observasi.
+5. Klik salah satu kartu angka → berpindah ke halaman terkait (Anggaran, Permintaan, DMBD, Pengadaan,
+   Overbudget, Pembatalan, Interchange).
+6. Bila ARKFLEET sedang tidak bisa dihubungi, bagian DMBD menampilkan pesan
+   *Data unit sedang tidak tersedia* — bukan angka palsu, dan halaman tetap terbuka.
+
+---
+
 ## 8. Skenario End-to-End (agenda simulasi ± 120 menit)
 
 | Waktu | Pelaku | Kegiatan | Skenario |
@@ -605,7 +641,7 @@ Ringkasan keputusan di akhir simulasi:
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
 Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
-**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8). Semuanya sudah live
+**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9). Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
@@ -624,7 +660,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-12 | Laporan | Belum ada tombol unduh di layar laporan (unduhan hanya lewat alamat langsung), dan pembatasan siapa yang boleh mengunduh belum dijalankan penuh |
 | B-13 | SAP Sync | Hanya bisa dibuka IT Manager, Procurement Manager, dan Finance Director |
 | B-14 | Beta | Modul **Components** dan **Cannibal** (fitur tahap Beta) belum diaktifkan, jadi halamannya belum bisa dibuka |
-| B-15 | Dashboard | Kartu statistik masih menampilkan nilai "—" (belum ada angka nyata) |
+| B-15 | ✅ Dashboard | **Diperbaiki 22 Sep 2026** — kartu "—" diganti angka nyata: pagu/terpakai/sisa/% terpakai bulan ini, jumlah permintaan per status, peringatan *Perlu keputusan Anda* untuk approver, pengadaan (bid menunggu review/PO), DMBD hari ini, dan tindakan menunggu. Angka dihitung dengan rumus yang sama seperti halaman Anggaran; kartu bisa diklik ke halaman terkait |
 | B-16 | Batas akses | Menyimpan **draft** Plant Request belum dibatasi khusus ke Planner/Mechanic — akun lain yang login masih bisa membuat draft (submit tetap hanya untuk pembuatnya) |
 | B-17 | Batas akses | Halaman Approvals, Tabulation Bid, Overbudget, Cancellation, dan Interchange bisa **dibuka** semua akun yang login; yang dibatasi adalah tindakannya (menyetujui, menetapkan vendor, menyimpan) |
 | B-18 | Proyek bawaan | Akun direktur/pengadaan/IT tidak terikat proyek, jadi halaman terbuka di proyek `000H` dan layar DMBD menampilkan seluruh unit dari banyak proyek — rawan salah pilih |
