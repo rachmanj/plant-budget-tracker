@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button, Card, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
@@ -18,7 +18,7 @@ interface Props {
         approvals: Array<{ step_order: number; required_role: string; decision: string }>;
     };
     tolerance: { projected_pct: string; within_tolerance: boolean; cap: string };
-    can: { submit: boolean; cancel: boolean };
+    can: { submit: boolean; cancel: boolean; update?: boolean };
 }
 
 export default function Show({ request, tolerance, can = { submit: false, cancel: false } }: Props) {
@@ -66,6 +66,11 @@ export default function Show({ request, tolerance, can = { submit: false, cancel
                     pagination={false}
                 />
                 <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+                    {can.update && (
+                        <Link href={`/plant-requests/${request.id}/edit`}>
+                            <Button>Ubah Draft</Button>
+                        </Link>
+                    )}
                     {can.submit && (
                         <Button
                             type="primary"

@@ -4,6 +4,28 @@ namespace App\Support;
 
 class ApprovalChains
 {
+    /** @var list<string> */
+    private const CHAIN_TYPES = [
+        'PlantRequest',
+        'TabulationBid',
+        'OverbudgetRequest',
+        'CancellationRequest',
+        'CannibalRequest',
+    ];
+
+    /**
+     * @return list<string>
+     */
+    public static function approverRoles(): array
+    {
+        return collect(self::CHAIN_TYPES)
+            ->flatMap(fn (string $type) => self::for($type))
+            ->pluck('required_role')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public static function for(string $type): array
     {
         return match ($type) {

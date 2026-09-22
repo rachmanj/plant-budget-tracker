@@ -2,13 +2,6 @@ import { Head } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import PlantRequestWizard from '@/Components/PlantRequestWizard';
 
-interface Prefill {
-    dmbd_entry_id?: number;
-    equipment_id?: number;
-    unit_code_cache?: string;
-    project_code?: string;
-}
-
 interface Project {
     project_code: string;
     project_name: string;
@@ -36,21 +29,38 @@ interface Allocation {
     remaining: string;
 }
 
+type PriceSource = 'tabulation_bid' | 'sap_price' | 'manual' | 'none';
+
 interface Props {
-    prefill?: Prefill;
+    request: {
+        id: number;
+        sap_mr_id: number;
+        unit_code_cache: string;
+        budget_allocation_id: number;
+        dmbd_entry_id: number | null;
+        equipment_id: number;
+        lines: Array<{
+            part_number: string;
+            material_name: string;
+            uom: string;
+            qty: number;
+            unit_price_est: string;
+            price_source: PriceSource;
+        }>;
+    };
     projectCode: string;
     projects: Project[];
     equipment: Equipment[];
     allocations: Allocation[];
 }
 
-export default function Create({ prefill, projectCode, projects, equipment, allocations }: Props) {
+export default function Edit({ request, projectCode, projects, equipment, allocations }: Props) {
     return (
-        <AppLayout title="Buat Plant Request">
-            <Head title="Buat Plant Request" />
+        <AppLayout title="Ubah Plant Request">
+            <Head title="Ubah Plant Request" />
             <PlantRequestWizard
-                mode="create"
-                prefill={prefill}
+                mode="edit"
+                request={request}
                 projectCode={projectCode}
                 projects={projects}
                 equipment={equipment}

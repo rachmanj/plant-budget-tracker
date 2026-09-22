@@ -2,8 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\RequestApproval;
+use App\Support\ApprovalChains;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,7 +23,34 @@ class HandleInertiaRequests extends \Inertia\Middleware
     {
         $user = $request->user();
 
+        $nav = [
+            'pendingApprovals' => 0,
+            'isApprover' => false,
+            'viewSapDashboard' => false,
+            'roles' => [],
+        ];
+
+        if ($user) {
+            $roleNames = $user->getRoleNames();
+            $rolesArray = $roleNames->all();
+            $approverRoles = ApprovalChains::approverRoles();
+            $isApprover = (bool) array_intersect($rolesArray, $approverRoles);
+
+            $nav = [
+                'pendingApprovals' => $isApprover
+                    ? RequestApproval::query()
+                        ->where('decision', 'pending')
+                        ->whereIn('required_role', $roleNames)
+                        ->count()
+                    : 0,
+                'isApprover' => $isApprover,
+                'viewSapDashboard' => Gate::allows('viewSapDashboard'),
+                'roles' => $rolesArray,
+            ];
+        }
+
         return array_merge(parent::share($request), [
+            'nav' => $nav,
             'auth' => [
                 'user' => $user ? [
                     'id' => $user->id,

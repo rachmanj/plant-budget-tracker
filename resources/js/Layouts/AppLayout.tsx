@@ -27,11 +27,19 @@ interface AuthUser {
     roles: string[];
 }
 
+interface NavProps {
+    pendingApprovals: number;
+    isApprover: boolean;
+    viewSapDashboard: boolean;
+    roles: string[];
+}
+
 interface PageProps {
     auth: {
         user: AuthUser | null;
         can: string[];
     };
+    nav?: NavProps;
     features?: {
         cannibal_beta?: boolean;
     };
@@ -47,8 +55,9 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, title }: AppLayoutProps) {
-    const { auth, features } = usePage<PageProps>().props;
+    const { auth, nav, features } = usePage<PageProps>().props;
     const can = auth.can ?? [];
+    const navRoles = nav?.roles ?? auth.user?.roles ?? [];
     const { isDark, toggleTheme } = useTheme();
     const { token } = theme.useToken();
 
@@ -79,6 +88,55 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         menuItems.push({
             key: 'dmbd',
             label: <Link href="/dmbd">DMBD</Link>,
+        });
+    }
+
+    if (nav?.isApprover) {
+        menuItems.push({
+            key: 'approvals',
+            label: (
+                <Link href="/approvals">
+                    <Badge count={nav.pendingApprovals} size="small" offset={[8, 0]}>
+                        Approvals
+                    </Badge>
+                </Link>
+            ),
+        });
+    }
+
+    if (
+        can.includes('plant_request.create')
+        || can.includes('overbudget.approve.fin_dir')
+        || can.includes('overbudget.approve.ops_dir')
+    ) {
+        menuItems.push({
+            key: 'overbudget',
+            label: <Link href="/overbudget">Overbudget</Link>,
+        });
+    }
+
+    if (can.includes('cancellation.plant') || can.includes('cancellation.procurement')) {
+        menuItems.push({
+            key: 'cancellation',
+            label: <Link href="/cancellation">Cancellation</Link>,
+        });
+    }
+
+    if (
+        can.includes('interchange.manage')
+        || navRoles.includes('plant_manager')
+        || navRoles.includes('aml_manager')
+    ) {
+        menuItems.push({
+            key: 'interchange',
+            label: <Link href="/interchange">Interchange</Link>,
+        });
+    }
+
+    if (nav?.viewSapDashboard) {
+        menuItems.push({
+            key: 'sap-sync',
+            label: <Link href="/sap/sync-dashboard">SAP Sync</Link>,
         });
     }
 

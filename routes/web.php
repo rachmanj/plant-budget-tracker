@@ -51,6 +51,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/plant-requests/create', [PlantRequestController::class, 'create'])->name('plant-requests.create');
         Route::post('/plant-requests', [PlantRequestController::class, 'store'])->name('plant-requests.store');
         Route::post('/plant-requests/estimate-part', [PlantRequestController::class, 'estimatePart'])->name('plant-requests.estimate-part');
+        Route::get('/plant-requests/{plantRequest}/edit', [PlantRequestController::class, 'edit'])->name('plant-requests.edit');
+        Route::put('/plant-requests/{plantRequest}', [PlantRequestController::class, 'update'])->name('plant-requests.update');
         Route::get('/plant-requests/{plantRequest}', [PlantRequestController::class, 'show'])->name('plant-requests.show');
         Route::post('/plant-requests/{plantRequest}/submit', [PlantRequestController::class, 'submit'])->name('plant-requests.submit');
         Route::post('/plant-requests/{plantRequest}/cancel', [CancellationController::class, 'store'])->name('plant-requests.cancel');
