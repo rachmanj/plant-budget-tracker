@@ -1,9 +1,14 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.11 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.12 · **Tanggal:** 22 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
 
+> **Perubahan v1.12:** modul **Laporan**. Halaman `/reports` kini menjadi daftar laporan (tiga laporan:
+> konsumsi anggaran, kinerja vendor, biaya peralatan), tiap laporan punya tombol **Unduh PDF** dan
+> **Unduh CSV**. Izin unduh ditegakkan: akun tanpa izin unduh tetap bisa **melihat** laporan di layar
+> tetapi tidak bisa mengunduh (gap B-12 ditutup).
+>
 > **Perubahan v1.11:** perbaikan **perhitungan anggaran**. Sebelumnya dua keadaan membuat angka anggaran
 > keliru: (1) permintaan yang **dibatalkan** tetap "memakan" anggaran — sekarang anggaran kembali utuh;
 > (2) setelah **barang diterima (GRPO)**, pemakaian dihitung dua kali (komitmen + aktual sekaligus) —
@@ -553,17 +558,22 @@ tidak muncul; memaksa URL/aksi tetap ditolak server.
 
 ---
 
-### S-14 · Laporan (semua role dengan `reports.view`)
+### S-14 · Laporan, unduh PDF/CSV, dan batas izin unduh (v1.12)
 
-1. klik menu **Reports** (default `/reports/budget-consumption`).
-2. Ubah parameter di URL, mis. `/reports/budget-consumption?project_code=022C&month=2026-09`
-   → tabel Budget Consumption (Unit / Allocated / Committed / Actual) terisi sesuai ledger.
-3. `/reports/equipment-cost?project_code=022C&month=2026-09` → Equipment Cost Analysis.
-4. `/reports/vendor-performance` → daftar vendor + % indent (dari bid yang sudah di-award).
-5. Uji ekspor (URL langsung): `/reports/budget-consumption/export/pdf` dan `.../export/csv`.
-   - Diharapkan: PDF/CSV terunduh.
-   - **Temuan:** tombol ekspor belum ada di UI, dan izin `reports.export` **belum ditegakkan**
-     pada alamat unduhannya (akun yang bisa melihat laporan juga bisa mengunduh). Catat untuk perbaikan.
+1. Klik menu **Reports** → terbuka **daftar laporan** (`/reports`) berisi tiga laporan.
+2. **Konsumsi Anggaran** → `/reports/budget-consumption?project_code=022C&month=2026-09`
+   → tabel (Unit / Allocated / Committed / Actual) terisi sesuai catatan anggaran.
+3. **Biaya Peralatan** → `/reports/equipment-cost?project_code=022C&month=2026-09`.
+4. **Kinerja Vendor** → `/reports/vendor-performance` → daftar vendor + % indent.
+5. **Uji unduh sebagai Finance Director** (`finance.director@pmb.demo`, punya izin unduh):
+   - Tekan **Unduh PDF** dan **Unduh CSV** pada ketiga laporan → berkas benar-benar terunduh
+     dan isinya ada barisnya (bukan halaman kosong).
+6. **Uji batas izin sebagai Planner** (`planner@pmb.demo`, **tanpa** izin unduh):
+   - Laporan tetap bisa **dibuka** di layar, tetapi tombol unduh **tidak muncul**.
+   - Bila alamat unduh dibuka langsung (`/reports/budget-consumption/export/pdf`) →
+     **ditolak (tidak boleh terunduh)**. Ini yang benar: melihat boleh, mengunduh tidak.
+7. Alamat dengan jenis laporan yang salah (mis. `/reports/laporan-ngawur/export/pdf`) →
+   pesan "jenis laporan tidak ditemukan" (bukan halaman rusak).
 
 ---
 
@@ -653,7 +663,7 @@ Ringkasan keputusan di akhir simulasi:
 ## 10. Batasan yang Sudah Diketahui (bukan bug baru — tapi perlu dicatat)
 
 Daftar ini hasil pemeriksaan aplikasi (22 September 2026) supaya penguji tidak salah tafsir.
-**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9); B-8 (v1.10). Semuanya sudah live
+**Sudah diperbaiki:** B-1, B-2, B-3, B-5, B-6 (v1.1); B-4, B-7, B-19 (v1.2); B-9 (v1.6); B-10 (v1.7); B-11 (v1.8); B-15 (v1.9); B-8 (v1.10); B-12 (v1.12). Semuanya sudah live
 di server, jadi skenario terkait kini normal, bukan temuan.
 
 | # | Modul | Kondisi |
@@ -669,7 +679,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Catatan Breakdown** (wajib saat status Breakdown) + daftar unit berhalaman (25/50/100) dengan pencarian, filter status & filter proyek, serta ringkasan status harian |
 | B-10 | ✅ Budget | **Diperbaiki 22 Sep 2026** — pilihan unit memakai daftar nyata dari ARKFLEET per proyek (bisa dicari, dikelompokkan per tipe plant; SOLD/SCRAP dikecualikan) dan alokasi tingkat **divisi (tanpa unit)** sudah tersedia, lengkap dengan pencegahan alokasi ganda |
 | B-11 | ✅ Harga | **Diperbaiki 22 Sep 2026** — harga diambil **per part number** dari SAP (harga PO terakhir, lalu harga beli terakhir di item master), dengan **referensi** yang terlihat (mis. "PO 260206551 · 2026-09-22"); bila SAP tidak punya data dipakai harga historis part yang sama dari permintaan sebelumnya, dan hanya kalau semuanya kosong harga 0,00 + "Belum ada". Sekaligus diperbaiki: koneksi baca SAP yang selama ini gagal sehingga pencarian harga selalu nihil |
-| B-12 | Laporan | Belum ada tombol unduh di layar laporan (unduhan hanya lewat alamat langsung), dan pembatasan siapa yang boleh mengunduh belum dijalankan penuh |
+| B-12 | ✅ Laporan | **Diperbaiki 22 Sep 2026** — layar laporan kini punya tombol **Unduh PDF** dan **Unduh CSV** (tersembunyi untuk yang tidak berhak), tersedia untuk ketiga laporan (konsumsi anggaran, kinerja vendor, biaya peralatan). Izin unduh (**reports.export**) sekarang benar-benar ditegakkan: tanpa izin → ditolak, sedangkan melihat laporan tetap boleh |
 | B-13 | SAP Sync | Hanya bisa dibuka IT Manager, Procurement Manager, dan Finance Director |
 | B-14 | Beta | Modul **Components** dan **Cannibal** (fitur tahap Beta) belum diaktifkan, jadi halamannya belum bisa dibuka |
 | B-15 | ✅ Dashboard | **Diperbaiki 22 Sep 2026** — kartu "—" diganti angka nyata: pagu/terpakai/sisa/% terpakai bulan ini, jumlah permintaan per status, peringatan *Perlu keputusan Anda* untuk approver, pengadaan (bid menunggu review/PO), DMBD hari ini, dan tindakan menunggu. Angka dihitung dengan rumus yang sama seperti halaman Anggaran; kartu bisa diklik ke halaman terkait |
