@@ -1,0 +1,46 @@
+.app-layout-header.ant-layout-header {
+    height: 64px;
+    line-height: normal;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.app-layout-header-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-right: 16px !important;
+}
+
+.app-layout-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    height: 100%;
+    max-height: 64px;
+}
+
+.app-layout-project-row {
+    flex-shrink: 0;
+    max-width: 300px;
+}
+
+.app-layout-project-select {
+    width: 280px;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.app-layout-project-select .ant-select-selector {
+    overflow: hidden;
+}
+
+@media (max-width: 991.98px) {
+    .app-layout-project-label {
+        display: none !important;
+    }
+
+    .app-layout-user-name {
+        display: none !important;
+    }
+}

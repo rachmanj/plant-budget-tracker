@@ -1,5 +1,19 @@
 import { usePage, Link, router } from '@inertiajs/react';
-import { Layout, Menu, Avatar, Badge, Dropdown, Typography, Button, theme, Select, Tag, Space } from 'antd';
+import {
+    Layout,
+    Menu,
+    Avatar,
+    Badge,
+    Dropdown,
+    Typography,
+    Button,
+    theme,
+    Select,
+    Tag,
+    Space,
+    Tooltip,
+} from 'antd';
+import './AppLayout.css';
 import {
     DashboardOutlined,
     TeamOutlined,
@@ -210,6 +224,27 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         },
     ];
 
+    const activeProjects = nav?.activeProjects ?? [];
+    const projectSelectOptions = activeProjects.map((p) => ({
+        value: p.project_code,
+        label: `${p.project_code} — ${p.project_name}`,
+    }));
+
+    const projectLabelForCode = (code: string | undefined) => {
+        if (!code) {
+            return '';
+        }
+        const match = activeProjects.find((p) => p.project_code === code);
+        return match ? `${match.project_code} — ${match.project_name}` : code;
+    };
+
+    const projectEllipsis = {
+        display: 'block',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap' as const,
+    };
+
     return (
         <Layout style={{ minHeight: '100vh' }}>
             <Sider breakpoint="lg" collapsedWidth={0} theme={isDark ? 'dark' : 'light'}>
@@ -220,36 +255,52 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             </Sider>
             <Layout>
                 <Header
+                    className="app-layout-header"
                     style={{
                         background: token.colorBgContainer,
                         padding: '0 24px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
+                        gap: 16,
                     }}
                 >
-                    <Typography.Title level={4} style={{ margin: 0 }}>
+                    <Typography.Title level={4} className="app-layout-header-title" ellipsis style={{ margin: 0 }}>
                         {title ?? 'Plant Budget Tracker'}
                     </Typography.Title>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div className="app-layout-header-right">
                         {nav?.canSwitchProject ? (
-                            <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
-                                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                                    Project context (all pages)
-                                </Typography.Text>
-                                <Select
-                                    showSearch
-                                    optionFilterProp="label"
-                                    style={{ minWidth: 220 }}
-                                    value={nav.currentProject || undefined}
-                                    options={(nav.activeProjects ?? []).map((p) => ({
-                                        value: p.project_code,
-                                        label: `${p.project_code} — ${p.project_name}`,
-                                    }))}
-                                    onChange={(code) =>
-                                        router.post('/project-context', { project_code: code }, { preserveScroll: true })
-                                    }
-                                />
+                            <Space align="center" size={8} className="app-layout-project-row">
+                                <Tooltip title="Applies to all pages">
+                                    <Typography.Text
+                                        type="secondary"
+                                        className="app-layout-project-label"
+                                        style={{ fontSize: 12, whiteSpace: 'nowrap' }}
+                                    >
+                                        Project
+                                    </Typography.Text>
+                                </Tooltip>
+                                <Tooltip title={projectLabelForCode(nav.currentProject)}>
+                                    <Select
+                                        showSearch
+                                        optionFilterProp="label"
+                                        className="app-layout-project-select"
+                                        value={nav.currentProject || undefined}
+                                        options={projectSelectOptions}
+                                        labelRender={({ value }) => {
+                                            const full = projectLabelForCode(value as string);
+                                            return <span style={projectEllipsis}>{full}</span>;
+                                        }}
+                                        optionRender={(option) => (
+                                            <Tooltip title={String(option.label ?? '')}>
+                                                <div style={projectEllipsis}>{option.label}</div>
+                                            </Tooltip>
+                                        )}
+                                        onChange={(code) =>
+                                            router.post('/project-context', { project_code: code }, { preserveScroll: true })
+                                        }
+                                    />
+                                </Tooltip>
                             </Space>
                         ) : (
                             nav?.currentProject &&
@@ -273,9 +324,12 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                             <Button type="text" icon={<BellOutlined />} />
                         </Badge>
                         <Dropdown menu={{ items: userMenu }} placement="bottomRight">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                            <div
+                                className="app-layout-user-block"
+                                style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                            >
                                 <Avatar icon={<UserOutlined />} />
-                                <span>{auth.user?.name}</span>
+                                <span className="app-layout-user-name">{auth.user?.name}</span>
                             </div>
                         </Dropdown>
                     </div>
