@@ -80,12 +80,12 @@ export default function BudgetSetting({
     };
 
     return (
-        <AppLayout title="Atur Pagu Anggaran">
-            <Head title="Atur Pagu Anggaran" />
+        <AppLayout title="Set Budget Ceiling">
+            <Head title="Set Budget Ceiling" />
             <Card>
                 <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
-                    Tetapkan pagu global untuk seluruh proyek pada bulan periode yang dipilih. Tidak ada
-                    pembagian per unit alat.
+                    Set the global project ceiling for the selected period month. Budget is not split per
+                    equipment unit.
                 </Typography.Paragraph>
 
                 {isRevision && (
@@ -93,13 +93,13 @@ export default function BudgetSetting({
                         type="info"
                         showIcon
                         style={{ marginBottom: 16 }}
-                        message="Periode ini sudah memiliki pagu. Menyimpan akan merevisi pagu periode tersebut (bukan menambah baris baru)."
+                        message="This period already has a ceiling. Saving will revise that period (not add a new row)."
                     />
                 )}
 
                 <Form layout="vertical" onFinish={submit}>
                     <Form.Item
-                        label="Proyek"
+                        label="Project"
                         validateStatus={errors.project_code ? 'error' : undefined}
                         help={errors.project_code}
                     >
@@ -114,7 +114,7 @@ export default function BudgetSetting({
                     </Form.Item>
 
                     <Form.Item
-                        label="Bulan Periode"
+                        label="Period Month"
                         validateStatus={errors.period_month ? 'error' : undefined}
                         help={errors.period_month}
                     >
@@ -127,7 +127,7 @@ export default function BudgetSetting({
                     </Form.Item>
 
                     <Form.Item
-                        label="Total Anggaran Proyek (IDR)"
+                        label="Total Project Budget (IDR)"
                         validateStatus={errors.allocated_amount ? 'error' : undefined}
                         help={errors.allocated_amount}
                         required
@@ -143,7 +143,7 @@ export default function BudgetSetting({
                     </Form.Item>
 
                     <Form.Item
-                        label="Toleransi (%)"
+                        label="Tolerance (%)"
                         validateStatus={errors.tolerance_pct ? 'error' : undefined}
                         help={errors.tolerance_pct}
                         required
@@ -158,7 +158,7 @@ export default function BudgetSetting({
                     </Form.Item>
 
                     <Form.Item
-                        label="Catatan (opsional)"
+                        label="Notes (optional)"
                         validateStatus={errors.memo ? 'error' : undefined}
                         help={errors.memo}
                     >
@@ -172,7 +172,7 @@ export default function BudgetSetting({
 
                     <Form.Item>
                         <Button type="primary" htmlType="submit" loading={processing}>
-                            {isRevision ? 'Simpan Revisi Pagu' : 'Simpan Pagu Anggaran'}
+                            {isRevision ? 'Save Ceiling Revision' : 'Save Budget Ceiling'}
                         </Button>
                     </Form.Item>
                 </Form>

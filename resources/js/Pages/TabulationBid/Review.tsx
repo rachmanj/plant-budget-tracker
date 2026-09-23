@@ -35,11 +35,11 @@ export default function Review({ bid, can = { review: false, award: false, creat
 
     const confirmCreatePo = () => {
         Modal.confirm({
-            title: 'Buat Purchase Order di SAP?',
+            title: 'Create Purchase Order in SAP?',
             content:
-                'Tindakan ini akan membuat Purchase Order nyata di SAP B1 melalui antrian sinkronisasi. Pastikan vendor pemenang sudah benar.',
-            okText: 'Buat PO',
-            cancelText: 'Batal',
+                'This will create a real Purchase Order in SAP B1 via the sync queue. Confirm the winning vendor is correct.',
+            okText: 'Create PO',
+            cancelText: 'Cancel',
             onOk: () => router.post(`/tabulation-bids/${bid.id}/create-po`),
         });
     };
@@ -51,7 +51,7 @@ export default function Review({ bid, can = { review: false, award: false, creat
                 <VendorComparisonTable vendors={bid.vendors} />
                 {bid.award?.vendor && (
                     <Descriptions style={{ marginTop: 16 }} column={1} size="small">
-                        <Descriptions.Item label="Vendor pemenang">
+                        <Descriptions.Item label="Winning vendor">
                             {bid.award.vendor.vendor_name} — {formatIdr(bid.award.vendor.price)}
                         </Descriptions.Item>
                         {bid.sap_po_id && (
@@ -82,7 +82,7 @@ export default function Review({ bid, can = { review: false, award: false, creat
                 </Space>
                 {can.review && (
                     <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-                        Mode review procurement manager aktif.
+                        Procurement manager review mode is active.
                     </Typography.Paragraph>
                 )}
             </Card>

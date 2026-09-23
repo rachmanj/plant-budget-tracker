@@ -11,7 +11,7 @@ export default function Create() {
     });
 
     return (
-        <AppLayout title="Buat Cannibal Request">
+        <AppLayout title="Create Cannibal Request">
             <Head title="Cannibal Request" />
             <Card title="Cannibal Request">
                 <Form layout="vertical" onFinish={() => post('/cannibal-requests')}>

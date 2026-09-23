@@ -16,6 +16,7 @@ import {
 import type { TablePaginationConfig } from 'antd/es/table';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { statusLabel } from '@/utils/labels';
 
 interface EquipmentRow {
     id: number;
@@ -61,7 +62,6 @@ interface Props {
 }
 
 const statusColor: Record<string, string> = { rfu: 'green', standby: 'gold', breakdown: 'red' };
-const statusLabel: Record<string, string> = { rfu: 'RFU', standby: 'Standby', breakdown: 'Breakdown' };
 
 export default function Index({
     units,
@@ -127,7 +127,7 @@ export default function Index({
             },
             {
                 preserveScroll: true,
-                onError: () => message.error('Gagal menyimpan status.'),
+                onError: () => message.error('Failed to save status.'),
             }
         );
     };
@@ -155,17 +155,17 @@ export default function Index({
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    message.success('Catatan tersimpan.');
+                    message.success('Note saved.');
                     closeNoteModal();
                 },
-                onError: () => message.error('Gagal menyimpan catatan.'),
+                onError: () => message.error('Failed to save note.'),
             }
         );
     };
 
     const currentProjectName = (): string => {
         if (!projectCode || projectCode === 'all') {
-            return 'Semua Proyek';
+            return 'All Projects';
         }
         const match = projects.find((p) => p.project_code === projectCode);
         return match ? `${match.project_code} — ${match.project_name}` : projectCode;
@@ -174,33 +174,33 @@ export default function Index({
     const columns = [
         { title: 'Unit', dataIndex: 'unit_code', key: 'unit_code' },
         ...(!projectCode || projectCode === 'all'
-            ? [{ title: 'Proyek', dataIndex: 'project_code', key: 'project_code', render: (v: string | null) => v ?? '—' }]
+            ? [{ title: 'Project', dataIndex: 'project_code', key: 'project_code', render: (v: string | null) => v ?? '—' }]
             : []),
         {
             title: 'Status',
             key: 'status',
-            width: 160,
+            width: 200,
             render: (_: unknown, row: EquipmentRow) => {
                 const current = entries[row.id]?.operational_status ?? 'rfu';
                 if (!can.update) {
-                    return <Tag color={statusColor[current]}>{statusLabel[current]}</Tag>;
+                    return <Tag color={statusColor[current]}>{statusLabel(current)}</Tag>;
                 }
                 return (
                     <Select
                         value={current}
-                        style={{ width: 140 }}
+                        style={{ width: 180 }}
                         onChange={(v) => handleStatusChange(row, v)}
                         options={[
-                            { value: 'rfu', label: <Tag color="green">RFU</Tag> },
-                            { value: 'standby', label: <Tag color="gold">Standby</Tag> },
-                            { value: 'breakdown', label: <Tag color="red">Breakdown</Tag> },
+                            { value: 'rfu', label: statusLabel('rfu') },
+                            { value: 'standby', label: statusLabel('standby') },
+                            { value: 'breakdown', label: statusLabel('breakdown') },
                         ]}
                     />
                 );
             },
         },
         {
-            title: 'Catatan Breakdown',
+            title: 'Breakdown Notes',
             key: 'breakdown_note',
             render: (_: unknown, row: EquipmentRow) => {
                 const note = entries[row.id]?.breakdown_note;
@@ -220,14 +220,14 @@ export default function Index({
         ...(can.update
             ? [
                   {
-                      title: 'Aksi',
+                      title: 'Actions',
                       key: 'action',
                       width: 160,
                       render: (_: unknown, row: EquipmentRow) => {
                           const current = entries[row.id]?.operational_status ?? 'rfu';
                           return (
                               <Button size="small" onClick={() => openNoteModal(row, current)}>
-                                  {entries[row.id]?.breakdown_note ? 'Ubah Catatan' : 'Isi Catatan'}
+                                  {entries[row.id]?.breakdown_note ? 'Edit Note' : 'Add Note'}
                               </Button>
                           );
                       },
@@ -243,7 +243,7 @@ export default function Index({
                 <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                     <Space wrap>
                         <Input.Search
-                            placeholder="Cari kode unit / deskripsi"
+                            placeholder="Search unit code / description"
                             allowClear
                             style={{ width: 260 }}
                             value={searchValue}
@@ -251,14 +251,14 @@ export default function Index({
                             onSearch={handleSearch}
                         />
                         <Select
-                            style={{ width: 160 }}
+                            style={{ width: 180 }}
                             value={filters.status ?? 'all'}
                             onChange={handleStatusFilterChange}
                             options={[
-                                { value: 'all', label: 'Semua Status' },
-                                { value: 'rfu', label: 'RFU' },
-                                { value: 'standby', label: 'Standby' },
-                                { value: 'breakdown', label: 'Breakdown' },
+                                { value: 'all', label: 'All Statuses' },
+                                { value: 'rfu', label: statusLabel('rfu') },
+                                { value: 'standby', label: statusLabel('standby') },
+                                { value: 'breakdown', label: statusLabel('breakdown') },
                             ]}
                         />
                         {projects.length > 1 && (
@@ -267,7 +267,7 @@ export default function Index({
                                 value={projectCode ?? 'all'}
                                 onChange={handleProjectChange}
                                 options={[
-                                    { value: 'all', label: 'Semua Proyek' },
+                                    { value: 'all', label: 'All Projects' },
                                     ...projects.map((p) => ({
                                         value: p.project_code,
                                         label: `${p.project_code} — ${p.project_name}`,
@@ -277,10 +277,10 @@ export default function Index({
                         )}
                     </Space>
                     <Space size="middle">
-                        <Typography.Text>Hari ini:</Typography.Text>
-                        <Tag color="green">RFU: {statusSummary.rfu}</Tag>
-                        <Tag color="gold">Standby: {statusSummary.standby}</Tag>
-                        <Tag color="red">Breakdown: {statusSummary.breakdown}</Tag>
+                        <Typography.Text>Today:</Typography.Text>
+                        <Tag color="green">{statusLabel('rfu')}: {statusSummary.rfu}</Tag>
+                        <Tag color="gold">{statusLabel('standby')}: {statusSummary.standby}</Tag>
+                        <Tag color="red">{statusLabel('breakdown')}: {statusSummary.breakdown}</Tag>
                     </Space>
                     <Table
                         rowKey="id"
@@ -298,25 +298,25 @@ export default function Index({
                 </Space>
             </Card>
             <Modal
-                title={noteModal?.status === 'breakdown' ? 'Catatan Penyebab Breakdown' : 'Catatan Unit'}
+                title={noteModal?.status === 'breakdown' ? 'Breakdown Cause Note' : 'Unit Note'}
                 open={!!noteModal?.open}
                 onCancel={closeNoteModal}
                 onOk={() => noteForm.submit()}
-                okText="Simpan"
-                cancelText="Batal"
+                okText="Save"
+                cancelText="Cancel"
             >
                 <Form form={noteForm} layout="vertical" onFinish={submitNote}>
                     <Form.Item
                         name="breakdown_note"
-                        label="Catatan"
+                        label="Note"
                         rules={
                             noteModal?.status === 'breakdown'
                                 ? [
-                                      { required: true, message: 'Catatan wajib diisi untuk status Breakdown' },
-                                      { min: 5, message: 'Catatan minimal 5 karakter' },
-                                      { max: 500, message: 'Catatan maksimal 500 karakter' },
+                                      { required: true, message: 'Note is required for Breakdown status' },
+                                      { min: 5, message: 'Note must be at least 5 characters' },
+                                      { max: 500, message: 'Note must be at most 500 characters' },
                                   ]
-                                : [{ max: 500, message: 'Catatan maksimal 500 karakter' }]
+                                : [{ max: 500, message: 'Note must be at most 500 characters' }]
                         }
                     >
                         <Input.TextArea rows={4} maxLength={500} showCount />

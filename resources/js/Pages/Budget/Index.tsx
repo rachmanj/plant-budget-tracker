@@ -91,17 +91,17 @@ export default function BudgetIndex({
     const submitRevise = (allocationId: number) => {
         patch(`/budget/allocations/${allocationId}`, {
             onSuccess: () => {
-                message.success('Pagu direvisi');
+                message.success('Budget ceiling revised');
                 setEditingId(null);
             },
-            onError: () => message.error('Gagal merevisi pagu'),
+            onError: () => message.error('Failed to revise budget'),
         });
     };
 
     const columns: ColumnsType<AllocationRow> = useMemo(() => {
         const base: ColumnsType<AllocationRow> = [
             {
-                title: 'Pagu',
+                title: 'Ceiling',
                 dataIndex: 'allocated_amount',
                 align: 'right',
                 render: (value, row) =>
@@ -124,19 +124,19 @@ export default function BudgetIndex({
                 render: (value) => formatIdr(value),
             },
             {
-                title: 'Komitmen',
+                title: 'Committed',
                 dataIndex: 'committed_amount',
                 align: 'right',
                 render: (value) => formatIdr(value),
             },
             {
-                title: 'Aktual',
+                title: 'Actual',
                 dataIndex: 'actual_amount',
                 align: 'right',
                 render: (value) => formatIdr(value),
             },
             {
-                title: 'Sisa',
+                title: 'Remaining',
                 dataIndex: 'variance',
                 align: 'right',
                 render: (value) => (
@@ -146,7 +146,7 @@ export default function BudgetIndex({
                 ),
             },
             {
-                title: '% Terpakai',
+                title: '% Used',
                 dataIndex: 'utilization_pct',
                 width: 200,
                 render: (value, row) => (
@@ -162,7 +162,7 @@ export default function BudgetIndex({
 
         if (isFinanceDirector) {
             base.push({
-                title: 'Toleransi',
+                title: 'Tolerance',
                 dataIndex: 'tolerance_pct',
                 render: (value, row) =>
                     row.is_editable && editingId === row.id ? (
@@ -180,7 +180,7 @@ export default function BudgetIndex({
 
         if (isFinanceDirector && activePeriod?.is_editable) {
             base.push({
-                title: 'Aksi',
+                title: 'Actions',
                 key: 'actions',
                 render: (_, row) =>
                     row.is_editable ? (
@@ -192,15 +192,15 @@ export default function BudgetIndex({
                                     loading={processing}
                                     onClick={() => submitRevise(row.id)}
                                 >
-                                    Simpan
+                                    Save
                                 </Button>
                                 <Button size="small" onClick={() => setEditingId(null)}>
-                                    Batal
+                                    Cancel
                                 </Button>
                             </Space>
                         ) : (
                             <Button size="small" onClick={() => startEdit(row)}>
-                                Revisi
+                                Revise
                             </Button>
                         )
                     ) : null,
@@ -227,7 +227,7 @@ export default function BudgetIndex({
                     <Space wrap>
                         {canManage && (
                             <Button type="primary" href={settingUrl(projectCode, period.period_month)}>
-                                {period.allocations.length > 0 ? 'Ubah Alokasi' : 'Buat Alokasi'}
+                                {period.allocations.length > 0 ? 'Edit Allocation' : 'Create Allocation'}
                             </Button>
                         )}
                         {canManage && period.status === 'open' ? (
@@ -237,7 +237,7 @@ export default function BudgetIndex({
                                     router.post(`/budget/${period.id}/carry-forward`, {}, { preserveScroll: true })
                                 }
                             >
-                                Jalankan Carry Forward
+                                Run Carry Forward
                             </Button>
                         ) : null}
                     </Space>
@@ -249,18 +249,18 @@ export default function BudgetIndex({
                     dataSource={period.allocations}
                     pagination={false}
                     size="small"
-                    locale={{ emptyText: 'Belum ada pagu untuk periode ini.' }}
+                    locale={{ emptyText: 'No budget ceiling for this period yet.' }}
                 />
             </Card>
         ),
     }));
 
     return (
-        <AppLayout title="Anggaran">
-            <Head title="Anggaran" />
+        <AppLayout title="Budget">
+            <Head title="Budget" />
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 <Space wrap>
-                    <Typography.Text>Proyek:</Typography.Text>
+                    <Typography.Text>Project:</Typography.Text>
                     <Select
                         style={{ minWidth: 220 }}
                         value={projectCode}
@@ -272,7 +272,7 @@ export default function BudgetIndex({
                     />
                     {canManage && activePeriod && (
                         <Button type="primary" href={settingUrl(projectCode, activePeriod.period_month)}>
-                            {activePeriod.allocations.length > 0 ? 'Ubah Alokasi' : 'Buat Alokasi'}
+                            {activePeriod.allocations.length > 0 ? 'Edit Allocation' : 'Create Allocation'}
                         </Button>
                     )}
                 </Space>
@@ -280,8 +280,8 @@ export default function BudgetIndex({
                 {periods.length === 0 ? (
                     <Card>
                         <Typography.Text type="secondary">
-                            Belum ada periode anggaran untuk proyek ini.
-                            {canManage && ' Gunakan "Buat Alokasi" untuk memulai.'}
+                            No budget periods for this project yet.
+                            {canManage && ' Use "Create Allocation" to get started.'}
                         </Typography.Text>
                         {canManage && (
                             <div style={{ marginTop: 16 }}>
@@ -289,7 +289,7 @@ export default function BudgetIndex({
                                     type="primary"
                                     href={settingUrl(projectCode, dayjs().startOf('month').format('YYYY-MM-DD'))}
                                 >
-                                    Buat Alokasi
+                                    Create Allocation
                                 </Button>
                             </div>
                         )}

@@ -12,9 +12,9 @@ interface Props {
 
 export default function EquipmentCost({ data = [], projectCode, month, can = {} }: Props) {
     return (
-        <AppLayout title="Biaya Peralatan">
-            <Head title="Biaya Peralatan" />
-            <Card title={`Analisis Biaya Peralatan — ${projectCode ?? ''} ${month ?? ''}`}>
+        <AppLayout title="Equipment Cost">
+            <Head title="Equipment Cost" />
+            <Card title={`Equipment Cost Analysis — ${projectCode ?? ''} ${month ?? ''}`}>
                 <ReportExportButtons
                     reportType="equipment-cost"
                     projectCode={projectCode}

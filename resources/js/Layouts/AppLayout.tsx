@@ -38,6 +38,7 @@ interface NavProps {
     canCreatePlantRequest: boolean;
     viewSapDashboard: boolean;
     roles: string[];
+    roleLabels?: Record<string, string>;
     canSwitchProject?: boolean;
     currentProject?: string;
     currentProjectName?: string;
@@ -82,7 +83,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         menuItems.push({
             key: 'budget',
             icon: <DollarOutlined />,
-            label: <Link href="/budget">Anggaran</Link>,
+            label: <Link href="/budget">Budget</Link>,
         });
     }
 
@@ -144,7 +145,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (nav?.canViewTabulationBids) {
         menuItems.push({
             key: 'tabulation-bids',
-            label: <Link href="/tabulation-bids">Tabulation Bid</Link>,
+            label: <Link href="/tabulation-bids">Tabulation Bids</Link>,
         });
     }
 
@@ -155,19 +156,19 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             children: [
                 {
                     key: 'reports-index',
-                    label: <Link href="/reports">Daftar Laporan</Link>,
+                    label: <Link href="/reports">Report List</Link>,
                 },
                 {
                     key: 'reports-budget-consumption',
-                    label: <Link href="/reports/budget-consumption">Konsumsi Anggaran</Link>,
+                    label: <Link href="/reports/budget-consumption">Budget Consumption</Link>,
                 },
                 {
                     key: 'reports-vendor-performance',
-                    label: <Link href="/reports/vendor-performance">Kinerja Vendor</Link>,
+                    label: <Link href="/reports/vendor-performance">Vendor Performance</Link>,
                 },
                 {
                     key: 'reports-equipment-cost',
-                    label: <Link href="/reports/equipment-cost">Biaya Peralatan</Link>,
+                    label: <Link href="/reports/equipment-cost">Equipment Cost</Link>,
                 },
             ],
         });
@@ -185,7 +186,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             {
                 key: 'admin-users',
                 icon: <TeamOutlined />,
-                label: <Link href="/admin/users">Pengguna</Link>,
+                label: <Link href="/admin/users">Users</Link>,
             },
             {
                 key: 'admin-roles',
@@ -195,7 +196,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             {
                 key: 'admin-projects',
                 icon: <ProjectOutlined />,
-                label: <Link href="/admin/projects">Proyek</Link>,
+                label: <Link href="/admin/projects">Projects</Link>,
             }
         );
     }
@@ -204,7 +205,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         {
             key: 'logout',
             icon: <LogoutOutlined />,
-            label: 'Keluar',
+            label: 'Logout',
             onClick: () => router.post('/logout'),
         },
     ];
@@ -234,7 +235,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                         {nav?.canSwitchProject ? (
                             <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
                                 <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                                    Konteks proyek (semua halaman)
+                                    Project context (all pages)
                                 </Typography.Text>
                                 <Select
                                     showSearch
@@ -266,7 +267,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                             type="text"
                             icon={isDark ? <BulbOutlined /> : <BulbFilled />}
                             onClick={toggleTheme}
-                            aria-label={isDark ? 'Mode terang' : 'Mode gelap'}
+                            aria-label={isDark ? 'Light mode' : 'Dark mode'}
                         />
                         <Badge count={0} size="small">
                             <Button type="text" icon={<BellOutlined />} />

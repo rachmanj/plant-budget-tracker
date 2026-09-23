@@ -125,7 +125,7 @@ class SapReadRepository
                     'price' => number_format((float) $itemRow->LastPurPrc, 2, '.', ''),
                     'currency' => 'IDR',
                     'source' => 'item_master',
-                    'reference' => 'Harga beli terakhir (item master SAP)',
+                    'reference' => 'Last purchase price (SAP item master)',
                 ];
             }
         } catch (\Throwable $e) {

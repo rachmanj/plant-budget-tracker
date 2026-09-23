@@ -28,15 +28,15 @@ export default function BudgetProgressBar({
 
     const tooltip = (
         <div>
-            <div>Penggunaan: {pct.toFixed(2)}%</div>
-            {pagu !== undefined && <div>Pagu proyek: {formatIdr(pagu)}</div>}
-            {committed !== undefined && <div>Komitmen: {formatIdr(committed)}</div>}
-            {actual !== undefined && <div>Aktual: {formatIdr(actual)}</div>}
+            <div>Utilization: {pct.toFixed(2)}%</div>
+            {pagu !== undefined && <div>Project ceiling: {formatIdr(pagu)}</div>}
+            {committed !== undefined && <div>Committed: {formatIdr(committed)}</div>}
+            {actual !== undefined && <div>Actual: {formatIdr(actual)}</div>}
             {additionalAmount !== undefined && (
-                <div>+ permintaan ini: {formatIdr(additionalAmount)}</div>
+                <div>+ this request: {formatIdr(additionalAmount)}</div>
             )}
-            {remaining !== undefined && <div>Sisa pagu: {formatIdr(remaining)}</div>}
-            {cap !== undefined && <div>Batas toleransi: {formatIdr(cap)}</div>}
+            {remaining !== undefined && <div>Remaining: {formatIdr(remaining)}</div>}
+            {cap !== undefined && <div>Tolerance cap: {formatIdr(cap)}</div>}
         </div>
     );
 
@@ -51,7 +51,7 @@ export default function BudgetProgressBar({
                 />
                 {showLabel && (
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        {pct < 90 ? 'Aman' : pct <= 110 ? 'Mendekati batas' : 'Melebihi batas'}
+                        {pct < 90 ? 'Within limit' : pct <= 110 ? 'Near limit' : 'Over limit'}
                     </Typography.Text>
                 )}
             </div>

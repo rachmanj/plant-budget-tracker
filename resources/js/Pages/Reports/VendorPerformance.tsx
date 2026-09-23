@@ -10,9 +10,9 @@ interface Props {
 
 export default function VendorPerformance({ data = [], can = {} }: Props) {
     return (
-        <AppLayout title="Kinerja Vendor">
-            <Head title="Kinerja Vendor" />
-            <Card title="Kinerja Vendor">
+        <AppLayout title="Vendor Performance">
+            <Head title="Vendor Performance" />
+            <Card title="Vendor Performance">
                 <ReportExportButtons
                     reportType="vendor-performance"
                     canExport={can.export === true}

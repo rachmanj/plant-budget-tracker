@@ -16,11 +16,11 @@ interface Props {
 
 export default function Index({ reports }: Props) {
     return (
-        <AppLayout title="Laporan">
-            <Head title="Laporan" />
-            <Card title="Laporan">
+        <AppLayout title="Reports">
+            <Head title="Reports" />
+            <Card title="Reports">
                 <Typography.Paragraph type="secondary">
-                    Pilih jenis laporan untuk melihat detail dan mengunduh data.
+                    Select a report to view details and download data.
                 </Typography.Paragraph>
                 <List
                     itemLayout="horizontal"

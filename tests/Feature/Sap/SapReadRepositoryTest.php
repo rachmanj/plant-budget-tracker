@@ -148,6 +148,7 @@ class SapReadRepositoryTest extends TestCase
 
         $this->assertSame('88000.00', $result['price']);
         $this->assertSame('item_master', $result['source']);
+        $this->assertSame('Last purchase price (SAP item master)', $result['reference']);
     }
 
     public function test_get_item_purchase_price_returns_null_on_connection_failure(): void

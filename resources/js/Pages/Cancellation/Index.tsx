@@ -3,6 +3,7 @@ import { Button, Card, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import AppLayout from '@/Layouts/AppLayout';
 import { formatIdr } from '@/hooks/useCurrency';
+import { statusLabel } from '@/utils/labels';
 
 interface CancellationRow {
     id: number;
@@ -25,20 +26,20 @@ export default function Index({ requests }: Props) {
             key: 'request_no',
             render: (_, row) => row.plant_request?.request_no ?? '—',
         },
-        { title: 'Diajukan Oleh', dataIndex: 'initiated_by' },
-        { title: 'Tahap PO', dataIndex: 'po_stage' },
+        { title: 'Initiated By', dataIndex: 'initiated_by' },
+        { title: 'PO Stage', dataIndex: 'po_stage' },
         {
-            title: 'Jumlah Reversal',
+            title: 'Reversal Amount',
             dataIndex: 'budget_reversal_amount',
             render: (value: string) => formatIdr(value),
         },
         {
             title: 'Status',
             dataIndex: 'status',
-            render: (status: string) => <Tag>{status}</Tag>,
+            render: (status: string) => <Tag>{statusLabel(status)}</Tag>,
         },
         {
-            title: 'Aksi',
+            title: 'Actions',
             key: 'actions',
             render: (_, row) =>
                 row.can.agree ? (

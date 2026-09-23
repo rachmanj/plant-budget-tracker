@@ -29,7 +29,7 @@ export default function Index({ maps, can = { create: false } }: Props) {
     const columns: ColumnsType<MapRow> = [
         { title: 'Genuine P/N', dataIndex: 'genuine_part_number' },
         { title: 'OEM P/N', dataIndex: 'oem_part_number' },
-        { title: 'Nama Material', dataIndex: 'material_name' },
+        { title: 'Material Name', dataIndex: 'material_name' },
         {
             title: 'SAP',
             dataIndex: 'sap_synced',
@@ -38,12 +38,12 @@ export default function Index({ maps, can = { create: false } }: Props) {
             ),
         },
         {
-            title: 'Sign-off oleh',
+            title: 'Signed off by',
             key: 'signoff',
             render: (_, row) => row.signoff_by?.name ?? '—',
         },
         {
-            title: 'Aksi',
+            title: 'Actions',
             key: 'actions',
             render: (_, row) =>
                 row.can.signoff ? (
@@ -52,7 +52,7 @@ export default function Index({ maps, can = { create: false } }: Props) {
                         size="small"
                         onClick={() => router.post(`/interchange/${row.id}/signoff`)}
                     >
-                        Sign-off Teknis
+                        Technical Sign-off
                     </Button>
                 ) : null,
         },
@@ -66,7 +66,7 @@ export default function Index({ maps, can = { create: false } }: Props) {
         <AppLayout title="Interchange">
             <Head title="Interchange" />
             {can.create && (
-                <Card title="Tambah Mapping" style={{ marginBottom: 16 }}>
+                <Card title="Add Mapping" style={{ marginBottom: 16 }}>
                     <Form layout="vertical" onFinish={submitMapping}>
                         <Form.Item
                             label="Genuine P/N"
@@ -91,7 +91,7 @@ export default function Index({ maps, can = { create: false } }: Props) {
                             />
                         </Form.Item>
                         <Form.Item
-                            label="Nama Material"
+                            label="Material Name"
                             required
                             validateStatus={errors.material_name ? 'error' : undefined}
                             help={errors.material_name}
@@ -102,7 +102,7 @@ export default function Index({ maps, can = { create: false } }: Props) {
                             />
                         </Form.Item>
                         <Button type="primary" htmlType="submit" loading={processing}>
-                            Tambah Mapping
+                            Add Mapping
                         </Button>
                     </Form>
                 </Card>

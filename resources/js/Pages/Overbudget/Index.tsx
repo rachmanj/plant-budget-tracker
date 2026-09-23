@@ -3,6 +3,7 @@ import { Button, Card, Descriptions, Form, Input, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import AppLayout from '@/Layouts/AppLayout';
 import { formatIdr } from '@/hooks/useCurrency';
+import { statusLabel } from '@/utils/labels';
 
 interface OverbudgetRow {
     id: number;
@@ -39,7 +40,7 @@ export default function Index({ requests = { data: [] }, showForm = false, prefi
         { title: 'Request No', dataIndex: 'request_no' },
         { title: 'Plant Request', dataIndex: 'plant_request_id' },
         {
-            title: 'Jumlah',
+            title: 'Amount',
             dataIndex: 'requested_amount',
             render: (value: string) => formatIdr(value),
         },
@@ -51,7 +52,7 @@ export default function Index({ requests = { data: [] }, showForm = false, prefi
         {
             title: 'Status',
             dataIndex: 'status',
-            render: (status: string) => <Tag>{status}</Tag>,
+            render: (status: string) => <Tag>{statusLabel(status)}</Tag>,
         },
     ];
 
@@ -69,7 +70,7 @@ export default function Index({ requests = { data: [] }, showForm = false, prefi
         <AppLayout title="Overbudget">
             <Head title="Overbudget" />
             {showForm && (
-                <Card title="Ajukan Overbudget" style={{ marginBottom: 16 }}>
+                <Card title="Submit Overbudget Request" style={{ marginBottom: 16 }}>
                     <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
                         <Descriptions.Item label="Plant Request ID">
                             {prefill.plant_request_id ?? '—'}
@@ -77,7 +78,7 @@ export default function Index({ requests = { data: [] }, showForm = false, prefi
                         <Descriptions.Item label="Allocation ID">
                             {prefill.budget_allocation_id ?? '—'}
                         </Descriptions.Item>
-                        <Descriptions.Item label="Jumlah diminta">
+                        <Descriptions.Item label="Requested amount">
                             {prefill.requested_amount != null
                                 ? formatIdr(prefill.requested_amount)
                                 : '—'}
@@ -95,16 +96,16 @@ export default function Index({ requests = { data: [] }, showForm = false, prefi
                     >
                         <Form.Item
                             name="justification"
-                            label="Justifikasi"
+                            label="Justification"
                             rules={[
-                                { required: true, message: 'Justifikasi wajib diisi' },
-                                { min: 10, message: 'Minimal 10 karakter' },
+                                { required: true, message: 'Justification is required' },
+                                { min: 10, message: 'At least 10 characters' },
                             ]}
                         >
-                            <Input.TextArea rows={4} placeholder="Alasan permintaan overbudget..." />
+                            <Input.TextArea rows={4} placeholder="Reason for overbudget request..." />
                         </Form.Item>
                         <Button type="primary" htmlType="submit">
-                            Ajukan Overbudget
+                            Submit Overbudget
                         </Button>
                     </Form>
                 </Card>
@@ -114,7 +115,7 @@ export default function Index({ requests = { data: [] }, showForm = false, prefi
                 extra={
                     can.includes('plant_request.create') ? (
                         <Link href="/overbudget/create">
-                            <Button type="primary">Ajukan Overbudget Baru</Button>
+                            <Button type="primary">New Overbudget Request</Button>
                         </Link>
                     ) : null
                 }

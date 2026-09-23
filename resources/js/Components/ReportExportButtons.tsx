@@ -38,10 +38,10 @@ export default function ReportExportButtons({
                 icon={<DownloadOutlined />}
                 href={exportUrl(reportType, 'pdf', projectCode, month)}
             >
-                Unduh PDF
+                Download PDF
             </Button>
             <Button icon={<DownloadOutlined />} href={exportUrl(reportType, 'csv', projectCode, month)}>
-                Unduh CSV
+                Download CSV
             </Button>
         </Space>
     );

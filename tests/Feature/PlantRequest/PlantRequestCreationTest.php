@@ -75,7 +75,7 @@ class PlantRequestCreationTest extends TestCase
                     'price' => '99000.00',
                     'currency' => 'IDR',
                     'source' => 'item_master',
-                    'reference' => 'Harga beli terakhir (item master SAP)',
+                    'reference' => 'Last purchase price (SAP item master)',
                 ]);
         });
 
@@ -294,7 +294,7 @@ class PlantRequestCreationTest extends TestCase
                     'price' => '100000.00',
                     'currency' => 'IDR',
                     'source' => 'item_master',
-                    'reference' => 'Harga beli terakhir (item master SAP)',
+                    'reference' => 'Last purchase price (SAP item master)',
                 ]);
         });
 

@@ -102,7 +102,7 @@ const PRICE_SOURCE_LABELS: Record<PriceSource, string> = {
     sap_price: 'SAP Price',
     tabulation_bid: 'Tabulation',
     manual: 'Manual',
-    none: 'Belum ada',
+    none: 'None',
 };
 
 function getCsrfToken(): string {
@@ -195,7 +195,7 @@ export default function PlantRequestWizard({
         const groups = new Map<string, Equipment[]>();
 
         for (const item of equipment) {
-            const type = item.plant_type || 'Lainnya';
+            const type = item.plant_type || 'Other';
             const list = groups.get(type) ?? [];
             list.push(item);
             groups.set(type, list);
@@ -279,7 +279,7 @@ export default function PlantRequestWizard({
         const partNumber = data.lines[index]?.part_number?.trim();
 
         if (!partNumber) {
-            message.error('Isi part number terlebih dahulu');
+            message.error('Enter part number first');
 
             return;
         }
@@ -302,7 +302,7 @@ export default function PlantRequestWizard({
             const result = await response.json();
 
             if (!response.ok || !result.ok) {
-                message.error(result.message ?? 'Gagal mencari harga');
+                message.error(result.message ?? 'Price lookup failed');
 
                 return;
             }
@@ -313,7 +313,7 @@ export default function PlantRequestWizard({
                 price_reference: result.reference ?? null,
             });
         } catch {
-            message.error('Gagal menghubungi server');
+            message.error('Could not reach server');
         } finally {
             setEstimatingIndex(null);
         }
@@ -345,7 +345,7 @@ export default function PlantRequestWizard({
         </Typography.Title>
     );
 
-    const submitLabel = mode === 'edit' ? 'Simpan Perubahan' : 'Simpan Draft';
+    const submitLabel = mode === 'edit' ? 'Save Changes' : 'Save Draft';
 
     return (
         <>
@@ -362,15 +362,15 @@ export default function PlantRequestWizard({
                         <Alert
                             type="warning"
                             showIcon
-                            message="Data unit belum tersedia (cek koneksi ARKFLEET)"
+                            message="Unit data unavailable (check ARKFLEET connection)"
                             style={{ marginBottom: 16 }}
                         />
                     )}
 
-                    <Form.Item label="Pilih Unit" required>
+                    <Form.Item label="Select Unit" required>
                         <Select
                             showSearch
-                            placeholder="Cari unit code atau deskripsi"
+                            placeholder="Search unit code or description"
                             value={data.equipment_id > 0 ? data.equipment_id : undefined}
                             onChange={handleEquipmentSelect}
                             disabled={!hasEquipment}
@@ -410,7 +410,7 @@ export default function PlantRequestWizard({
 
                     <Form.Item
                         label="SAP MR ID"
-                        help="Diisi setelah MR dibuat di SAP — 0 untuk draft"
+                        help="Enter after MR is created in SAP — use 0 for draft"
                         required
                     >
                         <InputNumber
@@ -423,22 +423,22 @@ export default function PlantRequestWizard({
                 </Card>
 
                 <Card style={{ marginBottom: 16 }}>
-                    {sectionTitle(2, 'Pagu Proyek')}
+                    {sectionTitle(2, 'Project Budget')}
 
                     {!hasProjectBudget && (
                         <Alert
                             type="warning"
                             showIcon
-                            message={`Belum ada pagu anggaran untuk project ${projectCode} — Finance Director harus mengatur pagu proyek dulu`}
+                            message={`No budget ceiling for project ${projectCode} — Finance Director must set project budget first`}
                         />
                     )}
 
                     {projectBudget && (
                         <Descriptions size="small" column={2} bordered>
-                            <Descriptions.Item label="Pagu (alokasi + carry forward)">
+                            <Descriptions.Item label="Ceiling (allocation + carry forward)">
                                 {formatIdr(projectBudget.pagu)}
                             </Descriptions.Item>
-                            <Descriptions.Item label="Komitmen + Aktual">
+                            <Descriptions.Item label="Committed + Actual">
                                 {formatIdr(
                                     (
                                         parseFloat(projectBudget.committed_amount) +
@@ -446,15 +446,15 @@ export default function PlantRequestWizard({
                                     ).toFixed(2),
                                 )}
                             </Descriptions.Item>
-                            <Descriptions.Item label="Sisa pagu proyek">
+                            <Descriptions.Item label="Project budget remaining">
                                 <Typography.Text strong>
                                     {formatIdr(projectBudget.remaining)}
                                 </Typography.Text>
                                 <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
-                                    ({projectBudget.utilization_pct}% terpakai)
+                                    ({projectBudget.utilization_pct}% utilized)
                                 </Typography.Text>
                             </Descriptions.Item>
-                            <Descriptions.Item label="Penggunaan">
+                            <Descriptions.Item label="Utilization">
                                 <BudgetProgressBar
                                     utilizationPct={projectBudget.utilization_pct}
                                     cap={projectBudget.tolerance_cap}
@@ -507,7 +507,7 @@ export default function PlantRequestWizard({
                                     </Form.Item>
                                 </Col>
                                 <Col xs={24} md={8}>
-                                    <Form.Item label="Nama Material" required>
+                                    <Form.Item label="Material Name" required>
                                         <Input
                                             value={line.material_name}
                                             disabled={!hasProjectBudget}
@@ -539,7 +539,7 @@ export default function PlantRequestWizard({
                                     </Form.Item>
                                 </Col>
                                 <Col xs={12} md={4}>
-                                    <Form.Item label="Harga Estimasi">
+                                    <Form.Item label="Estimated Price">
                                         <InputNumber
                                             min={0}
                                             precision={2}
@@ -566,14 +566,14 @@ export default function PlantRequestWizard({
                                         disabled={!hasProjectBudget}
                                         onClick={() => estimatePrice(index)}
                                     >
-                                        Cari harga
+                                        Look up price
                                     </Button>
                                     <Tag>
-                                        {PRICE_SOURCE_LABELS[line.price_source] ?? 'Belum ada'}
+                                        {PRICE_SOURCE_LABELS[line.price_source] ?? 'None'}
                                     </Tag>
                                     {line.price_source === 'none' ? (
                                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                            Harga tidak ditemukan — isi manual
+                                            Price not found — enter manually
                                         </Typography.Text>
                                     ) : (
                                         line.price_reference && (
@@ -589,7 +589,7 @@ export default function PlantRequestWizard({
                                     )}
                                 </Space>
                                 <Typography.Text type="secondary">
-                                    Total baris: {formatIdr(lineTotal(line.qty, line.unit_price_est))}
+                                    Line total: {formatIdr(lineTotal(line.qty, line.unit_price_est))}
                                 </Typography.Text>
                             </Row>
                         </Card>
@@ -602,19 +602,19 @@ export default function PlantRequestWizard({
                         disabled={!hasProjectBudget}
                         block
                     >
-                        Tambah baris
+                        Add line
                     </Button>
                 </Card>
 
                 <Card style={{ marginBottom: 16 }} styles={{ body: { opacity: hasProjectBudget ? 1 : 0.5 } }}>
-                    {sectionTitle(4, 'Ringkasan')}
+                    {sectionTitle(4, 'Summary')}
 
                     <Descriptions column={1} bordered size="small">
-                        <Descriptions.Item label="Estimasi Total">
+                        <Descriptions.Item label="Estimated Total">
                             <Typography.Text strong>{formatIdr(linesTotal)}</Typography.Text>
                         </Descriptions.Item>
                         {projectBudget && (
-                            <Descriptions.Item label="Proyeksi Penggunaan Pagu Proyek">
+                            <Descriptions.Item label="Projected Budget Utilization">
                                 <BudgetProgressBar
                                     utilizationPct={projectedUtilization}
                                     cap={projectBudget.tolerance_cap}
@@ -626,8 +626,8 @@ export default function PlantRequestWizard({
                                 />
                                 {exceedsTolerance && (
                                     <Typography.Text type="danger" style={{ display: 'block', marginTop: 8 }}>
-                                        Melebihi batas {toleranceCapPct.toFixed(0)}% — submit akan masuk alur
-                                        Overbudget
+                                        Exceeds {toleranceCapPct.toFixed(0)}% cap — submit will trigger
+                                        Overbudget workflow
                                     </Typography.Text>
                                 )}
                             </Descriptions.Item>
@@ -651,7 +651,7 @@ export default function PlantRequestWizard({
                     )}
                     {mode === 'create' && (
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                            Draft disimpan — submit & approval dilakukan dari daftar Plant Request
+                            Draft saved — submit and approval are done from the Plant Requests list
                         </Typography.Text>
                     )}
                 </Space>

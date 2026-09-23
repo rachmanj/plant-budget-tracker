@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { ProTable } from '@ant-design/pro-components';
 import { Alert, Button, Switch, Tag, Typography, message } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import AppLayout from '@/Layouts/AppLayout';
 
 interface ProjectRow {
@@ -22,11 +23,11 @@ function formatSyncedAt(value: string | null): string {
     if (!value) {
         return '—';
     }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
+    const parsed = dayjs(value);
+    if (!parsed.isValid()) {
         return value;
     }
-    return date.toLocaleString('id-ID');
+    return parsed.format('DD MMM YYYY, HH:mm');
 }
 
 export default function Projects({ projects, lastSyncedAt, arkfleetReachable }: ProjectsProps) {
@@ -38,33 +39,33 @@ export default function Projects({ projects, lastSyncedAt, arkfleetReachable }: 
                 preserveScroll: true,
                 onSuccess: () => {
                     message.success(
-                        isActive ? `Proyek ${projectCode} diaktifkan.` : `Proyek ${projectCode} dinonaktifkan.`,
+                        isActive ? `Project ${projectCode} activated.` : `Project ${projectCode} deactivated.`,
                     );
                 },
-                onError: () => message.error('Gagal memperbarui status proyek.'),
+                onError: () => message.error('Failed to update project status.'),
             },
         );
     };
 
     return (
-        <AppLayout title="Proyek">
-            <Head title="Proyek" />
+        <AppLayout title="Projects">
+            <Head title="Projects" />
             {!arkfleetReachable && (
                 <Alert
                     type="warning"
-                    message="ARKFLEET tidak terjangkau"
-                    description="Daftar di bawah tetap ditampilkan dari data tersimpan di database. Sinkronisasi akan memperbarui nama dan lokasi saat ARKFLEET kembali online."
+                    message="ARKFLEET unreachable"
+                    description="The list below is from cached database data. Sync will refresh names and locations when ARKFLEET is back online."
                     style={{ marginBottom: 16 }}
                     showIcon
                 />
             )}
             <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
-                Proyek aktif menandai proyek yang dipakai dalam operasi (termasuk pemuatan cache unit harian) dan{' '}
-                <strong>tidak</strong> membatasi pembuatan anggaran untuk proyek lain.
+                Active projects are used in operations (including daily unit cache loading) and{' '}
+                <strong>do not</strong> restrict budget creation for other projects.
                 {lastSyncedAt ? (
                     <>
                         {' '}
-                        Terakhir disinkronkan: {formatSyncedAt(lastSyncedAt)}.
+                        Last synced: {formatSyncedAt(lastSyncedAt)}.
                     </>
                 ) : null}
             </Typography.Paragraph>
@@ -78,14 +79,14 @@ export default function Projects({ projects, lastSyncedAt, arkfleetReachable }: 
                         icon={<SyncOutlined />}
                         onClick={() => router.post('/admin/projects/sync')}
                     >
-                        Sinkronkan dari ARKFLEET
+                        Sync from ARKFLEET
                     </Button>,
                 ]}
                 columns={[
-                    { title: 'Kode', dataIndex: 'project_code', width: 100 },
-                    { title: 'Nama Proyek', dataIndex: 'project_name' },
+                    { title: 'Code', dataIndex: 'project_code', width: 100 },
+                    { title: 'Project Name', dataIndex: 'project_name' },
                     {
-                        title: 'Lokasi',
+                        title: 'Location',
                         dataIndex: 'location',
                         render: (_, row) => row.location ?? '—',
                     },
@@ -94,24 +95,24 @@ export default function Projects({ projects, lastSyncedAt, arkfleetReachable }: 
                         dataIndex: 'is_active',
                         render: (_, row) =>
                             row.is_active ? (
-                                <Tag color="success">Aktif</Tag>
+                                <Tag color="success">Active</Tag>
                             ) : (
-                                <Tag color="default">Non-aktif</Tag>
+                                <Tag color="default">Inactive</Tag>
                             ),
                     },
                     {
-                        title: 'Terakhir Sinkron',
+                        title: 'Last Sync',
                         dataIndex: 'synced_at',
                         render: (_, row) => formatSyncedAt(row.synced_at),
                     },
                     {
-                        title: 'Aksi',
+                        title: 'Actions',
                         valueType: 'option',
                         render: (_, row) => [
                             <Switch
                                 key="toggle"
                                 checked={row.is_active}
-                                checkedChildren="Aktif"
+                                checkedChildren="Active"
                                 unCheckedChildren="Off"
                                 onChange={(checked) => toggleActive(row.project_code, checked)}
                             />,

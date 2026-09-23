@@ -3,6 +3,7 @@ import { Card, Descriptions, Table, Typography } from 'antd';
 import ReportExportButtons from '@/Components/ReportExportButtons';
 import AppLayout from '@/Layouts/AppLayout';
 import { formatIdr } from '@/hooks/useCurrency';
+import { statusLabel } from '@/utils/labels';
 
 interface ProjectSummary {
     project_code: string;
@@ -38,9 +39,9 @@ export default function BudgetConsumption({ data, projectCode, month, can = {} }
     const units = data?.units ?? [];
 
     return (
-        <AppLayout title="Konsumsi Anggaran">
-            <Head title="Konsumsi Anggaran" />
-            <Card title={`Konsumsi Anggaran — ${projectCode ?? ''} ${month ?? ''}`}>
+        <AppLayout title="Budget Consumption">
+            <Head title="Budget Consumption" />
+            <Card title={`Budget Consumption — ${projectCode ?? ''} ${month ?? ''}`}>
                 <ReportExportButtons
                     reportType="budget-consumption"
                     projectCode={projectCode}
@@ -51,33 +52,37 @@ export default function BudgetConsumption({ data, projectCode, month, can = {} }
                 {summary ? (
                     <>
                         <Descriptions bordered size="small" column={3} style={{ marginBottom: 24 }}>
-                            <Descriptions.Item label="Pagu proyek">{formatIdr(summary.pagu)}</Descriptions.Item>
-                            <Descriptions.Item label="Komitmen">{formatIdr(summary.committed)}</Descriptions.Item>
-                            <Descriptions.Item label="Aktual">{formatIdr(summary.actual)}</Descriptions.Item>
-                            <Descriptions.Item label="Sisa">{formatIdr(summary.remaining)}</Descriptions.Item>
-                            <Descriptions.Item label="Terpakai">{summary.utilization_pct}%</Descriptions.Item>
+                            <Descriptions.Item label="Project ceiling">{formatIdr(summary.pagu)}</Descriptions.Item>
+                            <Descriptions.Item label="Committed">{formatIdr(summary.committed)}</Descriptions.Item>
+                            <Descriptions.Item label="Actual">{formatIdr(summary.actual)}</Descriptions.Item>
+                            <Descriptions.Item label="Remaining">{formatIdr(summary.remaining)}</Descriptions.Item>
+                            <Descriptions.Item label="Used">{summary.utilization_pct}%</Descriptions.Item>
                         </Descriptions>
 
-                        <Typography.Title level={5}>Rincian per unit (dari permintaan)</Typography.Title>
+                        <Typography.Title level={5}>Detail by unit (from requests)</Typography.Title>
                         <Table
                             rowKey="equipment_id"
                             dataSource={units}
                             pagination={false}
                             columns={[
                                 { title: 'Unit', dataIndex: 'unit_code' },
-                                { title: 'Jumlah permintaan', dataIndex: 'request_count' },
+                                { title: 'Request count', dataIndex: 'request_count' },
                                 {
-                                    title: 'Total nilai permintaan',
+                                    title: 'Total request value',
                                     dataIndex: 'total_estimated',
                                     render: (value: string) => formatIdr(value),
                                 },
-                                { title: 'Status terakhir', dataIndex: 'last_status' },
+                                {
+                                    title: 'Last status',
+                                    dataIndex: 'last_status',
+                                    render: (value: string) => statusLabel(value),
+                                },
                             ]}
                         />
                     </>
                 ) : (
                     <Typography.Text type="secondary">
-                        Tidak ada data pagu untuk periode ini.
+                        No budget data for this period.
                     </Typography.Text>
                 )}
             </Card>

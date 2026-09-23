@@ -1,7 +1,8 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Button, Card, Input, Modal, Radio, Table, Tag } from 'antd';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { roleLabel } from '@/utils/labels';
 
 interface Approval {
     id: number;
@@ -14,7 +15,12 @@ interface Props {
     approvals: { data: Approval[] };
 }
 
+interface NavPageProps {
+    nav?: { roleLabels?: Record<string, string> };
+}
+
 export default function Index({ approvals }: Props) {
+    const { nav } = usePage<NavPageProps>().props;
     const [selected, setSelected] = useState<Approval | null>(null);
     const [decision, setDecision] = useState('approved');
     const [remarks, setRemarks] = useState('');
@@ -35,7 +41,11 @@ export default function Index({ approvals }: Props) {
                     columns={[
                         { title: 'Type', dataIndex: 'approvable_type', render: (t: string) => t.split('\\').pop() },
                         { title: 'ID', dataIndex: 'approvable_id' },
-                        { title: 'Role', dataIndex: 'required_role', render: (r: string) => <Tag>{r}</Tag> },
+                        {
+                            title: 'Role',
+                            dataIndex: 'required_role',
+                            render: (r: string) => <Tag>{roleLabel(r, nav?.roleLabels)}</Tag>,
+                        },
                         {
                             title: 'Action',
                             render: (_: unknown, row: Approval) => (

@@ -33,7 +33,7 @@ export function useArkfleetEquipment(projectCode?: string) {
                 data: [],
                 loading: false,
                 stale: false,
-                error: e instanceof Error ? e.message : 'Gagal memuat equipment',
+                error: e instanceof Error ? e.message : 'Failed to load equipment',
             });
         }
     }, [projectCode]);
@@ -69,7 +69,7 @@ export function useArkfleetProjects() {
                     data: [],
                     loading: false,
                     stale: false,
-                    error: e instanceof Error ? e.message : 'Gagal memuat proyek',
+                    error: e instanceof Error ? e.message : 'Failed to load projects',
                 });
             });
     }, []);

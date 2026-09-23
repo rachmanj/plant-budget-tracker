@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Button, Card, Table, Tag } from 'antd';
 import AppLayout from '@/Layouts/AppLayout';
+import { statusLabel } from '@/utils/labels';
 
 interface PageProps {
     auth: { can: string[] };
@@ -22,7 +23,7 @@ export default function Index({ bids }: Props) {
                 extra={
                     can.includes('tabulation_bid.create') ? (
                         <Link href="/tabulation-bids/create">
-                            <Button type="primary">Buat Bid</Button>
+                            <Button type="primary">Create Bid</Button>
                         </Link>
                     ) : null
                 }
@@ -33,7 +34,7 @@ export default function Index({ bids }: Props) {
                     columns={[
                         { title: 'Bid No', dataIndex: 'bid_no' },
                         { title: 'SAP PR', dataIndex: 'sap_pr_id' },
-                        { title: 'Status', dataIndex: 'status', render: (s: string) => <Tag>{s}</Tag> },
+                        { title: 'Status', dataIndex: 'status', render: (s: string) => <Tag>{statusLabel(s)}</Tag> },
                     ]}
                 />
             </Card>

@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Button, Card, Select, Table, Tag } from 'antd';
 import AppLayout from '@/Layouts/AppLayout';
 import LifecycleStepper from '@/Components/LifecycleStepper';
+import { statusLabel } from '@/utils/labels';
 
 interface PlantRequestRow {
     id: number;
@@ -20,16 +21,16 @@ interface Props {
 }
 
 const STATUS_OPTIONS = [
-    { value: '', label: 'Semua' },
-    { value: 'draft', label: 'Draf' },
-    { value: 'pending_pm', label: 'Menunggu Approval' },
-    { value: 'pending_plant_mgr', label: 'Menunggu Approval' },
-    { value: 'approved', label: 'Disetujui' },
-    { value: 'pr_created', label: 'PR Dibuat' },
-    { value: 'po_created', label: 'PO Dibuat' },
-    { value: 'received', label: 'Diterima' },
-    { value: 'rejected', label: 'Ditolak' },
-    { value: 'cancelled', label: 'Dibatalkan' },
+    { value: '', label: 'All' },
+    { value: 'draft', label: statusLabel('draft') },
+    { value: 'pending_pm', label: statusLabel('pending_pm') },
+    { value: 'pending_plant_mgr', label: statusLabel('pending_plant_mgr') },
+    { value: 'approved', label: statusLabel('approved') },
+    { value: 'pr_created', label: statusLabel('pr_created') },
+    { value: 'po_created', label: statusLabel('po_created') },
+    { value: 'received', label: statusLabel('received') },
+    { value: 'rejected', label: statusLabel('rejected') },
+    { value: 'cancelled', label: statusLabel('cancelled') },
 ];
 
 export default function Index({ requests, filters }: Props) {
@@ -48,7 +49,7 @@ export default function Index({ requests, filters }: Props) {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
-            render: (status: string) => <Tag>{status}</Tag>,
+            render: (status: string) => <Tag>{statusLabel(status)}</Tag>,
         },
         {
             title: 'No. PR',
@@ -89,16 +90,16 @@ export default function Index({ requests, filters }: Props) {
                 title="Plant Requests"
                 extra={
                     <Link href="/plant-requests/create">
-                        <Button type="primary">Buat Request</Button>
+                        <Button type="primary">Create Request</Button>
                     </Link>
                 }
             >
                 <Select
-                    style={{ width: 240, marginBottom: 16 }}
+                    style={{ width: 280, marginBottom: 16 }}
                     value={filters.status ?? ''}
                     options={STATUS_OPTIONS}
                     onChange={handleStatusChange}
-                    placeholder="Filter Status"
+                    placeholder="Filter status"
                 />
                 <Table rowKey="id" columns={columns} dataSource={requests.data} pagination={false} />
             </Card>

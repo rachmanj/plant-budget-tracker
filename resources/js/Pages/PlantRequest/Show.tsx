@@ -6,6 +6,7 @@ import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import LifecycleStepper from '@/Components/LifecycleStepper';
 import BudgetProgressBar from '@/Components/BudgetProgressBar';
+import { statusLabel } from '@/utils/labels';
 
 interface Props {
     request: {
@@ -45,7 +46,7 @@ interface Props {
 }
 
 function formatDate(value?: string | null): string {
-    return value ? dayjs(value).format('DD-MM-YYYY') : '—';
+    return value ? dayjs(value).format('DD MMM YYYY') : '—';
 }
 
 export default function Show({
@@ -99,19 +100,19 @@ export default function Show({
                 <Descriptions style={{ marginTop: 16 }} column={2}>
                     <Descriptions.Item label="Unit">{request.unit_code_cache}</Descriptions.Item>
                     <Descriptions.Item label="Status">
-                        <Tag>{request.status}</Tag>
+                        <Tag>{statusLabel(request.status)}</Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="SAP MR">{request.sap_mr_id}</Descriptions.Item>
                     <Descriptions.Item label="Total Est.">{formatIdr(request.estimated_total)}</Descriptions.Item>
-                    <Descriptions.Item label="Sisa pagu proyek">
+                    <Descriptions.Item label="Project budget remaining">
                         {formatIdr(tolerance.remaining)}
                         <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
-                            ({tolerance.utilization_pct}% terpakai sebelum permintaan ini)
+                            ({tolerance.utilization_pct}% utilized before this request)
                         </Typography.Text>
                     </Descriptions.Item>
                 </Descriptions>
                 <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                    Proyeksi penggunaan pagu proyek setelah permintaan ini
+                    Projected project budget utilization after this request
                 </Typography.Text>
                 <BudgetProgressBar
                     utilizationPct={tolerance.projected_pct}
@@ -140,7 +141,7 @@ export default function Show({
                 <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
                     {can.update && (
                         <Link href={`/plant-requests/${request.id}/edit`}>
-                            <Button>Ubah Draft</Button>
+                            <Button>Edit Draft</Button>
                         </Link>
                     )}
                     {can.submit && (
@@ -152,56 +153,56 @@ export default function Show({
                         </Button>
                     )}
                     {can.createPr && (
-                        <Button onClick={createPr}>Buat PR di SAP</Button>
+                        <Button onClick={createPr}>Create PR in SAP</Button>
                     )}
                     {can.receive && (
                         <Button type="primary" onClick={openReceiveModal}>
-                            Tandai Barang Diterima
+                            Mark Goods Received
                         </Button>
                     )}
                     {can.cancel && (
                         <Button danger onClick={openCancelModal}>
-                            Ajukan Pembatalan
+                            Request Cancellation
                         </Button>
                     )}
                 </div>
             </Card>
 
-            <Card title="Riwayat Pengadaan" style={{ marginTop: 16 }}>
+            <Card title="Procurement History" style={{ marginTop: 16 }}>
                 <Descriptions column={2} bordered size="small">
-                    <Descriptions.Item label="Nomor MR">{request.sap_mr_id ?? '—'}</Descriptions.Item>
-                    <Descriptions.Item label="Nomor PR">
+                    <Descriptions.Item label="MR No.">{request.sap_mr_id ?? '—'}</Descriptions.Item>
+                    <Descriptions.Item label="PR No.">
                         {request.sap_pr_no
                             ? `${request.sap_pr_no}${procurement.sap_pr_created_at ? ` (${formatDate(procurement.sap_pr_created_at)})` : ''}`
                             : '—'}
                     </Descriptions.Item>
-                    <Descriptions.Item label="Nomor PO">
+                    <Descriptions.Item label="PO No.">
                         {procurement.sap_po_id ?? request.sap_po_id ?? '—'}
                     </Descriptions.Item>
-                    <Descriptions.Item label="Nomor GRPO">{request.sap_grpo_no ?? '—'}</Descriptions.Item>
-                    <Descriptions.Item label="Tanggal Terima">{formatDate(request.received_at)}</Descriptions.Item>
-                    <Descriptions.Item label="Diterima Oleh">{request.receiver?.name ?? '—'}</Descriptions.Item>
+                    <Descriptions.Item label="GRPO No.">{request.sap_grpo_no ?? '—'}</Descriptions.Item>
+                    <Descriptions.Item label="Received Date">{formatDate(request.received_at)}</Descriptions.Item>
+                    <Descriptions.Item label="Received By">{request.receiver?.name ?? '—'}</Descriptions.Item>
                 </Descriptions>
                 {procurement.sap_pr_sync_status === 'failed' && (
                     <Tag color="error" style={{ marginTop: 12 }}>
-                        Sinkronisasi PR ke SAP gagal: {procurement.sap_pr_sync_error ?? 'Alasan tidak diketahui'}
+                        PR sync to SAP failed: {procurement.sap_pr_sync_error ?? 'Unknown reason'}
                     </Tag>
                 )}
             </Card>
 
             <Modal
-                title="Ajukan Pembatalan"
+                title="Request Cancellation"
                 open={cancelOpen}
                 onCancel={() => setCancelOpen(false)}
                 onOk={() => cancelForm.submit()}
-                okText="Ajukan"
-                cancelText="Batal"
+                okText="Submit"
+                cancelText="Cancel"
             >
                 <Form form={cancelForm} layout="vertical" onFinish={submitCancellation}>
                     <Form.Item
                         name="po_stage"
-                        label="Tahap PO"
-                        rules={[{ required: true, message: 'Pilih tahap PO' }]}
+                        label="PO Stage"
+                        rules={[{ required: true, message: 'Select PO stage' }]}
                     >
                         <Select
                             options={[
@@ -213,43 +214,42 @@ export default function Show({
                     </Form.Item>
                     <Form.Item
                         name="reason"
-                        label="Alasan"
-                        rules={[{ required: true, message: 'Alasan wajib diisi' }]}
+                        label="Reason"
+                        rules={[{ required: true, message: 'Reason is required' }]}
                     >
                         <Input.TextArea rows={3} />
                     </Form.Item>
                     <Tag color="warning">
-                        Plant tidak dapat membatalkan setelah PO berstatus Sent — permintaan akan ditolak
-                        server.
+                        Plant cannot cancel after PO is Sent — the server will reject the request.
                     </Tag>
                 </Form>
             </Modal>
 
             <Modal
-                title="Tandai Barang Diterima"
+                title="Mark Goods Received"
                 open={receiveOpen}
                 onCancel={() => setReceiveOpen(false)}
                 onOk={() => receiveForm.submit()}
-                okText="Simpan"
-                cancelText="Batal"
+                okText="Save"
+                cancelText="Cancel"
             >
                 <Form form={receiveForm} layout="vertical" onFinish={submitReceive}>
                     <Form.Item
                         name="sap_grpo_no"
-                        label="Nomor GRPO"
-                        rules={[{ required: true, message: 'Nomor GRPO wajib diisi' }]}
+                        label="GRPO No."
+                        rules={[{ required: true, message: 'GRPO number is required' }]}
                     >
-                        <Input placeholder="Contoh: GRPO-1023" />
+                        <Input placeholder="e.g. GRPO-1023" />
                     </Form.Item>
                     <Form.Item
                         name="received_at"
-                        label="Tanggal Terima"
-                        rules={[{ required: true, message: 'Tanggal terima wajib diisi' }]}
+                        label="Received Date"
+                        rules={[{ required: true, message: 'Received date is required' }]}
                     >
-                        <DatePicker style={{ width: '100%' }} format="DD-MM-YYYY" disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
+                        <DatePicker style={{ width: '100%' }} format="DD MMM YYYY" disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
                     </Form.Item>
-                    <Form.Item name="note" label="Catatan (opsional)">
-                        <Input.TextArea rows={3} placeholder="Catatan tambahan mengenai penerimaan barang" />
+                    <Form.Item name="note" label="Notes (optional)">
+                        <Input.TextArea rows={3} placeholder="Additional notes about goods receipt" />
                     </Form.Item>
                 </Form>
             </Modal>

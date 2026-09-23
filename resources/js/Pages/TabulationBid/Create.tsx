@@ -54,8 +54,8 @@ export default function Create() {
     };
 
     return (
-        <AppLayout title="Buat Tabulation Bid">
-            <Head title="Buat Tabulation Bid" />
+        <AppLayout title="Create Tabulation Bid">
+            <Head title="Create Tabulation Bid" />
             <Card title="Tabulation Bid">
                 <Form layout="vertical" onFinish={() => post('/tabulation-bids')}>
                     <Form.Item
@@ -80,14 +80,14 @@ export default function Create() {
                             extra={
                                 data.vendors.length > 2 ? (
                                     <Button type="link" danger onClick={() => removeVendor(i)}>
-                                        Hapus
+                                        Remove
                                     </Button>
                                 ) : null
                             }
                         >
                             <Space direction="vertical" style={{ width: '100%' }}>
                                 <Form.Item
-                                    label="Kode Vendor"
+                                    label="Vendor Code"
                                     required
                                     validateStatus={vendorFieldError(i, 'vendor_code') ? 'error' : undefined}
                                     help={vendorFieldError(i, 'vendor_code')}
@@ -98,7 +98,7 @@ export default function Create() {
                                     />
                                 </Form.Item>
                                 <Form.Item
-                                    label="Nama Vendor"
+                                    label="Vendor Name"
                                     required
                                     validateStatus={vendorFieldError(i, 'vendor_name') ? 'error' : undefined}
                                     help={vendorFieldError(i, 'vendor_name')}
@@ -109,7 +109,7 @@ export default function Create() {
                                     />
                                 </Form.Item>
                                 <Form.Item
-                                    label="Harga"
+                                    label="Price"
                                     required
                                     validateStatus={vendorFieldError(i, 'price') ? 'error' : undefined}
                                     help={vendorFieldError(i, 'price')}
@@ -122,7 +122,7 @@ export default function Create() {
                                     />
                                 </Form.Item>
                                 <Form.Item
-                                    label="Ketersediaan Stok"
+                                    label="Stock Availability"
                                     required
                                     validateStatus={vendorFieldError(i, 'stock_availability') ? 'error' : undefined}
                                     help={vendorFieldError(i, 'stock_availability')}
@@ -140,7 +140,7 @@ export default function Create() {
                                     />
                                 </Form.Item>
                                 <Form.Item
-                                    label="Syarat Pembayaran"
+                                    label="Payment Terms"
                                     validateStatus={vendorFieldError(i, 'payment_terms') ? 'error' : undefined}
                                     help={vendorFieldError(i, 'payment_terms')}
                                 >
@@ -150,7 +150,7 @@ export default function Create() {
                                     />
                                 </Form.Item>
                                 <Form.Item
-                                    label="Catatan"
+                                    label="Remarks"
                                     validateStatus={vendorFieldError(i, 'remarks') ? 'error' : undefined}
                                     help={vendorFieldError(i, 'remarks')}
                                 >
@@ -165,11 +165,11 @@ export default function Create() {
                     ))}
                     {data.vendors.length < 3 && (
                         <Button type="dashed" onClick={addVendor} style={{ marginBottom: 16 }}>
-                            Tambah Vendor
+                            Add Vendor
                         </Button>
                     )}
                     <Button type="primary" htmlType="submit" loading={processing}>
-                        Simpan
+                        Save
                     </Button>
                 </Form>
             </Card>

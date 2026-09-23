@@ -3,8 +3,12 @@ import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ConfigProvider, App as AntApp, theme } from 'antd';
-import idID from 'antd/locale/id_ID';
+import enUS from 'antd/locale/en_US';
+import dayjs from 'dayjs';
+import 'dayjs/locale/en';
 import type { ReactNode } from 'react';
+
+dayjs.locale('en');
 import { ThemeProvider } from './providers/ThemeProvider';
 import { useTheme } from './Hooks/useTheme';
 
@@ -17,7 +21,7 @@ function ThemedApp({ children }: { children: ReactNode }) {
 
     return (
         <ConfigProvider
-            locale={idID}
+            locale={enUS}
             theme={{
                 algorithm: isDark ? darkAlgorithm : defaultAlgorithm,
                 token: {

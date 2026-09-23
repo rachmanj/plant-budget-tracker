@@ -46,8 +46,8 @@ interface Props {
 
 export default function Create({ prefill, projectCode, projects, equipment, projectBudget }: Props) {
     return (
-        <AppLayout title="Buat Plant Request">
-            <Head title="Buat Plant Request" />
+        <AppLayout title="Create Plant Request">
+            <Head title="Create Plant Request" />
             <PlantRequestWizard
                 mode="create"
                 prefill={prefill}

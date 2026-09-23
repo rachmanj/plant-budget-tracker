@@ -23,11 +23,11 @@ export default function Login() {
                 background: token.colorBgLayout,
             }}
         >
-            <Head title="Masuk" />
+            <Head title="Sign In" />
             <Card style={{ width: 400 }}>
                 <Typography.Title level={3}>Plant Budget Tracker</Typography.Title>
                 <Typography.Paragraph type="secondary">
-                    Masuk ke sistem penganggaran plant
+                    Sign in to the plant budgeting system
                 </Typography.Paragraph>
 
                 {errors.email && <Alert type="error" message={errors.email} style={{ marginBottom: 16 }} />}
@@ -41,7 +41,7 @@ export default function Login() {
                             autoComplete="username"
                         />
                     </Form.Item>
-                    <Form.Item label="Kata Sandi" required>
+                    <Form.Item label="Password" required>
                         <Input.Password
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
@@ -49,7 +49,7 @@ export default function Login() {
                         />
                     </Form.Item>
                     <Button type="primary" htmlType="submit" block loading={processing}>
-                        Masuk
+                        Sign In
                     </Button>
                 </Form>
             </Card>

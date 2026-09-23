@@ -55,8 +55,8 @@ interface Props {
 
 export default function Edit({ request, projectCode, projects, equipment, projectBudget }: Props) {
     return (
-        <AppLayout title="Ubah Plant Request">
-            <Head title="Ubah Plant Request" />
+        <AppLayout title="Edit Plant Request">
+            <Head title="Edit Plant Request" />
             <PlantRequestWizard
                 mode="edit"
                 request={request}

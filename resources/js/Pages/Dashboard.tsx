@@ -101,18 +101,18 @@ function getGreeting(): string {
     const hour = new Date().getHours();
 
     if (hour < 11) {
-        return 'Selamat pagi';
+        return 'Good morning';
     }
 
     if (hour < 15) {
-        return 'Selamat siang';
+        return 'Good afternoon';
     }
 
     if (hour < 18) {
-        return 'Selamat sore';
+        return 'Good evening';
     }
 
-    return 'Selamat malam';
+    return 'Good evening';
 }
 
 function StatCard({
@@ -163,33 +163,33 @@ export default function Dashboard({ metrics, projectCode, today, can }: Dashboar
             </Space>
 
             {can['budget.view'] && (
-                <Card title={`Anggaran ${period.label}`} style={{ marginBottom: 24 }}>
+                <Card title={`Budget ${period.label}`} style={{ marginBottom: 24 }}>
                     {!period.exists ? (
                         <Alert
                             type="info"
                             showIcon
-                            message="Belum ada anggaran untuk bulan ini"
-                            action={<Link href="/budget">Buka Anggaran</Link>}
+                            message="No budget for this month yet"
+                            action={<Link href="/budget">Open Budget</Link>}
                         />
                     ) : (
                         <Row gutter={[16, 16]}>
                             <Col xs={24} sm={12} lg={6}>
                                 <StatCard
-                                    title="Pagu"
+                                    title="Ceiling"
                                     value={formatIdrCompact(budget.allocated)}
                                     href="/budget"
                                 />
                             </Col>
                             <Col xs={24} sm={12} lg={6}>
                                 <StatCard
-                                    title="Terpakai"
+                                    title="Used"
                                     value={formatIdrCompact(budget.used)}
                                     href="/budget"
                                 />
                             </Col>
                             <Col xs={24} sm={12} lg={6}>
                                 <StatCard
-                                    title="Sisa"
+                                    title="Remaining"
                                     value={formatIdrCompact(budget.remaining)}
                                     href="/budget"
                                 />
@@ -197,7 +197,7 @@ export default function Dashboard({ metrics, projectCode, today, can }: Dashboar
                             <Col xs={24} sm={12} lg={6}>
                                 <Card style={{ height: '100%' }}>
                                     <Statistic
-                                        title="% Terpakai"
+                                        title="% Used"
                                         value={budget.usedPct.toFixed(1)}
                                         suffix="%"
                                     />
@@ -215,61 +215,61 @@ export default function Dashboard({ metrics, projectCode, today, can }: Dashboar
             )}
 
             {canSeeRequests && (
-                <Card title="Permintaan" style={{ marginBottom: 24 }}>
+                <Card title="Requests" style={{ marginBottom: 24 }}>
                     {requests.awaitingMyDecision > 0 && (
                         <Alert
                             style={{ marginBottom: 16, cursor: 'pointer' }}
                             type="warning"
                             showIcon
-                            message={`Perlu keputusan Anda: ${requests.awaitingMyDecision}`}
+                            message={`Awaiting your decision: ${requests.awaitingMyDecision}`}
                             onClick={() => router.visit('/approvals')}
                         />
                     )}
                     <Row gutter={[16, 16]}>
                         <Col xs={24} sm={12} lg={6}>
-                            <StatCard title="Draf" value={requests.draft} href="/plant-requests" />
+                            <StatCard title="Draft" value={requests.draft} href="/plant-requests" />
                         </Col>
                         <Col xs={24} sm={12} lg={6}>
                             <StatCard
-                                title="Menunggu Approval"
+                                title="Waiting for Approval"
                                 value={requests.waitingApproval}
                                 href="/plant-requests"
                             />
                         </Col>
                         <Col xs={24} sm={12} lg={6}>
                             <StatCard
-                                title="Disetujui Bulan Ini"
+                                title="Approved This Month"
                                 value={requests.approvedThisMonth}
                                 href="/plant-requests"
                             />
                         </Col>
                         <Col xs={24} sm={12} lg={6}>
-                            <StatCard title="Ditolak" value={requests.rejected} href="/plant-requests" />
+                            <StatCard title="Rejected" value={requests.rejected} href="/plant-requests" />
                         </Col>
                     </Row>
                 </Card>
             )}
 
             {can['tabulation_bid.view'] && (
-                <Card title="Pengadaan" style={{ marginBottom: 24 }}>
+                <Card title="Procurement" style={{ marginBottom: 24 }}>
                     <Row gutter={[16, 16]}>
                         <Col xs={24} sm={12} lg={8}>
                             <StatCard
-                                title="Bid Menunggu Review"
+                                title="Bids Awaiting Review"
                                 value={procurement.bidsAwaitingReview}
                                 href="/tabulation-bids"
                             />
                         </Col>
                         <Col xs={24} sm={12} lg={8}>
                             <StatCard
-                                title="Bid Menunggu PO"
+                                title="Bids Awaiting PO"
                                 value={procurement.bidsAwaitingPo}
                                 href="/tabulation-bids"
                             />
                         </Col>
                         <Col xs={24} sm={12} lg={8}>
                             <StatCard
-                                title="PO Bulan Ini"
+                                title="PO This Month"
                                 value={procurement.poCreatedThisMonth}
                                 href="/tabulation-bids"
                                 footer={
@@ -285,18 +285,18 @@ export default function Dashboard({ metrics, projectCode, today, can }: Dashboar
 
             {can['dmbd.view'] && (
                 <Card
-                    title="DMBD Hari Ini"
+                    title="DMBD Today"
                     extra={
                         dmbd.unitsActive !== null ? (
                             <Typography.Text type="secondary">
-                                {dmbd.unitsActive} unit aktif
+                                {dmbd.unitsActive} active units
                             </Typography.Text>
                         ) : null
                     }
                     style={{ marginBottom: 24 }}
                 >
                     {!dmbd.available ? (
-                        <Alert type="warning" showIcon message="Data unit sedang tidak tersedia" />
+                        <Alert type="warning" showIcon message="Unit data is currently unavailable" />
                     ) : (
                         <Row gutter={[16, 16]}>
                             <Col xs={24} sm={8}>
@@ -313,13 +313,13 @@ export default function Dashboard({ metrics, projectCode, today, can }: Dashboar
                 </Card>
             )}
 
-            <Card title="Tindakan Menunggu" style={{ marginBottom: 24 }}>
+            <Card title="Pending Actions" style={{ marginBottom: 24 }}>
                 <Row gutter={[16, 16]}>
                     <Col xs={24} sm={12} lg={8}>
                         <StatCard title="Overbudget" value={pending.overbudget} href="/overbudget" />
                     </Col>
                     <Col xs={24} sm={12} lg={8}>
-                        <StatCard title="Pembatalan" value={pending.cancellation} href="/cancellation" />
+                        <StatCard title="Cancellation" value={pending.cancellation} href="/cancellation" />
                     </Col>
                     <Col xs={24} sm={12} lg={8}>
                         <StatCard title="Interchange" value={pending.interchange} href="/interchange" />

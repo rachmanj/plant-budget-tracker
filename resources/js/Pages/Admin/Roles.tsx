@@ -1,9 +1,9 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { ProTable } from '@ant-design/pro-components';
 import { Button, Modal, Form, Input, Transfer } from 'antd';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-
+import { roleLabel } from '@/utils/labels';
 interface RoleRow {
     id: number;
     name: string;
@@ -15,7 +15,12 @@ interface RolesProps {
     permissions: string[];
 }
 
+interface NavPageProps {
+    nav?: { roleLabels?: Record<string, string> };
+}
+
 export default function Roles({ roles, permissions }: RolesProps) {
+    const { nav } = usePage<NavPageProps>().props;
     const [createOpen, setCreateOpen] = useState(false);
     const [permRole, setPermRole] = useState<RoleRow | null>(null);
     const [newRoleName, setNewRoleName] = useState('');
@@ -27,29 +32,33 @@ export default function Roles({ roles, permissions }: RolesProps) {
     };
 
     return (
-        <AppLayout title="Role & Permission">
-            <Head title="Role & Permission" />
+        <AppLayout title="Roles & Permissions">
+            <Head title="Roles & Permissions" />
             <ProTable<RoleRow>
                 rowKey="id"
                 search={false}
                 toolBarRender={() => [
                     <Button key="create" type="primary" onClick={() => setCreateOpen(true)}>
-                        Tambah Role
+                        Add Role
                     </Button>,
                 ]}
                 columns={[
-                    { title: 'Role', dataIndex: 'name' },
                     {
-                        title: 'Jumlah Permission',
+                        title: 'Role',
+                        dataIndex: 'name',
+                        render: (_, row) => roleLabel(row.name, nav?.roleLabels),
+                    },
+                    {
+                        title: 'Permission Count',
                         dataIndex: 'permissions',
                         render: (_, row) => row.permissions.length,
                     },
                     {
-                        title: 'Aksi',
+                        title: 'Actions',
                         valueType: 'option',
                         render: (_, row) => [
                             <Button key="perm" type="link" onClick={() => openPermissions(row)}>
-                                Permission
+                                Permissions
                             </Button>,
                         ],
                     },
@@ -58,7 +67,7 @@ export default function Roles({ roles, permissions }: RolesProps) {
             />
 
             <Modal
-                title="Tambah Role"
+                title="Add Role"
                 open={createOpen}
                 onCancel={() => setCreateOpen(false)}
                 onOk={() => {
@@ -66,14 +75,14 @@ export default function Roles({ roles, permissions }: RolesProps) {
                 }}
             >
                 <Form layout="vertical">
-                    <Form.Item label="Nama Role" required>
+                    <Form.Item label="Role Name" required>
                         <Input value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} />
                     </Form.Item>
                 </Form>
             </Modal>
 
             <Modal
-                title={`Permission — ${permRole?.name ?? ''}`}
+                title={`Permissions — ${permRole ? roleLabel(permRole.name, nav?.roleLabels) : ''}`}
                 open={!!permRole}
                 onCancel={() => setPermRole(null)}
                 onOk={() => {
@@ -86,7 +95,7 @@ export default function Roles({ roles, permissions }: RolesProps) {
             >
                 <Transfer
                     dataSource={permissions.map((p) => ({ key: p, title: p }))}
-                    titles={['Tersedia', 'Assigned']}
+                    titles={['Available', 'Assigned']}
                     targetKeys={selectedPermissions}
                     onChange={(keys) => setSelectedPermissions(keys as string[])}
                     render={(item) => item.title ?? ''}
