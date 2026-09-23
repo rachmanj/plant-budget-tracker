@@ -3,53 +3,82 @@
 namespace App\Services\Reporting;
 
 use App\Models\BudgetAllocation;
-use App\Models\BudgetLedger;
 use App\Models\BudgetPeriod;
+use App\Models\PlantRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class BudgetConsumptionReport
 {
+    /**
+     * @return array{summary: array<string, mixed>|null, units: list<array<string, mixed>>}
+     */
     public function byProject(string $projectCode, Carbon $month): array
     {
         $period = BudgetPeriod::query()
             ->where('project_code', $projectCode)
             ->whereDate('period_month', $month->copy()->startOfMonth())
+            ->with('allocations')
             ->first();
 
         if (! $period) {
-            return [];
+            return ['summary' => null, 'units' => []];
         }
 
-        return $period->allocations->map(fn (BudgetAllocation $a) => $this->allocationSummary($a))->all();
+        $allocation = $period->allocations->first();
+
+        if (! $allocation) {
+            return ['summary' => null, 'units' => []];
+        }
+
+        return [
+            'summary' => $this->projectSummary($allocation, $projectCode),
+            'units' => $this->unitBreakdownFromRequests($allocation),
+        ];
     }
 
+    /**
+     * @return array{summary: array<string, mixed>|null, units: list<array<string, mixed>>}
+     */
     public function byEquipment(int $equipmentId, Carbon $month): array
     {
         $allocation = BudgetAllocation::query()
-            ->where('equipment_id', $equipmentId)
             ->whereHas('period', fn ($q) => $q->whereDate('period_month', $month->copy()->startOfMonth()))
+            ->whereNull('equipment_id')
             ->first();
 
-        return $allocation ? $this->allocationSummary($allocation) : [];
-    }
-
-    public function byPlantType(string $projectCode, string $plantType, Carbon $month): array
-    {
-        $period = BudgetPeriod::query()
-            ->where('project_code', $projectCode)
-            ->whereDate('period_month', $month->copy()->startOfMonth())
-            ->first();
-
-        if (! $period) {
-            return [];
+        if (! $allocation) {
+            return ['summary' => null, 'units' => []];
         }
 
-        return $period->allocations()
-            ->where('plant_type_cache', $plantType)
-            ->get()
-            ->map(fn (BudgetAllocation $a) => $this->allocationSummary($a))
+        $units = collect($this->unitBreakdownFromRequests($allocation))
+            ->filter(fn (array $row) => (int) ($row['equipment_id'] ?? 0) === $equipmentId)
+            ->values()
             ->all();
+
+        return [
+            'summary' => $this->projectSummary($allocation, $allocation->period->project_code),
+            'units' => $units,
+        ];
+    }
+
+    /**
+     * @return array{summary: array<string, mixed>|null, units: list<array<string, mixed>>}
+     */
+    public function byPlantType(string $projectCode, string $plantType, Carbon $month): array
+    {
+        $report = $this->byProject($projectCode, $month);
+
+        if ($report['summary'] === null) {
+            return $report;
+        }
+
+        $report['units'] = collect($report['units'])
+            ->filter(fn (array $row) => ($row['plant_type'] ?? '') === $plantType)
+            ->values()
+            ->all();
+
+        return $report;
     }
 
     public function rollingSixMonth(string $projectCode): Collection
@@ -66,28 +95,62 @@ class BudgetConsumptionReport
         return $months;
     }
 
-    private function allocationSummary(BudgetAllocation $allocation): array
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function unitBreakdownFromRequests(BudgetAllocation $allocation): array
     {
-        $ledgers = BudgetLedger::query()
+        $requests = PlantRequest::query()
             ->where('budget_allocation_id', $allocation->id)
-            ->get()
-            ->groupBy('entry_type');
+            ->whereNotIn('status', ['draft', 'cancelled', 'rejected'])
+            ->orderByDesc('updated_at')
+            ->get();
 
-        $sum = fn (string $type) => number_format(
-            (float) ($ledgers->get($type)?->sum('amount') ?? 0),
-            2,
-            '.',
-            ''
-        );
+        return $requests
+            ->groupBy('equipment_id')
+            ->map(function (Collection $group, $equipmentId) {
+                $latest = $group->sortByDesc('id')->first();
+
+                return [
+                    'equipment_id' => (int) $equipmentId,
+                    'unit_code' => $latest->unit_code_cache,
+                    'plant_type' => null,
+                    'request_count' => $group->count(),
+                    'total_estimated' => number_format(
+                        (float) $group->sum('estimated_total'),
+                        2,
+                        '.',
+                        ''
+                    ),
+                    'last_status' => $latest->status,
+                ];
+            })
+            ->sortBy('unit_code')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function projectSummary(BudgetAllocation $allocation, string $projectCode): array
+    {
+        $allocation->refresh();
+
+        $base = bcadd((string) $allocation->allocated_amount, (string) $allocation->carry_forward_in, 2);
+        $spent = bcadd((string) $allocation->committed_amount, (string) $allocation->actual_amount, 2);
+        $remaining = bcsub($base, $spent, 2);
 
         return [
             'allocation_id' => $allocation->id,
-            'equipment_id' => $allocation->equipment_id,
-            'unit_code' => $allocation->unit_code_cache,
-            'allocated' => $sum('allocation'),
-            'committed' => $sum('commitment'),
-            'actual' => $sum('actual'),
-            'carry_forward' => $sum('carry_forward'),
+            'project_code' => $projectCode,
+            'allocated' => number_format((float) $allocation->allocated_amount, 2, '.', ''),
+            'carry_forward' => number_format((float) $allocation->carry_forward_in, 2, '.', ''),
+            'pagu' => number_format((float) $base, 2, '.', ''),
+            'committed' => number_format((float) $allocation->committed_amount, 2, '.', ''),
+            'actual' => number_format((float) $allocation->actual_amount, 2, '.', ''),
+            'remaining' => number_format((float) $remaining, 2, '.', ''),
+            'utilization_pct' => $allocation->utilization_pct,
             'variance' => $allocation->variance,
         ];
     }

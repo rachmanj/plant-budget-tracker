@@ -42,11 +42,11 @@ interface Equipment {
     unitstatus: string;
 }
 
-interface Allocation {
-    id: number;
-    unit_code_cache: string;
-    plant_type_cache: string;
+interface ProjectBudget {
+    allocation_id: number;
     allocated_amount: string;
+    carry_forward_in: string;
+    pagu: string;
     tolerance_pct: string;
     committed_amount: string;
     actual_amount: string;
@@ -71,7 +71,6 @@ interface EditRequest {
     id: number;
     sap_mr_id: number;
     unit_code_cache: string;
-    budget_allocation_id: number;
     dmbd_entry_id: number | null;
     equipment_id: number;
     lines: Array<{
@@ -91,7 +90,7 @@ export interface PlantRequestWizardProps {
     projectCode: string;
     projects: Project[];
     equipment: Equipment[];
-    allocations: Allocation[];
+    projectBudget: ProjectBudget | null;
 }
 
 const UOM_OPTIONS = ['EA', 'PCS', 'SET', 'LITER', 'KG', 'ROLL', 'BOX'].map((u) => ({
@@ -164,19 +163,13 @@ export default function PlantRequestWizard({
     projectCode,
     projects,
     equipment,
-    allocations,
+    projectBudget,
 }: PlantRequestWizardProps) {
     const projectName = projects.find((p) => p.project_code === projectCode)?.project_name ?? projectCode;
     const prefillEquipment = equipment.find((e) => e.id === prefill.equipment_id);
     const editEquipment = request ? equipment.find((e) => e.id === request.equipment_id) : undefined;
 
     const { data, setData, post, put, processing, errors } = useForm({
-        budget_allocation_id:
-            mode === 'edit' && request
-                ? request.budget_allocation_id
-                : allocations.length === 1
-                  ? allocations[0].id
-                  : (null as number | null),
         equipment_id:
             mode === 'edit' && request
                 ? request.equipment_id
@@ -197,7 +190,6 @@ export default function PlantRequestWizard({
     );
 
     const selectedEquipment = equipment.find((e) => e.id === data.equipment_id);
-    const selectedAllocation = allocations.find((a) => a.id === data.budget_allocation_id);
 
     const equipmentGroups = useMemo(() => {
         const groups = new Map<string, Equipment[]>();
@@ -215,31 +207,31 @@ export default function PlantRequestWizard({
     const linesTotal = useMemo(() => sumLinesTotal(data.lines), [data.lines]);
 
     const projectedUtilization = useMemo(() => {
-        if (!selectedAllocation) {
+        if (!projectBudget) {
             return '0.00';
         }
 
-        const allocated = parseFloat(selectedAllocation.allocated_amount);
-        const committed = parseFloat(selectedAllocation.committed_amount);
-        const actual = parseFloat(selectedAllocation.actual_amount);
+        const pagu = parseFloat(projectBudget.pagu);
+        const committed = parseFloat(projectBudget.committed_amount);
+        const actual = parseFloat(projectBudget.actual_amount);
         const linesAmt = parseFloat(linesTotal);
 
-        if (allocated <= 0) {
+        if (pagu <= 0) {
             return '0.00';
         }
 
-        return (((committed + actual + linesAmt) / allocated) * 100).toFixed(2);
-    }, [selectedAllocation, linesTotal]);
+        return (((committed + actual + linesAmt) / pagu) * 100).toFixed(2);
+    }, [projectBudget, linesTotal]);
 
-    const toleranceCapPct = selectedAllocation
-        ? 100 + parseFloat(selectedAllocation.tolerance_pct)
+    const toleranceCapPct = projectBudget
+        ? 100 + parseFloat(projectBudget.tolerance_pct)
         : 110;
 
     const exceedsTolerance = parseFloat(projectedUtilization) > toleranceCapPct;
 
     const hasEquipment = equipment.length > 0;
-    const hasAllocations = allocations.length > 0;
-    const canSubmit = hasAllocations && data.budget_allocation_id;
+    const hasProjectBudget = projectBudget !== null;
+    const canSubmit = hasProjectBudget && hasEquipment && data.equipment_id > 0;
 
     const handleEquipmentSelect = (equipmentId: number) => {
         const item = equipment.find((e) => e.id === equipmentId);
@@ -431,87 +423,53 @@ export default function PlantRequestWizard({
                 </Card>
 
                 <Card style={{ marginBottom: 16 }}>
-                    {sectionTitle(2, 'Budget Allocation')}
+                    {sectionTitle(2, 'Pagu Proyek')}
 
-                    {!hasAllocations && (
+                    {!hasProjectBudget && (
                         <Alert
                             type="warning"
                             showIcon
-                            message={`Belum ada alokasi budget untuk project ${projectCode} — Finance Director harus membuat periode budget dulu`}
+                            message={`Belum ada pagu anggaran untuk project ${projectCode} — Finance Director harus mengatur pagu proyek dulu`}
                         />
                     )}
 
-                    {hasAllocations && (
-                        <>
-                            <Form.Item label="Alokasi Budget" required>
-                                <Select
-                                    placeholder="Pilih alokasi budget"
-                                    value={data.budget_allocation_id}
-                                    onChange={(v) => setData('budget_allocation_id', v)}
-                                    optionLabelProp="label"
-                                >
-                                    {allocations.map((a) => {
-                                        const allocationLabel =
-                                            a.unit_code_cache != null && a.unit_code_cache !== ''
-                                                ? `${a.unit_code_cache}${a.plant_type_cache ? ` · ${a.plant_type_cache}` : ''}`
-                                                : 'Pagu proyek';
-
-                                        return (
-                                        <Select.Option
-                                            key={a.id}
-                                            value={a.id}
-                                            label={allocationLabel}
-                                        >
-                                            <div>
-                                                <div>{allocationLabel}</div>
-                                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                                    {formatIdr(a.allocated_amount)} · Sisa{' '}
-                                                    {formatIdr(a.remaining)}
-                                                </Typography.Text>
-                                            </div>
-                                        </Select.Option>
-                                        );
-                                    })}
-                                </Select>
-                                {errors.budget_allocation_id && (
-                                    <Typography.Text type="danger">
-                                        {errors.budget_allocation_id}
-                                    </Typography.Text>
+                    {projectBudget && (
+                        <Descriptions size="small" column={2} bordered>
+                            <Descriptions.Item label="Pagu (alokasi + carry forward)">
+                                {formatIdr(projectBudget.pagu)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Komitmen + Aktual">
+                                {formatIdr(
+                                    (
+                                        parseFloat(projectBudget.committed_amount) +
+                                        parseFloat(projectBudget.actual_amount)
+                                    ).toFixed(2),
                                 )}
-                            </Form.Item>
-
-                            {selectedAllocation && (
-                                <Descriptions size="small" column={2} bordered style={{ marginBottom: 16 }}>
-                                    <Descriptions.Item label="Alokasi">
-                                        {formatIdr(selectedAllocation.allocated_amount)}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label="Komitmen + Aktual">
-                                        {formatIdr(
-                                            (
-                                                parseFloat(selectedAllocation.committed_amount) +
-                                                parseFloat(selectedAllocation.actual_amount)
-                                            ).toFixed(2),
-                                        )}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label="Sisa">
-                                        {formatIdr(selectedAllocation.remaining)}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item label="Penggunaan">
-                                        <BudgetProgressBar
-                                            utilizationPct={selectedAllocation.utilization_pct}
-                                            cap={selectedAllocation.tolerance_cap}
-                                            committed={selectedAllocation.committed_amount}
-                                            actual={selectedAllocation.actual_amount}
-                                            showLabel={false}
-                                        />
-                                    </Descriptions.Item>
-                                </Descriptions>
-                            )}
-                        </>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Sisa pagu proyek">
+                                <Typography.Text strong>
+                                    {formatIdr(projectBudget.remaining)}
+                                </Typography.Text>
+                                <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
+                                    ({projectBudget.utilization_pct}% terpakai)
+                                </Typography.Text>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Penggunaan">
+                                <BudgetProgressBar
+                                    utilizationPct={projectBudget.utilization_pct}
+                                    cap={projectBudget.tolerance_cap}
+                                    pagu={projectBudget.pagu}
+                                    committed={projectBudget.committed_amount}
+                                    actual={projectBudget.actual_amount}
+                                    remaining={projectBudget.remaining}
+                                    showLabel={false}
+                                />
+                            </Descriptions.Item>
+                        </Descriptions>
                     )}
                 </Card>
 
-                <Card style={{ marginBottom: 16 }} styles={{ body: { opacity: hasAllocations ? 1 : 0.5 } }}>
+                <Card style={{ marginBottom: 16 }} styles={{ body: { opacity: hasProjectBudget ? 1 : 0.5 } }}>
                     {sectionTitle(3, 'Line Items')}
 
                     {data.lines.map((line, index) => (
@@ -526,7 +484,7 @@ export default function PlantRequestWizard({
                                         danger
                                         icon={<MinusCircleOutlined />}
                                         onClick={() => removeLine(index)}
-                                        disabled={!hasAllocations}
+                                        disabled={!hasProjectBudget}
                                     />
                                 ) : null
                             }
@@ -536,7 +494,7 @@ export default function PlantRequestWizard({
                                     <Form.Item label="Part Number" required>
                                         <Input
                                             value={line.part_number}
-                                            disabled={!hasAllocations}
+                                            disabled={!hasProjectBudget}
                                             onChange={(e) =>
                                                 handlePartNumberChange(index, e.target.value)
                                             }
@@ -552,7 +510,7 @@ export default function PlantRequestWizard({
                                     <Form.Item label="Nama Material" required>
                                         <Input
                                             value={line.material_name}
-                                            disabled={!hasAllocations}
+                                            disabled={!hasProjectBudget}
                                             onChange={(e) =>
                                                 updateLine(index, { material_name: e.target.value })
                                             }
@@ -563,7 +521,7 @@ export default function PlantRequestWizard({
                                     <Form.Item label="UOM" required>
                                         <Select
                                             value={line.uom}
-                                            disabled={!hasAllocations}
+                                            disabled={!hasProjectBudget}
                                             onChange={(v) => updateLine(index, { uom: v })}
                                             options={UOM_OPTIONS}
                                         />
@@ -575,7 +533,7 @@ export default function PlantRequestWizard({
                                             min={1}
                                             style={{ width: '100%' }}
                                             value={line.qty}
-                                            disabled={!hasAllocations}
+                                            disabled={!hasProjectBudget}
                                             onChange={(v) => updateLine(index, { qty: v ?? 1 })}
                                         />
                                     </Form.Item>
@@ -587,7 +545,7 @@ export default function PlantRequestWizard({
                                             precision={2}
                                             style={{ width: '100%' }}
                                             value={line.unit_price_est === '' ? undefined : line.unit_price_est}
-                                            disabled={!hasAllocations}
+                                            disabled={!hasProjectBudget}
                                             onChange={(v) =>
                                                 updateLine(index, {
                                                     unit_price_est: v ?? '',
@@ -605,7 +563,7 @@ export default function PlantRequestWizard({
                                         size="small"
                                         icon={<SearchOutlined />}
                                         loading={estimatingIndex === index}
-                                        disabled={!hasAllocations}
+                                        disabled={!hasProjectBudget}
                                         onClick={() => estimatePrice(index)}
                                     >
                                         Cari harga
@@ -641,27 +599,30 @@ export default function PlantRequestWizard({
                         type="dashed"
                         icon={<PlusOutlined />}
                         onClick={addLine}
-                        disabled={!hasAllocations}
+                        disabled={!hasProjectBudget}
                         block
                     >
                         Tambah baris
                     </Button>
                 </Card>
 
-                <Card style={{ marginBottom: 16 }} styles={{ body: { opacity: hasAllocations ? 1 : 0.5 } }}>
+                <Card style={{ marginBottom: 16 }} styles={{ body: { opacity: hasProjectBudget ? 1 : 0.5 } }}>
                     {sectionTitle(4, 'Ringkasan')}
 
                     <Descriptions column={1} bordered size="small">
                         <Descriptions.Item label="Estimasi Total">
                             <Typography.Text strong>{formatIdr(linesTotal)}</Typography.Text>
                         </Descriptions.Item>
-                        {selectedAllocation && (
-                            <Descriptions.Item label="Proyeksi Penggunaan Budget">
+                        {projectBudget && (
+                            <Descriptions.Item label="Proyeksi Penggunaan Pagu Proyek">
                                 <BudgetProgressBar
                                     utilizationPct={projectedUtilization}
-                                    cap={selectedAllocation.tolerance_cap}
-                                    committed={selectedAllocation.committed_amount}
-                                    actual={selectedAllocation.actual_amount}
+                                    cap={projectBudget.tolerance_cap}
+                                    pagu={projectBudget.pagu}
+                                    committed={projectBudget.committed_amount}
+                                    actual={projectBudget.actual_amount}
+                                    additionalAmount={linesTotal}
+                                    remaining={projectBudget.remaining}
                                 />
                                 {exceedsTolerance && (
                                     <Typography.Text type="danger" style={{ display: 'block', marginTop: 8 }}>
@@ -683,6 +644,11 @@ export default function PlantRequestWizard({
                     >
                         {submitLabel}
                     </Button>
+                    {(errors.equipment_id || errors.lines) && (
+                        <Typography.Text type="danger">
+                            {errors.equipment_id ?? errors.lines}
+                        </Typography.Text>
+                    )}
                     {mode === 'create' && (
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                             Draft disimpan — submit & approval dilakukan dari daftar Plant Request

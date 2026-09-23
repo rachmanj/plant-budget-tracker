@@ -58,12 +58,12 @@ class PlantRequestController extends Controller
 
         $equipmentResult = $this->equipmentCache->list(['project_code' => $projectCode]);
         $equipment = $this->mapEquipmentList($equipmentResult);
-        $allocations = $this->allocationsForProject($projectCode);
+        $projectBudget = $this->projectBudgetForCurrentPeriod($projectCode);
         $projects = $this->projectList();
 
         return Inertia::render('PlantRequest/Create', [
             'prefill' => $request->only(['dmbd_entry_id', 'equipment_id', 'unit_code_cache', 'project_code']),
-            ...$this->wizardSharedProps($projectCode, $projects, $equipment, $allocations),
+            ...$this->wizardSharedProps($projectCode, $projects, $equipment, $projectBudget),
         ]);
     }
 
@@ -78,12 +78,12 @@ class PlantRequestController extends Controller
 
         $equipmentResult = $this->equipmentCache->list(['project_code' => $projectCode]);
         $equipment = $this->mapEquipmentList($equipmentResult);
-        $allocations = $this->allocationsForProject($projectCode);
+        $projectBudget = $this->projectBudgetForCurrentPeriod($projectCode);
         $projects = $this->projectList();
 
         return Inertia::render('PlantRequest/Edit', [
             'request' => $plantRequest,
-            ...$this->wizardSharedProps($projectCode, $projects, $equipment, $allocations),
+            ...$this->wizardSharedProps($projectCode, $projects, $equipment, $projectBudget),
         ]);
     }
 
@@ -92,7 +92,6 @@ class PlantRequestController extends Controller
         $this->authorize('update', $plantRequest);
 
         $validated = $request->validate([
-            'budget_allocation_id' => 'required|exists:budget_allocations,id',
             'equipment_id' => 'required|integer',
             'unit_code_cache' => 'required|string',
             'dmbd_entry_id' => 'nullable|exists:dmbd_entries,id',
@@ -106,20 +105,10 @@ class PlantRequestController extends Controller
             'lines.*.price_source' => 'nullable|in:tabulation_bid,sap_price,manual,none',
         ]);
 
-        $user = $request->user();
         $projectCode = ProjectContext::resolve($request);
+        $allocation = $this->resolveProjectAllocation($projectCode);
 
-        $allocation = BudgetAllocation::query()
-            ->with('period')
-            ->findOrFail($validated['budget_allocation_id']);
-
-        if ($allocation->period->project_code !== $projectCode) {
-            throw ValidationException::withMessages([
-                'budget_allocation_id' => ['Allocation bukan untuk project ini'],
-            ]);
-        }
-
-        DB::transaction(function () use ($validated, $plantRequest) {
+        DB::transaction(function () use ($validated, $plantRequest, $allocation) {
             $total = '0.00';
             $resolvedLines = [];
 
@@ -147,7 +136,7 @@ class PlantRequestController extends Controller
             }
 
             $plantRequest->update([
-                'budget_allocation_id' => $validated['budget_allocation_id'],
+                'budget_allocation_id' => $allocation->id,
                 'equipment_id' => $validated['equipment_id'],
                 'unit_code_cache' => $validated['unit_code_cache'],
                 'dmbd_entry_id' => $validated['dmbd_entry_id'] ?? null,
@@ -171,7 +160,6 @@ class PlantRequestController extends Controller
         $this->authorize('create', PlantRequest::class);
 
         $validated = $request->validate([
-            'budget_allocation_id' => 'required|exists:budget_allocations,id',
             'equipment_id' => 'required|integer',
             'unit_code_cache' => 'required|string',
             'dmbd_entry_id' => 'nullable|exists:dmbd_entries,id',
@@ -185,20 +173,10 @@ class PlantRequestController extends Controller
             'lines.*.price_source' => 'nullable|in:tabulation_bid,sap_price,manual,none',
         ]);
 
-        $user = $request->user();
         $projectCode = ProjectContext::resolve($request);
+        $allocation = $this->resolveProjectAllocation($projectCode);
 
-        $allocation = BudgetAllocation::query()
-            ->with('period')
-            ->findOrFail($validated['budget_allocation_id']);
-
-        if ($allocation->period->project_code !== $projectCode) {
-            throw ValidationException::withMessages([
-                'budget_allocation_id' => ['Allocation bukan untuk project ini'],
-            ]);
-        }
-
-        $plantRequest = DB::transaction(function () use ($validated, $request) {
+        $plantRequest = DB::transaction(function () use ($validated, $request, $allocation) {
             $total = '0.00';
             foreach ($validated['lines'] as $line) {
                 $price = $line['unit_price_est'] ?? null;
@@ -215,7 +193,7 @@ class PlantRequestController extends Controller
             }
 
             $plantRequest = PlantRequest::create([
-                'budget_allocation_id' => $validated['budget_allocation_id'],
+                'budget_allocation_id' => $allocation->id,
                 'equipment_id' => $validated['equipment_id'],
                 'unit_code_cache' => $validated['unit_code_cache'],
                 'dmbd_entry_id' => $validated['dmbd_entry_id'] ?? null,
@@ -256,10 +234,22 @@ class PlantRequestController extends Controller
     {
         $plantRequest->load(['lines', 'allocation.period', 'approvals.approver', 'comments.author', 'requester', 'receiver']);
 
+        $allocation = $plantRequest->allocation;
         $tolerance = $this->budgetEngine->validateAgainstTolerance(
-            $plantRequest->allocation,
+            $allocation,
             (string) $plantRequest->estimated_total
         );
+
+        $base = $tolerance['base'];
+        $spent = bcadd((string) $allocation->committed_amount, (string) $allocation->actual_amount, 2);
+        $tolerance = array_merge($tolerance, [
+            'remaining' => bcsub($base, $spent, 2),
+            'utilization_pct' => $allocation->utilization_pct,
+            'committed_amount' => (string) $allocation->committed_amount,
+            'actual_amount' => (string) $allocation->actual_amount,
+            'tolerance_pct' => (string) $allocation->tolerance_pct,
+            'message' => $this->toleranceExceededMessage($tolerance, $allocation),
+        ]);
 
         $bid = $plantRequest->sap_pr_no
             ? TabulationBid::query()->where('sap_pr_id', $plantRequest->sap_pr_no)->latest()->first()
@@ -302,12 +292,14 @@ class PlantRequestController extends Controller
         );
 
         if (! $tolerance['within_tolerance']) {
+            $capPct = bcadd('100', (string) $allocation->tolerance_pct, 2);
+
             return redirect()->route('overbudget.create', [
                 'plant_request_id' => $plantRequest->id,
                 'budget_allocation_id' => $allocation->id,
                 'requested_amount' => $plantRequest->estimated_total,
-                'over_pct' => bcsub($tolerance['projected_pct'], '110.00', 2),
-            ]);
+                'over_pct' => bcsub($tolerance['projected_pct'], $capPct, 2),
+            ])->with('budget_exceeded', $this->toleranceExceededMessage($tolerance, $allocation));
         }
 
         DB::transaction(function () use ($plantRequest, $allocation, $tolerance, $request) {
@@ -442,9 +434,37 @@ class PlantRequestController extends Controller
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return array<string, mixed>|null
      */
-    private function allocationsForProject(string $projectCode): array
+    private function projectBudgetForCurrentPeriod(string $projectCode): ?array
+    {
+        try {
+            $allocation = $this->resolveProjectAllocation($projectCode);
+        } catch (ValidationException) {
+            return null;
+        }
+
+        $this->budgetEngine->recomputeCachedBalances($allocation);
+        $allocation->refresh();
+
+        $base = bcadd((string) $allocation->allocated_amount, (string) $allocation->carry_forward_in, 2);
+        $spent = bcadd((string) $allocation->committed_amount, (string) $allocation->actual_amount, 2);
+
+        return [
+            'allocation_id' => $allocation->id,
+            'allocated_amount' => (string) $allocation->allocated_amount,
+            'carry_forward_in' => (string) $allocation->carry_forward_in,
+            'pagu' => $base,
+            'tolerance_pct' => (string) $allocation->tolerance_pct,
+            'committed_amount' => (string) $allocation->committed_amount,
+            'actual_amount' => (string) $allocation->actual_amount,
+            'tolerance_cap' => $allocation->tolerance_cap,
+            'utilization_pct' => $allocation->utilization_pct,
+            'remaining' => bcsub($base, $spent, 2),
+        ];
+    }
+
+    private function resolveProjectAllocation(string $projectCode): BudgetAllocation
     {
         $periods = BudgetPeriod::query()
             ->rollingWindow($projectCode)
@@ -457,48 +477,68 @@ class PlantRequestController extends Controller
             ?? $periods->first();
 
         if (! $period) {
-            return [];
+            throw ValidationException::withMessages([
+                'equipment_id' => ['Belum ada periode anggaran untuk proyek ini — Finance Director harus mengatur pagu proyek terlebih dahulu.'],
+            ]);
         }
 
-        return $period->allocations
-            ->sortBy('unit_code_cache')
-            ->map(fn (BudgetAllocation $allocation) => [
-                'id' => $allocation->id,
-                'unit_code_cache' => $allocation->unit_code_cache,
-                'plant_type_cache' => $allocation->plant_type_cache,
-                'allocated_amount' => (string) $allocation->allocated_amount,
-                'tolerance_pct' => (string) $allocation->tolerance_pct,
-                'committed_amount' => (string) $allocation->committed_amount,
-                'actual_amount' => (string) $allocation->actual_amount,
-                'tolerance_cap' => $allocation->tolerance_cap,
-                'utilization_pct' => $allocation->utilization_pct,
-                'remaining' => bcsub(
-                    (string) $allocation->allocated_amount,
-                    bcadd((string) $allocation->committed_amount, (string) $allocation->actual_amount, 2),
-                    2
-                ),
-            ])
-            ->values()
-            ->all();
+        $allocation = $period->allocations->first();
+
+        if (! $allocation) {
+            throw ValidationException::withMessages([
+                'equipment_id' => ['Belum ada pagu anggaran proyek untuk periode ini — Finance Director harus mengatur pagu proyek terlebih dahulu.'],
+            ]);
+        }
+
+        if ($allocation->period->project_code !== $projectCode) {
+            throw ValidationException::withMessages([
+                'equipment_id' => ['Pagu anggaran tidak sesuai dengan proyek aktif.'],
+            ]);
+        }
+
+        return $allocation;
+    }
+
+    /**
+     * @param  array<string, mixed>  $tolerance
+     */
+    private function toleranceExceededMessage(array $tolerance, BudgetAllocation $allocation): string
+    {
+        $pagu = $this->formatIdr($tolerance['base']);
+        $pemakaian = $this->formatIdr($tolerance['projected']);
+        $batas = $this->formatIdr($tolerance['cap']);
+
+        return sprintf(
+            'Pagu proyek: %s. Pemakaian setelah permintaan ini: %s. Batas toleransi (%s%%): %s.',
+            $pagu,
+            $pemakaian,
+            number_format((float) $allocation->tolerance_pct, 2, ',', '.'),
+            $batas
+        );
+    }
+
+    private function formatIdr(string $amount): string
+    {
+        return 'Rp '.number_format((float) $amount, 2, ',', '.');
     }
 
     /**
      * @param  list<array<string, mixed>>  $projects
      * @param  list<array<string, mixed>>  $equipment
-     * @param  list<array<string, mixed>>  $allocations
-     * @return array{projectCode: string, projects: list<array<string, mixed>>, equipment: list<array<string, mixed>>, allocations: list<array<string, mixed>>}
+     * @param  array<string, mixed>|null  $projectBudget
+     * @return array{projectCode: string, projects: list<array<string, mixed>>, equipment: list<array<string, mixed>>, projectBudget: array<string, mixed>|null}
      */
     private function wizardSharedProps(
         string $projectCode,
         array $projects,
         array $equipment,
-        array $allocations,
+        ?array $projectBudget,
     ): array {
         return [
             'projectCode' => $projectCode,
             'projects' => $projects,
             'equipment' => $equipment,
-            'allocations' => $allocations,
+            'projectBudget' => $projectBudget,
         ];
     }
 }

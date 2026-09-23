@@ -88,6 +88,10 @@ class PlantRequestSubmissionTest extends TestCase
             'over_pct' => '10.00',
         ]));
 
+        $response->assertSessionHas('budget_exceeded', fn (string $message) => str_contains($message, 'Pagu proyek:')
+            && str_contains($message, 'Pemakaian setelah permintaan ini:')
+            && str_contains($message, 'Batas toleransi'));
+
         $plantRequest->refresh();
         $this->assertSame('draft', $plantRequest->status);
         $this->assertDatabaseMissing('budget_ledgers', [

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Reports;
 
-use App\Models\BudgetLedger;
+use App\Models\PlantRequest;
 use App\Services\Reporting\BudgetConsumptionReport;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,26 +20,62 @@ class BudgetConsumptionReportTest extends TestCase
         $this->seed(RoleAndPermissionSeeder::class);
     }
 
-    public function test_by_project_returns_allocation_summaries_from_ledger(): void
+    public function test_by_project_returns_project_summary_from_allocation(): void
     {
         $finance = $this->makeFinanceDirector();
         $allocation = $this->makeAllocation($finance, project: 'MBL', amount: '10000000.00');
 
-        BudgetLedger::create([
-            'budget_allocation_id' => $allocation->id,
-            'entry_type' => 'commitment',
-            'amount' => '-2500000.00',
-            'posted_by' => $finance->id,
-            'posted_at' => now(),
-        ]);
-
         $report = app(BudgetConsumptionReport::class);
         $data = $report->byProject('MBL', now()->startOfMonth());
 
-        $this->assertCount(1, $data);
-        $this->assertSame($allocation->id, $data[0]['allocation_id']);
-        $this->assertSame('10000000.00', $data[0]['allocated']);
-        $this->assertSame('-2500000.00', $data[0]['committed']);
+        $this->assertNotNull($data['summary']);
+        $this->assertSame($allocation->id, $data['summary']['allocation_id']);
+        $this->assertSame('10000000.00', $data['summary']['pagu']);
+        $this->assertSame('0.00', $data['summary']['committed']);
+    }
+
+    public function test_unit_breakdown_comes_from_plant_requests_not_allocations(): void
+    {
+        $finance = $this->makeFinanceDirector();
+        $allocation = $this->makeAllocation($finance, project: 'MBL', amount: '10000000.00');
+        $planner = $this->makeUserWithRole('planner');
+
+        PlantRequest::factory()->create([
+            'budget_allocation_id' => $allocation->id,
+            'equipment_id' => 42,
+            'unit_code_cache' => 'E-042',
+            'estimated_total' => '1500000.00',
+            'requested_by' => $planner->id,
+            'status' => 'approved',
+            'sap_mr_id' => 1,
+        ]);
+
+        $latestOnUnit42 = PlantRequest::factory()->create([
+            'budget_allocation_id' => $allocation->id,
+            'equipment_id' => 42,
+            'unit_code_cache' => 'E-042',
+            'estimated_total' => '500000.00',
+            'requested_by' => $planner->id,
+            'status' => 'pending_pm',
+            'sap_mr_id' => 2,
+        ]);
+        PlantRequest::factory()->create([
+            'budget_allocation_id' => $allocation->id,
+            'equipment_id' => 99,
+            'unit_code_cache' => 'E-099',
+            'estimated_total' => '800000.00',
+            'requested_by' => $planner->id,
+            'status' => 'pr_created',
+            'sap_mr_id' => 3,
+        ]);
+
+        $data = app(BudgetConsumptionReport::class)->byProject('MBL', now()->startOfMonth());
+
+        $this->assertCount(2, $data['units']);
+        $unit42 = collect($data['units'])->firstWhere('equipment_id', 42);
+        $this->assertSame(2, $unit42['request_count']);
+        $this->assertSame('2000000.00', $unit42['total_estimated']);
+        $this->assertSame('pending_pm', $unit42['last_status']);
     }
 
     public function test_planner_can_view_budget_consumption_report_page(): void
@@ -64,23 +100,6 @@ class BudgetConsumptionReportTest extends TestCase
         $this->assertCount(6, $rolling);
         $this->assertArrayHasKey('month', $rolling->first());
         $this->assertArrayHasKey('data', $rolling->first());
-    }
-
-    public function test_by_plant_type_filters_allocations(): void
-    {
-        $finance = $this->makeFinanceDirector();
-        $allocation = $this->makeAllocation($finance, amount: '10000000.00');
-
-        $report = app(BudgetConsumptionReport::class);
-        $month = now()->startOfMonth();
-
-        $this->assertCount(0, $report->byPlantType('MBL', 'DIGGER', $month));
-
-        $allocation->update(['plant_type_cache' => 'DIGGER']);
-
-        $diggers = $report->byPlantType('MBL', 'DIGGER', $month);
-
-        $this->assertCount(1, $diggers);
-        $this->assertSame($allocation->id, $diggers[0]['allocation_id']);
+        $this->assertArrayHasKey('summary', $rolling->first()['data']);
     }
 }

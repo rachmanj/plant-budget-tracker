@@ -30,7 +30,7 @@ class ReportController extends Controller
                 [
                     'key' => 'budget-consumption',
                     'title' => 'Konsumsi Anggaran',
-                    'description' => 'Alokasi, komitmen, dan aktual per unit.',
+                    'description' => 'Pagu proyek, komitmen, aktual, dan rincian permintaan per unit.',
                     'href' => route('reports.budget-consumption'),
                 ],
                 [
@@ -164,17 +164,7 @@ class ReportController extends Controller
     private function csvPayload(string $reportType, array $data): array
     {
         return match ($reportType) {
-            'budget-consumption' => [
-                ['unit_code', 'allocated', 'committed', 'actual', 'carry_forward', 'variance'],
-                array_map(fn (array $row) => [
-                    $row['unit_code'] ?? '',
-                    $row['allocated'] ?? '',
-                    $row['committed'] ?? '',
-                    $row['actual'] ?? '',
-                    $row['carry_forward'] ?? '',
-                    $row['variance'] ?? '',
-                ], $data),
-            ],
+            'budget-consumption' => $this->budgetConsumptionCsvRows($data),
             'vendor-performance' => [
                 ['vendor_code', 'vendor_name', 'indent_pct'],
                 array_map(fn (array $row) => [
@@ -195,6 +185,49 @@ class ReportController extends Controller
             ],
             default => $this->abortUnknownReportType(),
         };
+    }
+
+    /**
+     * @param  array{summary: array<string, mixed>|null, units: list<array<string, mixed>>}  $data
+     * @return array{0: list<string>, 1: list<list<string|int>>}
+     */
+    private function budgetConsumptionCsvRows(array $data): array
+    {
+        $headers = ['section', 'unit_code', 'pagu', 'committed', 'actual', 'remaining', 'utilization_pct', 'request_count', 'total_estimated', 'last_status'];
+        $rows = [];
+
+        if (! empty($data['summary'])) {
+            $summary = $data['summary'];
+            $rows[] = [
+                'project',
+                $summary['project_code'] ?? '',
+                $summary['pagu'] ?? '',
+                $summary['committed'] ?? '',
+                $summary['actual'] ?? '',
+                $summary['remaining'] ?? '',
+                $summary['utilization_pct'] ?? '',
+                '',
+                '',
+                '',
+            ];
+        }
+
+        foreach ($data['units'] ?? [] as $unit) {
+            $rows[] = [
+                'unit',
+                $unit['unit_code'] ?? '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                $unit['request_count'] ?? '',
+                $unit['total_estimated'] ?? '',
+                $unit['last_status'] ?? '',
+            ];
+        }
+
+        return [$headers, $rows];
     }
 
     private function abortUnknownReportType(): never

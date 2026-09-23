@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Button, Card, DatePicker, Descriptions, Form, Input, Modal, Select, Table, Tag } from 'antd';
+import { Alert, Button, Card, DatePicker, Descriptions, Form, Input, Modal, Select, Table, Tag, Typography } from 'antd';
+import { formatIdr } from '@/hooks/useCurrency';
 import dayjs, { Dayjs } from 'dayjs';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
@@ -22,7 +23,18 @@ interface Props {
         lines: Array<{ part_number: string; material_name: string; qty: number; line_total: string }>;
         approvals: Array<{ step_order: number; required_role: string; decision: string }>;
     };
-    tolerance: { projected_pct: string; within_tolerance: boolean; cap: string };
+    tolerance: {
+        projected_pct: string;
+        within_tolerance: boolean;
+        cap: string;
+        base: string;
+        projected: string;
+        remaining: string;
+        utilization_pct: string;
+        committed_amount: string;
+        actual_amount: string;
+        message?: string;
+    };
     procurement: {
         sap_po_id?: string | null;
         sap_pr_created_at?: string | null;
@@ -90,12 +102,29 @@ export default function Show({
                         <Tag>{request.status}</Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="SAP MR">{request.sap_mr_id}</Descriptions.Item>
-                    <Descriptions.Item label="Total Est.">{request.estimated_total}</Descriptions.Item>
+                    <Descriptions.Item label="Total Est.">{formatIdr(request.estimated_total)}</Descriptions.Item>
+                    <Descriptions.Item label="Sisa pagu proyek">
+                        {formatIdr(tolerance.remaining)}
+                        <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
+                            ({tolerance.utilization_pct}% terpakai sebelum permintaan ini)
+                        </Typography.Text>
+                    </Descriptions.Item>
                 </Descriptions>
+                <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                    Proyeksi penggunaan pagu proyek setelah permintaan ini
+                </Typography.Text>
                 <BudgetProgressBar
-                    utilizationPct={parseFloat(tolerance.projected_pct)}
-                    capPct={110}
+                    utilizationPct={tolerance.projected_pct}
+                    cap={tolerance.cap}
+                    pagu={tolerance.base}
+                    committed={tolerance.committed_amount}
+                    actual={tolerance.actual_amount}
+                    additionalAmount={request.estimated_total}
+                    remaining={tolerance.remaining}
                 />
+                {!tolerance.within_tolerance && tolerance.message && (
+                    <Alert type="warning" showIcon message={tolerance.message} style={{ marginTop: 12 }} />
+                )}
                 <Table
                     style={{ marginTop: 16 }}
                     rowKey="part_number"

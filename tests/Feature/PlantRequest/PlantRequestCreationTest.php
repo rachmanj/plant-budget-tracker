@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\PlantRequest;
 
-use App\Models\BudgetAllocation;
-use App\Models\BudgetPeriod;
 use App\Models\DmbdEntry;
 use App\Models\PlantRequest;
 use App\Models\PlantRequestLine;
@@ -26,7 +24,7 @@ class PlantRequestCreationTest extends TestCase
         $this->seed(RoleAndPermissionSeeder::class);
     }
 
-    public function test_create_returns_equipment_and_allocations_props(): void
+    public function test_create_returns_equipment_and_project_budget_props(): void
     {
         $finance = $this->makeFinanceDirector();
         $allocation = $this->makeAllocation($finance, 'MBL', '5000000.00', 42, 'E-042');
@@ -60,9 +58,8 @@ class PlantRequestCreationTest extends TestCase
                 ->where('projectCode', 'MBL')
                 ->has('equipment', 1)
                 ->where('equipment.0.unit_code', 'E-042')
-                ->has('allocations', 1)
-                ->where('allocations.0.id', $allocation->id)
-                ->where('allocations.0.unit_code_cache', null)
+                ->where('projectBudget.allocation_id', $allocation->id)
+                ->where('projectBudget.pagu', '5000000.00')
             );
     }
 
@@ -104,29 +101,14 @@ class PlantRequestCreationTest extends TestCase
             ]);
     }
 
-    public function test_store_rejects_allocation_from_another_project(): void
+    public function test_store_auto_assigns_project_allocation_without_user_selection(): void
     {
         $finance = $this->makeFinanceDirector();
-        $this->makeAllocation($finance, 'MBL');
-        $otherPeriod = BudgetPeriod::factory()->create([
-            'project_code' => '022C',
-            'created_by' => $finance->id,
-            'status' => 'open',
-            'period_month' => now()->startOfMonth(),
-        ]);
-        $otherAllocation = BudgetAllocation::factory()->create([
-            'budget_period_id' => $otherPeriod->id,
-            'equipment_id' => 99,
-            'unit_code_cache' => 'E-099',
-            'allocated_amount' => '8000000.00',
-            'tolerance_pct' => '10.00',
-        ]);
-
+        $allocation = $this->makeAllocation($finance, 'MBL');
         $planner = $this->makeUserWithRole('planner', 'MBL');
 
         $this->actingAsProject($planner, 'MBL')
             ->post('/plant-requests', [
-                'budget_allocation_id' => $otherAllocation->id,
                 'equipment_id' => 42,
                 'unit_code_cache' => 'E-042',
                 'sap_mr_id' => 5001,
@@ -141,11 +123,36 @@ class PlantRequestCreationTest extends TestCase
                     ],
                 ],
             ])
-            ->assertSessionHasErrors(['budget_allocation_id']);
+            ->assertRedirect();
 
-        $this->assertDatabaseMissing('plant_requests', [
-            'budget_allocation_id' => $otherAllocation->id,
+        $this->assertDatabaseHas('plant_requests', [
+            'budget_allocation_id' => $allocation->id,
+            'equipment_id' => 42,
+            'unit_code_cache' => 'E-042',
         ]);
+    }
+
+    public function test_store_fails_when_project_has_no_budget_period(): void
+    {
+        $planner = $this->makeUserWithRole('planner', 'MBL');
+
+        $this->actingAsProject($planner, 'MBL')
+            ->post('/plant-requests', [
+                'equipment_id' => 42,
+                'unit_code_cache' => 'E-042',
+                'sap_mr_id' => 5001,
+                'lines' => [
+                    [
+                        'part_number' => 'PN-001',
+                        'material_name' => 'Filter',
+                        'uom' => 'EA',
+                        'qty' => 1,
+                        'unit_price_est' => 100000,
+                        'price_source' => 'manual',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors(['equipment_id']);
     }
 
     public function test_planner_can_create_draft_plant_request(): void
@@ -156,7 +163,6 @@ class PlantRequestCreationTest extends TestCase
 
         $response = $this->actingAsProject($planner)
             ->post('/plant-requests', [
-                'budget_allocation_id' => $allocation->id,
                 'equipment_id' => 42,
                 'unit_code_cache' => 'E-042',
                 'sap_mr_id' => 5001,
@@ -204,7 +210,6 @@ class PlantRequestCreationTest extends TestCase
 
         $this->actingAsProject($planner)
             ->post('/plant-requests', [
-                'budget_allocation_id' => $allocation->id,
                 'equipment_id' => 42,
                 'unit_code_cache' => 'E-042',
                 'dmbd_entry_id' => $dmbd->id,
@@ -295,7 +300,6 @@ class PlantRequestCreationTest extends TestCase
 
         $this->actingAsProject($planner)
             ->post('/plant-requests', [
-                'budget_allocation_id' => $allocation->id,
                 'equipment_id' => 42,
                 'unit_code_cache' => 'E-042',
                 'sap_mr_id' => 7003,

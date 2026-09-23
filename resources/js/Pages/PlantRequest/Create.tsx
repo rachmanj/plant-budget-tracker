@@ -23,11 +23,11 @@ interface Equipment {
     unitstatus: string;
 }
 
-interface Allocation {
-    id: number;
-    unit_code_cache: string;
-    plant_type_cache: string;
+interface ProjectBudget {
+    allocation_id: number;
     allocated_amount: string;
+    carry_forward_in: string;
+    pagu: string;
     tolerance_pct: string;
     committed_amount: string;
     actual_amount: string;
@@ -41,10 +41,10 @@ interface Props {
     projectCode: string;
     projects: Project[];
     equipment: Equipment[];
-    allocations: Allocation[];
+    projectBudget: ProjectBudget | null;
 }
 
-export default function Create({ prefill, projectCode, projects, equipment, allocations }: Props) {
+export default function Create({ prefill, projectCode, projects, equipment, projectBudget }: Props) {
     return (
         <AppLayout title="Buat Plant Request">
             <Head title="Buat Plant Request" />
@@ -54,7 +54,7 @@ export default function Create({ prefill, projectCode, projects, equipment, allo
                 projectCode={projectCode}
                 projects={projects}
                 equipment={equipment}
-                allocations={allocations}
+                projectBudget={projectBudget}
             />
         </AppLayout>
     );

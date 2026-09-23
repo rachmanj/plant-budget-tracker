@@ -4,6 +4,7 @@ namespace App\Services\Budget;
 
 use App\Models\BudgetAllocation;
 use App\Models\BudgetPeriod;
+use App\Models\PlantRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -36,19 +37,32 @@ class VarianceCalculator
             return collect();
         }
 
-        return $period->allocations->map(fn (BudgetAllocation $allocation) => array_merge(
+        $allocation = $period->allocations->first();
+
+        if (! $allocation) {
+            return collect();
+        }
+
+        $projectRow = array_merge(
             [
+                'scope' => 'project',
                 'allocation_id' => $allocation->id,
-                'equipment_id' => $allocation->equipment_id,
-                'plant_type_cache' => $allocation->plant_type_cache,
+                'equipment_id' => null,
+                'unit_code_cache' => null,
+                'plant_type_cache' => null,
             ],
             $this->forAllocation($allocation)
-        ));
+        );
+
+        $equipmentRows = $this->equipmentVarianceFromRequests($allocation);
+
+        return collect([$projectRow])->concat($equipmentRows);
     }
 
     public function forPlantType(string $projectCode, string $plantType, Carbon $month): array
     {
         $items = $this->forProject($projectCode, $month)
+            ->filter(fn (array $row) => ($row['scope'] ?? '') === 'equipment')
             ->filter(fn (array $row) => ($row['plant_type_cache'] ?? null) === $plantType);
 
         $totals = [
@@ -80,5 +94,46 @@ class VarianceCalculator
             );
 
         return $totals;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function equipmentVarianceFromRequests(BudgetAllocation $allocation): array
+    {
+        $requests = PlantRequest::query()
+            ->where('budget_allocation_id', $allocation->id)
+            ->whereNotIn('status', ['draft', 'cancelled', 'rejected'])
+            ->get();
+
+        return $requests
+            ->groupBy('equipment_id')
+            ->map(function (Collection $group, $equipmentId) {
+                $latest = $group->sortByDesc('id')->first();
+                $requestTotal = number_format((float) $group->sum('estimated_total'), 2, '.', '');
+                $receivedTotal = number_format(
+                    (float) $group->where('status', 'received')->sum('estimated_total'),
+                    2,
+                    '.',
+                    ''
+                );
+
+                return [
+                    'scope' => 'equipment',
+                    'allocation_id' => null,
+                    'equipment_id' => (int) $equipmentId,
+                    'unit_code_cache' => $latest->unit_code_cache,
+                    'plant_type_cache' => null,
+                    'allocated' => '0.00',
+                    'carry_forward_in' => '0.00',
+                    'committed' => $requestTotal,
+                    'actual' => $receivedTotal,
+                    'variance' => bcsub('0.00', bcadd($requestTotal, $receivedTotal, 2), 2),
+                    'utilization_pct' => '0.00',
+                    'tolerance_cap' => '0.00',
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

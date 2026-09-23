@@ -16,11 +16,11 @@ interface Equipment {
     unitstatus: string;
 }
 
-interface Allocation {
-    id: number;
-    unit_code_cache: string;
-    plant_type_cache: string;
+interface ProjectBudget {
+    allocation_id: number;
     allocated_amount: string;
+    carry_forward_in: string;
+    pagu: string;
     tolerance_pct: string;
     committed_amount: string;
     actual_amount: string;
@@ -36,7 +36,6 @@ interface Props {
         id: number;
         sap_mr_id: number;
         unit_code_cache: string;
-        budget_allocation_id: number;
         dmbd_entry_id: number | null;
         equipment_id: number;
         lines: Array<{
@@ -51,10 +50,10 @@ interface Props {
     projectCode: string;
     projects: Project[];
     equipment: Equipment[];
-    allocations: Allocation[];
+    projectBudget: ProjectBudget | null;
 }
 
-export default function Edit({ request, projectCode, projects, equipment, allocations }: Props) {
+export default function Edit({ request, projectCode, projects, equipment, projectBudget }: Props) {
     return (
         <AppLayout title="Ubah Plant Request">
             <Head title="Ubah Plant Request" />
@@ -64,7 +63,7 @@ export default function Edit({ request, projectCode, projects, equipment, alloca
                 projectCode={projectCode}
                 projects={projects}
                 equipment={equipment}
-                allocations={allocations}
+                projectBudget={projectBudget}
             />
         </AppLayout>
     );

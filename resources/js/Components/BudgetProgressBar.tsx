@@ -6,6 +6,9 @@ interface BudgetProgressBarProps {
     committed?: string | number;
     actual?: string | number;
     cap?: string | number;
+    pagu?: string | number;
+    remaining?: string | number;
+    additionalAmount?: string | number;
     showLabel?: boolean;
 }
 
@@ -14,6 +17,9 @@ export default function BudgetProgressBar({
     committed,
     actual,
     cap,
+    pagu,
+    remaining,
+    additionalAmount,
     showLabel = true,
 }: BudgetProgressBarProps) {
     const pct = typeof utilizationPct === 'string' ? parseFloat(utilizationPct) : utilizationPct;
@@ -23,8 +29,13 @@ export default function BudgetProgressBar({
     const tooltip = (
         <div>
             <div>Penggunaan: {pct.toFixed(2)}%</div>
+            {pagu !== undefined && <div>Pagu proyek: {formatIdr(pagu)}</div>}
             {committed !== undefined && <div>Komitmen: {formatIdr(committed)}</div>}
             {actual !== undefined && <div>Aktual: {formatIdr(actual)}</div>}
+            {additionalAmount !== undefined && (
+                <div>+ permintaan ini: {formatIdr(additionalAmount)}</div>
+            )}
+            {remaining !== undefined && <div>Sisa pagu: {formatIdr(remaining)}</div>}
             {cap !== undefined && <div>Batas toleransi: {formatIdr(cap)}</div>}
         </div>
     );

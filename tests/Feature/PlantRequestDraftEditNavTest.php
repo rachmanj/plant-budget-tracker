@@ -118,7 +118,6 @@ class PlantRequestDraftEditNavTest extends TestCase
 
         $this->actingAsProject($planner)
             ->put(route('plant-requests.update', $plantRequest), [
-                'budget_allocation_id' => $allocation->id,
                 'equipment_id' => 42,
                 'unit_code_cache' => 'E-042',
                 'sap_mr_id' => 88001,
@@ -165,7 +164,6 @@ class PlantRequestDraftEditNavTest extends TestCase
 
         $this->actingAsProject($planner)
             ->put(route('plant-requests.update', $plantRequest), [
-                'budget_allocation_id' => $allocation->id,
                 'equipment_id' => 42,
                 'unit_code_cache' => 'E-042',
                 'sap_mr_id' => 9003,
@@ -205,7 +203,6 @@ class PlantRequestDraftEditNavTest extends TestCase
 
         $this->actingAsProject($planner)
             ->put(route('plant-requests.update', $plantRequest), [
-                'budget_allocation_id' => $allocation->id,
                 'equipment_id' => 42,
                 'unit_code_cache' => 'E-042',
                 'sap_mr_id' => 99001,
