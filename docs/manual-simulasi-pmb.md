@@ -1,9 +1,17 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.14 · **Tanggal:** 22 September 2026
+**Versi dokumen:** 1.15 · **Tanggal:** 23 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
 **Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
 
+> **Perubahan v1.15 (23 September 2026): anggaran kini GLOBAL per proyek.** Finance Director
+> menetapkan **satu pagu untuk satu proyek per bulan** — tidak lagi per unit alat, tidak lagi ada
+> baris per divisi. Yang diperiksa saat permintaan diajukan adalah pagu proyek beserta toleransinya.
+> Unit alat **tetap dipilih** pada permintaan (untuk riwayat & analisis), dan laporan Konsumsi
+> Anggaran tetap menyediakan rincian per unit — diambil dari data permintaan. Perubahan ini
+> menggantikan cara lama pada v1.7 (gap B-10). Data anggaran September 2026 sudah digabung menjadi
+> satu baris per proyek dengan total tetap.
+>
 > **Perubahan v1.14:** **konteks proyek**. Akun tanpa ikatan proyek tidak lagi terbuka di `000H`: kini
 > default-nya **proyek aktif pertama** dan ada **pemilih proyek** di header yang berlaku untuk semua
 > halaman (Anggaran, Permintaan, DMBD, Laporan). Akun yang terikat proyek tetap terkunci. Ini menutup
@@ -251,27 +259,32 @@ Kolom temuan dipakai di lembar observasi §9.
      transaksi). Kartu bisa diklik ke halaman terkait.
    - Catat angka Pagu ini untuk dibandingkan dengan halaman `/budget` pada langkah 2 — harus sama.
 2. Buka `/budget` → pilih proyek **022C** pada dropdown Proyek.
-   - Diharapkan: tab periode Sep 2026 status `open`, 3 baris alokasi (AC 035, ADT 001, E 062)
-     dengan kolom Alokasi / Carry Fwd / Komitmen / Aktual / Varians / Toleransi %.
-3. Klik tombol **Buat Alokasi** (kanan atas) → halaman `/budget/setting`.
-4. Isi: Proyek = `022C`, Bulan Periode = **Oktober 2026**.
-   - Pilih unit pada kolom **Unit** (bisa dicari, dikelompokkan per tipe plant, label
-     `kode unit — deskripsi (status)`). Unit berstatus **SOLD/SCRAP tidak muncul** karena tidak
-     mungkin dianggarkan lagi. Tipe plant terisi otomatis bila tipenya dikenali
-     (`DIGGER`/`HAULER`/`SUPPORT`); untuk unit bertipe `HEAVY EQUIPMENT` atau `n/a`, pilih tipe plant
-     manual.
-   - Kolom **Tingkat** menunjukkan **Per unit** atau **Divisi**.
-   - Contoh: `E 062` DIGGER Rp 100.000.000; `ADT 001` HAULER Rp 80.000.000; toleransi 10%.
-5. Tambah satu baris lagi lalu pilih **— Divisi (tanpa unit) —** (mis. tipe plant SUPPORT
-   Rp 50.000.000) → baris ini menganggarkan tingkat divisi, bukan unit tertentu.
-6. Klik **Simpan Anggaran**.
-   - Diharapkan: kembali ke `/budget`, muncul tab **2026-10** berisi 3 alokasi (2 per unit + 1 divisi).
-7. Coba simpan unit yang sama dua kali (tambahkan baris `E 062` lagi) → ditolak dengan pesan
-   *"Unit ini dialokasikan lebih dari sekali dalam satu periode."* Begitu pula bila unit itu sudah
-   punya alokasi pada periode 2026-10 → *"Unit ini sudah punya alokasi pada periode tersebut."*
-8. Buat permintaan plant request (dari S-04) sampai total komitmen terpakai, lalu kembali ke sini.
-9. Klik **Revisi** pada baris E 062 → ubah Alokasi menjadi Rp 90.000.000 → **Simpan**.
-   - Diharapkan: nilai berubah, kolom Varians & Penggunaan ikut berubah.
+   - Diharapkan: tab periode Sep 2026 status `open` berisi **satu baris pagu proyek**
+     (kolom Pagu / Carry Fwd / Komitmen / Aktual / Sisa / % Terpakai / Toleransi).
+   - **Mulai 23 September 2026 anggaran bersifat global per proyek** — tidak lagi dipecah per unit
+     alat. Jadi wajar bila hanya ada satu baris untuk satu bulan, dan kolom unit tidak ada lagi.
+3. Klik tombol **Buat/Ubah Alokasi** (kanan atas) → halaman `/budget/setting`.
+4. Isi form: Proyek = `022C`, Bulan Periode = **Oktober 2026**,
+   **Total Anggaran Proyek** = mis. Rp 250.000.000, Toleransi = 10%.
+   - Tidak ada lagi pilihan unit alat atau baris per divisi di halaman ini — anggaran memang
+     ditetapkan untuk proyek secara keseluruhan.
+5. Klik **Simpan Anggaran**.
+   - Diharapkan: kembali ke `/budget`, muncul tab **2026-10** berisi **satu baris** pagu proyek
+     Rp 250.000.000 (Toleransi 10%).
+6. Uji revisi: buka lagi **Buat/Ubah Alokasi** untuk proyek & bulan yang sama → form menampilkan
+   nilai yang sudah ada. Ubah Total Anggaran menjadi Rp 240.000.000 → **Simpan**.
+   - Diharapkan: pagu berubah menjadi Rp 240.000.000, **baris tetap satu**, dan perubahan tercatat
+     sebagai revisi resmi (pembalikan nilai lama + pagu baru) — bukan penimpaan diam-diam.
+7. Uji batas pagu proyek: minta Planner mengajukan permintaan (skenario S-04) yang totalnya masih
+   di dalam pagu + toleransi → permintaan bisa diajukan. Bila totalnya melebihi pagu + toleransi,
+   sistem mengarahkan ke jalur **Overbudget** (skenario S-11) dengan pesan yang menyebut pagu,
+   pemakaian, dan batas toleransinya.
+8. (Opsional) Bandingkan: buka `/plant-requests/create` sebagai Planner → di layar permintaan
+   terlihat **sisa pagu proyek**, sedangkan unit alat tetap dipilih — unit hanya untuk riwayat dan
+   analisis, bukan sumber pagu.
+9. Buka laporan **Konsumsi Anggaran** (`/reports/budget-consumption?project_code=022C`) →
+   ringkasan berisi pagu/komitmen/aktual/sisa **proyek**, dan rincian per unit muncul di bagian
+   bawah **dari data permintaan** (kosong bila belum ada permintaan).
 10. Klik **Jalankan Carry Forward** pada tab periode yang masih `open`.
    - Diharapkan: periode menjadi `locked`, alokasi bulan berikutnya dibuat otomatis dengan
      kolom **Carry Fwd** terisi sebesar sisa anggaran.
@@ -572,7 +585,9 @@ tidak muncul; memaksa URL/aksi tetap ditolak server.
 
 1. Klik menu **Reports** → terbuka **daftar laporan** (`/reports`) berisi tiga laporan.
 2. **Konsumsi Anggaran** → `/reports/budget-consumption?project_code=022C&month=2026-09`
-   → tabel (Unit / Allocated / Committed / Actual) terisi sesuai catatan anggaran.
+   → ringkasan **per proyek** (Pagu / Komitmen / Aktual / Sisa / % Terpakai) terisi sesuai catatan
+     anggaran, dan bagian rincian **per unit** terisi dari data permintaan (kosong bila belum ada
+     permintaan pada periode itu).
 3. **Biaya Peralatan** → `/reports/equipment-cost?project_code=022C&month=2026-09`.
 4. **Kinerja Vendor** → `/reports/vendor-performance` → daftar vendor + % indent.
 5. **Uji unduh sebagai Finance Director** (`finance.director@pmb.demo`, punya izin unduh):
@@ -691,7 +706,7 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | B-7 | ✅ Plant Request | **Diperbaiki 22 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
 | B-8 | ✅ Status lanjutan | **Diperbaiki 22 Sep 2026 (v1.10)** — kartu Riwayat Pengadaan menampilkan nomor MR/PR/PO/GRPO; tombol "Buat PR di SAP" (Procurement Admin/IT Manager) dan "Tandai Barang Diterima" (Plant Manager/Project Manager/Logistic Foreman/PIC) memajukan status `approved` → `pr_created` → `po_created` → `received` langsung dari aplikasi. **Catatan:** menekan "Tandai Barang Diterima" mengubah status & mencatat nomor GRPO, tetapi angka **aktual** anggaran baru terisi otomatis setelah dokumen GRPO terbaca dari SAP — jadi wajar bila sesaat setelah ditekan angka anggaran masih tampil sebagai komitmen |
 | B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Catatan Breakdown** (wajib saat status Breakdown) + daftar unit berhalaman (25/50/100) dengan pencarian, filter status & filter proyek, serta ringkasan status harian |
-| B-10 | ✅ Budget | **Diperbaiki 22 Sep 2026** — pilihan unit memakai daftar nyata dari ARKFLEET per proyek (bisa dicari, dikelompokkan per tipe plant; SOLD/SCRAP dikecualikan) dan alokasi tingkat **divisi (tanpa unit)** sudah tersedia, lengkap dengan pencegahan alokasi ganda |
+| B-10 | ⤴️ Digantikan | **22 Sep 2026** pilihan unit memakai daftar nyata ARKFLEET per proyek (SOLD/SCRAP dikecualikan) plus alokasi tingkat divisi. **Sejak 23 Sep 2026 cara ini DIGANTIKAN** oleh aturan baru: anggaran ditetapkan **global per proyek** — lihat catatan v1.15 di atas dan skenario S-01 |
 | B-11 | ✅ Harga | **Diperbaiki 22 Sep 2026** — harga diambil **per part number** dari SAP (harga PO terakhir, lalu harga beli terakhir di item master), dengan **referensi** yang terlihat (mis. "PO 260206551 · 2026-09-22"); bila SAP tidak punya data dipakai harga historis part yang sama dari permintaan sebelumnya, dan hanya kalau semuanya kosong harga 0,00 + "Belum ada". Sekaligus diperbaiki: koneksi baca SAP yang selama ini gagal sehingga pencarian harga selalu nihil |
 | B-12 | ✅ Laporan | **Diperbaiki 22 Sep 2026** — layar laporan kini punya tombol **Unduh PDF** dan **Unduh CSV** (tersembunyi untuk yang tidak berhak), tersedia untuk ketiga laporan (konsumsi anggaran, kinerja vendor, biaya peralatan). Izin unduh (**reports.export**) sekarang benar-benar ditegakkan: tanpa izin → ditolak, sedangkan melihat laporan tetap boleh |
 | B-13 | SAP Sync | Hanya bisa dibuka IT Manager, Procurement Manager, dan Finance Director |

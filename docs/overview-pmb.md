@@ -26,7 +26,7 @@ PMB mengelola **siklus anggaran dan pengadaan suku cadang Divisi Plant dari awal
 
 | # | Modul | Yang dikerjakan |
 |---|-------|-----------------|
-| 1 | **Anggaran** | Menetapkan pagu bulanan per unit alat berat atau per divisi, toleransi, dan carry forward bulan sebelumnya |
+| 1 | **Anggaran** | Menetapkan **satu pagu bulanan per proyek** (bukan per unit alat), toleransi, dan carry forward bulan sebelumnya |
 | 2 | **Plant Request** | Permintaan suku cadang dari Planner/Mechanic, lengkap dengan estimasi harga otomatis |
 | 3 | **Approval** | Persetujuan berjenjang: Project Manager → Plant Manager |
 | 4 | **Tabulation Bid** | Perbandingan 2–3 vendor secara terstruktur (stok, harga, syarat pembayaran) |
@@ -44,8 +44,8 @@ flowchart LR
     A[Permintaan] --> B[Persetujuan] --> C[Bid vendor] --> D[Pesanan ke SAP] --> E[Barang diterima]
 ```
 
-1. **Planner/Mechanic** membuat permintaan: unit, suku cadang, jumlah, dan alasan. Sistem langsung menampilkan **sisa anggaran unit tersebut** dan harga perkiraan per part number.
-2. Sistem memeriksa pagu: bila permintaan masih dalam batas (pagu + toleransi), permintaan bisa diajukan. Bila melebihi, jalur **Overbudget** otomatis diwajibkan.
+1. **Planner/Mechanic** membuat permintaan: unit, suku cadang, jumlah, dan alasan. Sistem langsung menampilkan **sisa pagu proyek** dan harga perkiraan per part number.
+2. Sistem memeriksa pagu **proyek**: bila permintaan masih dalam batas (pagu proyek + toleransi), permintaan bisa diajukan. Bila melebihi, jalur **Overbudget** otomatis diwajibkan.
 3. **Project Manager** lalu **Plant Manager** menyetujui. Setelah disetujui, anggaran unit tersebut tercatat sebagai **komitmen** — belum terpakai, tetapi sudah "dipesan".
 4. **Buyer/Procurement** membuat perbandingan vendor (Tabulation Bid). **Procurement Manager** meninjau, lalu **Procurement Admin** membuat pesanan ke SAP.
 5. Status akhir dipantau di aplikasi: **PR dibuat → PO dibuat → barang diterima** (dengan nomor GRPO dan tanggal terima). Saat barang diterima dan dokumennya terbaca dari SAP, anggaran berpindah dari **komitmen** menjadi **aktual**.
@@ -59,7 +59,7 @@ flowchart LR
     A[Pagu bulanan] --> B[Komitmen] --> C[Aktual] --> D[Sisa dipantau] --> E[Carry forward]
 ```
 
-- **Pagu** ditetapkan setiap bulan per unit alat berat atau per divisi, dengan **toleransi standar 10%** (bisa diatur per baris).
+- **Pagu** ditetapkan setiap bulan **per proyek** — satu angka untuk satu proyek, dengan **toleransi standar 10%**. Anggaran tidak lagi dipecah per unit alat; unit alat tetap dipilih pada setiap permintaan agar riwayat dan analisis per unit tetap bisa ditelusuri.
 - **Komitmen** muncul begitu permintaan disetujui; **aktual** muncul saat barang benar-benar diterima. Jadi selalu jelas mana yang baru direncanakan dan mana yang sudah terbelanja.
 - **Tidak ada angka yang bisa ditimpa diam-diam.** Setiap perubahan dicatat sebagai catatan baru; koreksi dilakukan dengan membalik catatan lama lalu mencatat yang baru — cara ini membuat jejak audit selalu utuh.
 - Bila permintaan **dibatalkan**, anggaran yang tadinya "dipesan" **kembali utuh**.
@@ -114,7 +114,7 @@ Peran yang tidak berhak **tidak melihat menunya**, dan bila alamatnya dibuka lan
 ## 8. Dashboard dan laporan
 
 - **Dashboard** menampilkan angka nyata hari itu: pagu, terpakai, sisa, dan persentase terpakai bulan berjalan; jumlah permintaan per status; **peringatan "Perlu keputusan Anda"** bagi penyetuju; kondisi pengadaan; dan ringkasan **DMBD hari ini**.
-- **Laporan** menyediakan tiga jenis: **Konsumsi Anggaran**, **Kinerja Vendor**, dan **Biaya Peralatan** — semuanya bisa **diunduh PDF atau CSV**. Hak melihat dan hak mengunduh dipisahkan: pengguna yang hanya berhak melihat tetap bisa membaca di layar, tetapi tidak bisa mengunduh.
+- **Laporan** menyediakan tiga jenis: **Konsumsi Anggaran** (ringkasan per proyek + rincian per unit dari data permintaan), **Kinerja Vendor**, dan **Biaya Peralatan** — semuanya bisa **diunduh PDF atau CSV**. Hak melihat dan hak mengunduh dipisahkan: pengguna yang hanya berhak melihat tetap bisa membaca di layar, tetapi tidak bisa mengunduh.
 
 ---
 
