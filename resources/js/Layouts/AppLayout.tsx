@@ -28,7 +28,77 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from '@/Hooks/useTheme';
+
+function normalizePathname(url: string): string {
+    const withoutQuery = url.split('?')[0];
+    const trimmed = withoutQuery.replace(/\/+$/, '');
+    return trimmed === '' ? '/' : trimmed;
+}
+
+function resolveMenuState(pathname: string): { selectedKeys: string[]; openKeys: string[] } {
+    const path = normalizePathname(pathname);
+
+    if (path === '/reports') {
+        return { selectedKeys: ['reports-index'], openKeys: ['reports'] };
+    }
+    if (path.startsWith('/reports/budget-consumption')) {
+        return { selectedKeys: ['reports-budget-consumption'], openKeys: ['reports'] };
+    }
+    if (path.startsWith('/reports/vendor-performance')) {
+        return { selectedKeys: ['reports-vendor-performance'], openKeys: ['reports'] };
+    }
+    if (path.startsWith('/reports/equipment-cost')) {
+        return { selectedKeys: ['reports-equipment-cost'], openKeys: ['reports'] };
+    }
+
+    if (path.startsWith('/admin/users')) {
+        return { selectedKeys: ['admin-users'], openKeys: ['admin'] };
+    }
+    if (path.startsWith('/admin/roles')) {
+        return { selectedKeys: ['admin-roles'], openKeys: ['admin'] };
+    }
+    if (path.startsWith('/admin/projects')) {
+        return { selectedKeys: ['admin-projects'], openKeys: ['admin'] };
+    }
+
+    if (path === '/dashboard' || path.startsWith('/dashboard/')) {
+        return { selectedKeys: ['dashboard'], openKeys: [] };
+    }
+    if (path === '/budget' || path.startsWith('/budget/')) {
+        return { selectedKeys: ['budget'], openKeys: [] };
+    }
+    if (path.startsWith('/plant-requests')) {
+        return { selectedKeys: ['plant-requests'], openKeys: [] };
+    }
+    if (path.startsWith('/dmbd')) {
+        return { selectedKeys: ['dmbd'], openKeys: [] };
+    }
+    if (path.startsWith('/approvals')) {
+        return { selectedKeys: ['approvals'], openKeys: [] };
+    }
+    if (path.startsWith('/overbudget')) {
+        return { selectedKeys: ['overbudget'], openKeys: [] };
+    }
+    if (path.startsWith('/cancellation')) {
+        return { selectedKeys: ['cancellation'], openKeys: [] };
+    }
+    if (path.startsWith('/interchange')) {
+        return { selectedKeys: ['interchange'], openKeys: [] };
+    }
+    if (path.startsWith('/sap')) {
+        return { selectedKeys: ['sap-sync'], openKeys: [] };
+    }
+    if (path.startsWith('/tabulation-bids')) {
+        return { selectedKeys: ['tabulation-bids'], openKeys: [] };
+    }
+    if (path.startsWith('/components')) {
+        return { selectedKeys: ['components'], openKeys: [] };
+    }
+
+    return { selectedKeys: [], openKeys: [] };
+}
 
 const { Header, Sider, Content } = Layout;
 
@@ -80,7 +150,15 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, title }: AppLayoutProps) {
-    const { auth, nav, features } = usePage<PageProps>().props;
+    const page = usePage<PageProps>();
+    const { auth, nav, features } = page.props;
+    const pathname = normalizePathname(page.url);
+    const { selectedKeys } = resolveMenuState(pathname);
+    const [openKeys, setOpenKeys] = useState<string[]>(() => resolveMenuState(pathname).openKeys);
+
+    useEffect(() => {
+        setOpenKeys(resolveMenuState(pathname).openKeys);
+    }, [pathname]);
     const can = auth.can ?? [];
     const { isDark, toggleTheme } = useTheme();
     const { token } = theme.useToken();
@@ -251,7 +329,13 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                 <div style={{ padding: '16px', fontWeight: 700, fontSize: 16 }}>
                     PMB
                 </div>
-                <Menu mode="inline" items={menuItems} defaultSelectedKeys={['dashboard']} />
+                <Menu
+                    mode="inline"
+                    items={menuItems}
+                    selectedKeys={selectedKeys}
+                    openKeys={openKeys}
+                    onOpenChange={setOpenKeys}
+                />
             </Sider>
             <Layout>
                 <Header
