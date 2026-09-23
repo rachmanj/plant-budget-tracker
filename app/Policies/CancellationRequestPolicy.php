@@ -28,13 +28,13 @@ class CancellationRequestPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk mengakses halaman Pembatalan.');
+        return Response::deny('You do not have permission to access the Cancellation page.');
     }
 
     public function agree(User $user, CancellationRequest $request): Response|bool
     {
         if ($request->status !== 'pending') {
-            return Response::deny('Permintaan pembatalan ini sudah tidak dapat disetujui.');
+            return Response::deny('This cancellation request can no longer be approved.');
         }
 
         if ($request->initiated_by === 'plant') {
@@ -42,13 +42,13 @@ class CancellationRequestPolicy
                 return true;
             }
 
-            return Response::deny('Anda tidak memiliki izin untuk menyetujui pembatalan dari sisi procurement.');
+            return Response::deny('You do not have permission to approve this cancellation on behalf of procurement.');
         }
 
         if ($user->can('cancellation.plant')) {
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk menyetujui pembatalan dari sisi plant.');
+        return Response::deny('You do not have permission to approve this cancellation on behalf of plant.');
     }
 }

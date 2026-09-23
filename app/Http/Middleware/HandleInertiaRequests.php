@@ -10,6 +10,7 @@ use App\Models\ProjectCache;
 use App\Models\RequestApproval;
 use App\Models\TabulationBid;
 use App\Support\ProjectContext;
+use App\Support\RoleLabels;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -40,6 +41,7 @@ class HandleInertiaRequests extends \Inertia\Middleware
             'canCreatePlantRequest' => false,
             'viewSapDashboard' => false,
             'roles' => [],
+            'roleLabels' => RoleLabels::all(),
             'canSwitchProject' => false,
             'currentProject' => '',
             'currentProjectName' => '',
@@ -69,6 +71,7 @@ class HandleInertiaRequests extends \Inertia\Middleware
                 'canCreatePlantRequest' => Gate::allows('create', PlantRequest::class),
                 'viewSapDashboard' => Gate::allows('viewSapDashboard'),
                 'roles' => $rolesArray,
+                'roleLabels' => RoleLabels::all(),
                 'canSwitchProject' => ProjectContext::allowSwitch($user),
                 'currentProject' => $currentProject,
                 'currentProjectName' => self::projectNameForCode($currentProject),

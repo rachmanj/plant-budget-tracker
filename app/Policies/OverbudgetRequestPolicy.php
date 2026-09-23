@@ -27,7 +27,7 @@ class OverbudgetRequestPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk mengakses halaman Overbudget.');
+        return Response::deny('You do not have permission to access the Overbudget page.');
     }
 
     public function create(User $user): Response|bool
@@ -36,7 +36,7 @@ class OverbudgetRequestPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk membuat permintaan overbudget.');
+        return Response::deny('You do not have permission to create overbudget requests.');
     }
 
     public function view(User $user, OverbudgetRequest $request): bool

@@ -25,7 +25,7 @@ class TabulationBidPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk mengakses halaman Tabulation Bid.');
+        return Response::deny('You do not have permission to access the Tabulation Bid page.');
     }
 
     public function create(User $user): Response|bool
@@ -34,7 +34,7 @@ class TabulationBidPolicy
             return true;
         }
 
-        return Response::deny('Hanya Buyer yang dapat membuat Tabulation Bid.');
+        return Response::deny('Only Buyers can create Tabulation Bids.');
     }
 
     public function view(User $user, TabulationBid $bid): bool
@@ -48,7 +48,7 @@ class TabulationBidPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk meninjau Tabulation Bid ini.');
+        return Response::deny('You do not have permission to review this Tabulation Bid.');
     }
 
     public function award(User $user, TabulationBid $bid): Response|bool
@@ -58,7 +58,7 @@ class TabulationBidPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk memberikan award pada Tabulation Bid ini.');
+        return Response::deny('You do not have permission to award this Tabulation Bid.');
     }
 
     public function createPo(User $user, TabulationBid $bid): Response|bool
@@ -70,6 +70,6 @@ class TabulationBidPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk membuat PO dari Tabulation Bid ini.');
+        return Response::deny('You do not have permission to create a PO from this Tabulation Bid.');
     }
 }

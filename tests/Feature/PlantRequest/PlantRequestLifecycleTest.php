@@ -218,7 +218,7 @@ class PlantRequestLifecycleTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['sap_grpo_no']);
-        $this->assertStringContainsString('Nomor GRPO wajib diisi.', $response->json('errors.sap_grpo_no.0'));
+        $this->assertStringContainsString('GRPO number is required.', $response->json('errors.sap_grpo_no.0'));
     }
 
     public function test_receive_validation_rejects_future_received_at(): void

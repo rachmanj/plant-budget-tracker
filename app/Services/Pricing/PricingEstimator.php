@@ -94,7 +94,7 @@ class PricingEstimator
         return [
             'unit_price' => number_format((float) $line->unit_price_est, 2, '.', ''),
             'source' => $source,
-            'reference' => "Permintaan {$line->request_no} · {$date}",
+            'reference' => "Request {$line->request_no} · {$date}",
         ];
     }
 }

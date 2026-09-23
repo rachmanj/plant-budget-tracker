@@ -143,7 +143,7 @@ class BudgetSettingEquipmentTest extends TestCase
                 'period_month' => now()->startOf('month')->toDateString(),
                 'tolerance_pct' => 10,
             ])
-            ->assertInvalid(['allocated_amount' => 'Total anggaran wajib diisi.']);
+            ->assertInvalid(['allocated_amount' => 'Total budget amount is required.']);
 
         $this->actingAs($finance)
             ->withoutVite()
@@ -153,7 +153,7 @@ class BudgetSettingEquipmentTest extends TestCase
                 'allocated_amount' => 'bukan-angka',
                 'tolerance_pct' => 10,
             ])
-            ->assertInvalid(['allocated_amount' => 'Total anggaran harus berupa angka.']);
+            ->assertInvalid(['allocated_amount' => 'Total budget amount must be a number.']);
     }
 
     public function test_store_rejects_tolerance_outside_zero_to_hundred(): void
@@ -168,7 +168,7 @@ class BudgetSettingEquipmentTest extends TestCase
                 'allocated_amount' => 1000000,
                 'tolerance_pct' => 101,
             ])
-            ->assertInvalid(['tolerance_pct' => 'Toleransi maksimal 100%.']);
+            ->assertInvalid(['tolerance_pct' => 'Tolerance may not exceed 100%.']);
 
         $this->actingAs($finance)
             ->withoutVite()
@@ -178,7 +178,7 @@ class BudgetSettingEquipmentTest extends TestCase
                 'allocated_amount' => 1000000,
                 'tolerance_pct' => -1,
             ])
-            ->assertInvalid(['tolerance_pct' => 'Toleransi minimal 0%.']);
+            ->assertInvalid(['tolerance_pct' => 'Tolerance must be at least 0%.']);
     }
 
     public function test_budget_index_does_not_expose_equipment_on_setting_route(): void

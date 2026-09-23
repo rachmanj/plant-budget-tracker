@@ -53,7 +53,7 @@ class UserController extends Controller
         $data['password'] = Hash::make($data['password']);
         User::create($data);
 
-        return back()->with('success', 'User berhasil dibuat.');
+        return back()->with('success', 'User created successfully.');
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -76,14 +76,14 @@ class UserController extends Controller
 
         $user->update($data);
 
-        return back()->with('success', 'User berhasil diperbarui.');
+        return back()->with('success', 'User updated successfully.');
     }
 
     public function destroy(User $user): RedirectResponse
     {
         $user->delete();
 
-        return back()->with('success', 'User berhasil dihapus.');
+        return back()->with('success', 'User deleted successfully.');
     }
 
     public function assignRole(Request $request, User $user): RedirectResponse
@@ -102,6 +102,6 @@ class UserController extends Controller
             $user->assignRole($roleData['name']);
         }
 
-        return back()->with('success', 'Role user berhasil diperbarui.');
+        return back()->with('success', 'User roles updated successfully.');
     }
 }

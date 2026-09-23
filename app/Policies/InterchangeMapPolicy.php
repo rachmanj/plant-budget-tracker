@@ -27,7 +27,7 @@ class InterchangeMapPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk mengakses halaman Interchange.');
+        return Response::deny('You do not have permission to access the Interchange page.');
     }
 
     public function create(User $user): Response|bool
@@ -38,7 +38,7 @@ class InterchangeMapPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk membuat mapping interchange.');
+        return Response::deny('You do not have permission to create interchange mappings.');
     }
 
     public function signoff(User $user, InterchangeMap $map): Response|bool
@@ -48,6 +48,6 @@ class InterchangeMapPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk melakukan sign-off teknis interchange ini.');
+        return Response::deny('You do not have permission to perform technical sign-off on this interchange.');
     }
 }

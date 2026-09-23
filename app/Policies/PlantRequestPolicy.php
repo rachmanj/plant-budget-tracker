@@ -14,7 +14,7 @@ class PlantRequestPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk membuat plant request. Hanya Planner dan Mechanic yang dapat membuat draft.');
+        return Response::deny('You do not have permission to create plant requests. Only Planners and Mechanics can create drafts.');
     }
 
     public function view(User $user, PlantRequest $request): bool

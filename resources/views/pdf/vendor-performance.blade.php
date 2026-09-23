@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Kinerja Vendor</title></head>
+<head><meta charset="utf-8"><title>Vendor Performance</title></head>
 <body>
-<h1>Laporan Kinerja Vendor</h1>
+<h1>Vendor Performance Report</h1>
 <table border="1" cellpadding="4">
-    <tr><th>Kode Vendor</th><th>Nama Vendor</th><th>Indent %</th></tr>
+    <tr><th>Vendor Code</th><th>Vendor Name</th><th>Indent %</th></tr>
     @foreach($data as $row)
     <tr>
         <td>{{ $row['vendor_code'] ?? '' }}</td>

@@ -57,8 +57,8 @@ class ProjectController extends Controller
         $project->update(['is_active' => $validated['is_active']]);
 
         $message = $validated['is_active']
-            ? "Proyek {$projectCode} diaktifkan."
-            : "Proyek {$projectCode} dinonaktifkan.";
+            ? "Project {$projectCode} has been activated."
+            : "Project {$projectCode} has been deactivated.";
 
         return back()->with('success', $message);
     }
@@ -72,7 +72,7 @@ class ProjectController extends Controller
 
         return back()->with(
             'success',
-            "Sinkronisasi selesai: {$counts['created']} proyek baru, {$counts['updated']} diperbarui."
+            "Sync completed: {$counts['created']} new project(s), {$counts['updated']} updated."
         );
     }
 }

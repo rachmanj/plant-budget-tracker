@@ -4,9 +4,9 @@
 <body>
 <h1>Budget Consumption Report</h1>
 @if(!empty($data['summary']))
-    <h2>Ringkasan Proyek — {{ $data['summary']['project_code'] ?? '' }}</h2>
+    <h2>Project Summary — {{ $data['summary']['project_code'] ?? '' }}</h2>
     <table border="1" cellpadding="4">
-        <tr><th>Pagu</th><th>Committed</th><th>Actual</th><th>Remaining</th><th>Utilization %</th></tr>
+        <tr><th>Budget Ceiling</th><th>Committed</th><th>Actual</th><th>Remaining</th><th>Utilization %</th></tr>
         <tr>
             <td>{{ $data['summary']['pagu'] ?? '' }}</td>
             <td>{{ $data['summary']['committed'] ?? '' }}</td>
@@ -16,15 +16,15 @@
         </tr>
     </table>
 @endif
-<h2>Rincian per Unit</h2>
+<h2>Breakdown by Unit</h2>
 <table border="1" cellpadding="4">
-    <tr><th>Unit</th><th>Jumlah Permintaan</th><th>Total Nilai</th><th>Status Terakhir</th></tr>
+    <tr><th>Unit</th><th>Request Count</th><th>Total Value</th><th>Last Status</th></tr>
     @foreach($data['units'] ?? [] as $row)
     <tr>
         <td>{{ $row['unit_code'] ?? '' }}</td>
         <td>{{ $row['request_count'] ?? '' }}</td>
         <td>{{ $row['total_estimated'] ?? '' }}</td>
-        <td>{{ $row['last_status'] ?? '' }}</td>
+        <td>{{ \App\Support\RoleLabels::status($row['last_status'] ?? '') }}</td>
     </tr>
     @endforeach
 </table>

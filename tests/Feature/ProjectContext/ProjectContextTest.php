@@ -76,7 +76,7 @@ class ProjectContextTest extends TestCase
 
         $this->actingAsProject($planner)
             ->post('/project-context', ['project_code' => 'SML'])
-            ->assertSessionHas('error', 'Akun Anda terikat pada satu proyek dan tidak dapat mengganti konteks proyek.');
+            ->assertSessionHas('error', 'Your account is bound to a single project and cannot switch project context.');
     }
 
     public function test_update_rejects_project_code_not_in_cache(): void

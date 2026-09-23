@@ -21,12 +21,6 @@ use Throwable;
 
 class DashboardMetrics
 {
-    private const INDONESIAN_MONTHS = [
-        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
-    ];
-
     public function __construct(
         private readonly EquipmentCache $equipmentCache,
     ) {}
@@ -55,7 +49,7 @@ class DashboardMetrics
 
         $default = [
             'month' => $month->format('Y-m'),
-            'label' => $this->indonesianMonthLabel($month),
+            'label' => $this->monthLabel($month),
             'status' => 'none',
             'exists' => false,
         ];
@@ -76,7 +70,7 @@ class DashboardMetrics
 
             return [
                 'month' => $month->format('Y-m'),
-                'label' => $this->indonesianMonthLabel($month),
+                'label' => $this->monthLabel($month),
                 'status' => $period->status,
                 'exists' => true,
             ];
@@ -413,9 +407,9 @@ class DashboardMetrics
         return $map;
     }
 
-    private function indonesianMonthLabel(Carbon $month): string
+    private function monthLabel(Carbon $month): string
     {
-        return (self::INDONESIAN_MONTHS[$month->month] ?? $month->format('F')).' '.$month->format('Y');
+        return $month->locale('en')->translatedFormat('M Y');
     }
 
     private function money(mixed $value): string

@@ -84,7 +84,7 @@ class ReportExportDownloadTest extends TestCase
             ->get('/reports/jenis-tidak-valid/export/pdf');
 
         $response->assertNotFound();
-        $this->assertStringContainsString('Jenis laporan tidak ditemukan.', $response->getContent());
+        $this->assertStringContainsString('Report type not found.', $response->getContent());
     }
 
     public function test_unknown_report_type_csv_returns_404_with_indonesian_message(): void
@@ -95,7 +95,7 @@ class ReportExportDownloadTest extends TestCase
             ->get('/reports/jenis-tidak-valid/export/csv');
 
         $response->assertNotFound();
-        $this->assertStringContainsString('Jenis laporan tidak ditemukan.', $response->getContent());
+        $this->assertStringContainsString('Report type not found.', $response->getContent());
     }
 
     /**

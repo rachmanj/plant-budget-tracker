@@ -88,9 +88,9 @@ class PlantRequestSubmissionTest extends TestCase
             'over_pct' => '10.00',
         ]));
 
-        $response->assertSessionHas('budget_exceeded', fn (string $message) => str_contains($message, 'Pagu proyek:')
-            && str_contains($message, 'Pemakaian setelah permintaan ini:')
-            && str_contains($message, 'Batas toleransi'));
+        $response->assertSessionHas('budget_exceeded', fn (string $message) => str_contains($message, 'Project budget:')
+            && str_contains($message, 'Usage after this request:')
+            && str_contains($message, 'Tolerance limit'));
 
         $plantRequest->refresh();
         $this->assertSame('draft', $plantRequest->status);

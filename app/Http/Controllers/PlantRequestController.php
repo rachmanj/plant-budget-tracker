@@ -327,11 +327,11 @@ class PlantRequestController extends Controller
     public function receive(ReceivePlantRequestRequest $request, PlantRequest $plantRequest): RedirectResponse
     {
         if ($plantRequest->status === 'received') {
-            abort(422, 'Plant request ini sudah ditandai diterima sebelumnya.');
+            abort(422, 'This plant request has already been marked as received.');
         }
 
         if (! Gate::allows('receive', $plantRequest)) {
-            abort(403, 'Plant request belum berada pada tahap yang bisa ditandai diterima, atau Anda tidak memiliki izin untuk melakukannya.');
+            abort(403, 'This plant request is not at a stage where it can be marked received, or you do not have permission to do so.');
         }
 
         $validated = $request->validated();
@@ -350,29 +350,29 @@ class PlantRequestController extends Controller
             $plantRequest->comments()->create([
                 'category' => 'general',
                 'body' => sprintf(
-                    'Barang diterima — GRPO %s tanggal %s.%s',
+                    'Goods received — GRPO %s on %s.%s',
                     $validated['sap_grpo_no'],
-                    Carbon::parse($validated['received_at'])->format('d-m-Y'),
-                    ! empty($validated['note']) ? ' Catatan: '.$validated['note'] : ''
+                    Carbon::parse($validated['received_at'])->format('d M Y'),
+                    ! empty($validated['note']) ? ' Note: '.$validated['note'] : ''
                 ),
                 'author_id' => $request->user()->id,
             ]);
         });
 
         return redirect()->route('plant-requests.show', $plantRequest)
-            ->with('success', 'Penerimaan barang berhasil dicatat.');
+            ->with('success', 'Goods receipt recorded successfully.');
     }
 
     public function createPr(Request $request, PlantRequest $plantRequest): RedirectResponse
     {
         if (! Gate::allows('createPr', $plantRequest)) {
-            abort(403, 'Hanya Procurement Admin atau IT Manager yang dapat memicu pembuatan PR di SAP untuk plant request yang sudah disetujui.');
+            abort(403, 'Only Procurement Admin or IT Manager can trigger PR creation in SAP for an approved plant request.');
         }
 
         CreateSapPurchaseRequest::dispatch($plantRequest->id);
 
         return redirect()->route('plant-requests.show', $plantRequest)
-            ->with('success', 'Permintaan PR dikirim ke SAP.');
+            ->with('success', 'PR request sent to SAP.');
     }
 
     public function estimatePart(Request $request): JsonResponse
@@ -478,7 +478,7 @@ class PlantRequestController extends Controller
 
         if (! $period) {
             throw ValidationException::withMessages([
-                'equipment_id' => ['Belum ada periode anggaran untuk proyek ini — Finance Director harus mengatur pagu proyek terlebih dahulu.'],
+                'equipment_id' => ['No budget period exists for this project — the Finance Director must set the project budget first.'],
             ]);
         }
 
@@ -486,13 +486,13 @@ class PlantRequestController extends Controller
 
         if (! $allocation) {
             throw ValidationException::withMessages([
-                'equipment_id' => ['Belum ada pagu anggaran proyek untuk periode ini — Finance Director harus mengatur pagu proyek terlebih dahulu.'],
+                'equipment_id' => ['No project budget allocation exists for this period — the Finance Director must set the project budget first.'],
             ]);
         }
 
         if ($allocation->period->project_code !== $projectCode) {
             throw ValidationException::withMessages([
-                'equipment_id' => ['Pagu anggaran tidak sesuai dengan proyek aktif.'],
+                'equipment_id' => ['The budget allocation does not match the active project.'],
             ]);
         }
 
@@ -509,7 +509,7 @@ class PlantRequestController extends Controller
         $batas = $this->formatIdr($tolerance['cap']);
 
         return sprintf(
-            'Pagu proyek: %s. Pemakaian setelah permintaan ini: %s. Batas toleransi (%s%%): %s.',
+            'Project budget: %s. Usage after this request: %s. Tolerance limit (%s%%): %s.',
             $pagu,
             $pemakaian,
             number_format((float) $allocation->tolerance_pct, 2, ',', '.'),

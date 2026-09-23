@@ -155,7 +155,7 @@ class BudgetController extends Controller
 
         return redirect()
             ->route('budget.index', ['project_code' => $validated['project_code']])
-            ->with('success', 'Anggaran berhasil disimpan.');
+            ->with('success', 'Budget saved successfully.');
     }
 
     public function revise(ReviseBudgetAllocationRequest $request, BudgetAllocation $allocation): RedirectResponse
@@ -170,7 +170,7 @@ class BudgetController extends Controller
             $validated['memo'] ?? null
         );
 
-        return back()->with('success', 'Alokasi anggaran berhasil direvisi.');
+        return back()->with('success', 'Budget allocation revised successfully.');
     }
 
     public function carryForward(Request $request, BudgetPeriod $period): RedirectResponse
@@ -179,7 +179,7 @@ class BudgetController extends Controller
 
         $this->budgetEngine->carryForwardPeriod($period);
 
-        return back()->with('success', 'Carry-forward berhasil dijalankan.');
+        return back()->with('success', 'Carry-forward completed successfully.');
     }
 
     public function variance(Request $request): \Illuminate\Http\JsonResponse

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Reporting\BudgetConsumptionReport;
 use App\Support\ProjectContext;
+use App\Support\RoleLabels;
 use App\Services\Reporting\EquipmentCostReport;
 use App\Services\Reporting\VendorPerformanceReport;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -29,20 +30,20 @@ class ReportController extends Controller
             'reports' => [
                 [
                     'key' => 'budget-consumption',
-                    'title' => 'Konsumsi Anggaran',
-                    'description' => 'Pagu proyek, komitmen, aktual, dan rincian permintaan per unit.',
+                    'title' => 'Budget Consumption',
+                    'description' => 'Project budget ceiling, commitment, actuals, and request breakdown by unit.',
                     'href' => route('reports.budget-consumption'),
                 ],
                 [
                     'key' => 'vendor-performance',
-                    'title' => 'Kinerja Vendor',
-                    'description' => 'Frekuensi indent dan performa pemasok.',
+                    'title' => 'Vendor Performance',
+                    'description' => 'Indent frequency and supplier performance.',
                     'href' => route('reports.vendor-performance'),
                 ],
                 [
                     'key' => 'equipment-cost',
-                    'title' => 'Biaya Peralatan',
-                    'description' => 'Ringkasan biaya peralatan fleet.',
+                    'title' => 'Equipment Cost',
+                    'description' => 'Fleet equipment cost summary.',
                     'href' => route('reports.equipment-cost'),
                 ],
             ],
@@ -166,7 +167,7 @@ class ReportController extends Controller
         return match ($reportType) {
             'budget-consumption' => $this->budgetConsumptionCsvRows($data),
             'vendor-performance' => [
-                ['vendor_code', 'vendor_name', 'indent_pct'],
+                ['Vendor Code', 'Vendor Name', 'Indent %'],
                 array_map(fn (array $row) => [
                     $row['vendor_code'] ?? '',
                     $row['vendor_name'] ?? '',
@@ -174,7 +175,7 @@ class ReportController extends Controller
                 ], $data),
             ],
             'equipment-cost' => [
-                ['equipment_id', 'cost_per_hour', 'total_spend', 'delta_hm', 'stale'],
+                ['Equipment ID', 'Cost/Hour', 'Total Spend', 'Delta HM', 'Stale'],
                 array_map(fn (array $row) => [
                     $row['equipment_id'] ?? '',
                     $row['cost_per_hour'] ?? '',
@@ -193,7 +194,18 @@ class ReportController extends Controller
      */
     private function budgetConsumptionCsvRows(array $data): array
     {
-        $headers = ['section', 'unit_code', 'pagu', 'committed', 'actual', 'remaining', 'utilization_pct', 'request_count', 'total_estimated', 'last_status'];
+        $headers = [
+            'Section',
+            'Unit Code',
+            'Budget Ceiling',
+            'Committed',
+            'Actual',
+            'Remaining',
+            'Utilization %',
+            'Request Count',
+            'Total Estimated',
+            'Last Status',
+        ];
         $rows = [];
 
         if (! empty($data['summary'])) {
@@ -223,7 +235,7 @@ class ReportController extends Controller
                 '',
                 $unit['request_count'] ?? '',
                 $unit['total_estimated'] ?? '',
-                $unit['last_status'] ?? '',
+                $unit['last_status'] ? RoleLabels::status((string) $unit['last_status']) : '',
             ];
         }
 
@@ -233,7 +245,7 @@ class ReportController extends Controller
     private function abortUnknownReportType(): never
     {
         throw new HttpResponseException(
-            response('Jenis laporan tidak ditemukan.', 404, [
+            response('Report type not found.', 404, [
                 'Content-Type' => 'text/plain; charset=UTF-8',
             ])
         );

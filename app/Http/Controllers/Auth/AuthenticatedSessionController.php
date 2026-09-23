@@ -36,7 +36,7 @@ class AuthenticatedSessionController extends Controller
             $request->session()->regenerateToken();
 
             return back()->withErrors([
-                'email' => 'Akun tidak aktif.',
+                'email' => 'This account is inactive.',
             ])->onlyInput('email');
         }
 

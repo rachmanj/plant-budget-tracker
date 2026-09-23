@@ -19,26 +19,26 @@ class RequestApprovalPolicy
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk mengakses halaman Persetujuan.');
+        return Response::deny('You do not have permission to access the Approvals page.');
     }
 
     public function decide(User $user, RequestApproval $approval): Response|bool
     {
         if ($approval->decision !== 'pending') {
-            return Response::deny('Persetujuan ini sudah diputuskan.');
+            return Response::deny('This approval has already been decided.');
         }
 
         $engine = app(ApprovalEngine::class);
         $current = $engine->currentStep($approval->approvable);
 
         if (! $current || $current->id !== $approval->id) {
-            return Response::deny('Langkah persetujuan ini bukan giliran Anda.');
+            return Response::deny('It is not your turn for this approval step.');
         }
 
         if ($user->hasRole($approval->required_role)) {
             return true;
         }
 
-        return Response::deny('Anda tidak memiliki izin untuk memutuskan persetujuan ini.');
+        return Response::deny('You do not have permission to decide this approval.');
     }
 }

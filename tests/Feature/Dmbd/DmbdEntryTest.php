@@ -333,7 +333,7 @@ class DmbdEntryTest extends TestCase
             ])
             ->assertStatus(422)
             ->assertJsonFragment([
-                'breakdown_note' => ['Catatan breakdown wajib diisi.'],
+                'breakdown_note' => ['Breakdown note is required.'],
             ]);
     }
 

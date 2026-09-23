@@ -13,7 +13,7 @@ class ProjectContextController extends Controller
         $user = $request->user();
 
         if (! ProjectContext::allowSwitch($user)) {
-            return back()->with('error', 'Akun Anda terikat pada satu proyek dan tidak dapat mengganti konteks proyek.');
+            return back()->with('error', 'Your account is bound to a single project and cannot switch project context.');
         }
 
         $validated = $request->validate([
@@ -22,6 +22,6 @@ class ProjectContextController extends Controller
 
         $request->session()->put('current_project', $validated['project_code']);
 
-        return back()->with('success', 'Konteks proyek diperbarui.');
+        return back()->with('success', 'Project context updated.');
     }
 }

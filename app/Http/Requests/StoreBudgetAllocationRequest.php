@@ -26,16 +26,16 @@ class StoreBudgetAllocationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'project_code.required' => 'Proyek wajib dipilih.',
-            'period_month.required' => 'Bulan periode wajib diisi.',
-            'period_month.date' => 'Bulan periode tidak valid.',
-            'allocated_amount.required' => 'Total anggaran wajib diisi.',
-            'allocated_amount.numeric' => 'Total anggaran harus berupa angka.',
-            'allocated_amount.min' => 'Total anggaran minimal 0.',
-            'tolerance_pct.required' => 'Toleransi wajib diisi.',
-            'tolerance_pct.numeric' => 'Toleransi harus berupa angka.',
-            'tolerance_pct.min' => 'Toleransi minimal 0%.',
-            'tolerance_pct.max' => 'Toleransi maksimal 100%.',
+            'project_code.required' => 'Project is required.',
+            'period_month.required' => 'Period month is required.',
+            'period_month.date' => 'Period month is not valid.',
+            'allocated_amount.required' => 'Total budget amount is required.',
+            'allocated_amount.numeric' => 'Total budget amount must be a number.',
+            'allocated_amount.min' => 'Total budget amount must be at least 0.',
+            'tolerance_pct.required' => 'Tolerance is required.',
+            'tolerance_pct.numeric' => 'Tolerance must be a number.',
+            'tolerance_pct.min' => 'Tolerance must be at least 0%.',
+            'tolerance_pct.max' => 'Tolerance may not exceed 100%.',
         ];
     }
 }

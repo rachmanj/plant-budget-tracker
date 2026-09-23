@@ -34,7 +34,7 @@ class RoleController extends Controller
 
         Role::create(['name' => $data['name'], 'guard_name' => 'web']);
 
-        return back()->with('success', 'Role berhasil dibuat.');
+        return back()->with('success', 'Role created successfully.');
     }
 
     public function update(Request $request, Role $role): RedirectResponse
@@ -45,7 +45,7 @@ class RoleController extends Controller
 
         $role->update($data);
 
-        return back()->with('success', 'Role berhasil diperbarui.');
+        return back()->with('success', 'Role updated successfully.');
     }
 
     public function syncPermissions(Request $request, Role $role): RedirectResponse
@@ -57,6 +57,6 @@ class RoleController extends Controller
 
         $role->syncPermissions($data['permissions'] ?? []);
 
-        return back()->with('success', 'Permission role berhasil diperbarui.');
+        return back()->with('success', 'Role permissions updated successfully.');
     }
 }
