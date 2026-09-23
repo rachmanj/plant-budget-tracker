@@ -1,9 +1,15 @@
 # Manual Simulasi — Plant Budget Tracker (PMB)
 
-**Versi dokumen:** 1.15 · **Tanggal:** 23 September 2026
+**Versi dokumen:** 1.16 · **Tanggal:** 23 September 2026
 **Lingkungan uji:** aplikasi internal `http://192.168.32.149:86` (jaringan kantor)
-**Versi aplikasi:** 22 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
+**Versi aplikasi:** 23 September 2026 · **Sumber kebenaran bisnis:** `docs/concept.md` / `docs/concept-id.md`
 
+> **Perubahan v1.16 (23 September 2026):** (a) seluruh tampilan aplikasi kini **bahasa Inggris** —
+> kutipan label, tombol, dan judul kolom di manual ini mengikuti teks layar persis; narasi manual
+> tetap bahasa Indonesia. (b) Anggaran **global per proyek** (satu pagu per proyek per bulan, bukan
+> per unit alat). (c) Pemilih proyek di **topbar** (label **Project**, tooltip *Applies to all pages*)
+> berlaku untuk Dashboard, Budget, Plant Requests, DMBD, Reports, dan halaman kerja lainnya.
+>
 > **Perubahan v1.15 (23 September 2026): anggaran kini GLOBAL per proyek.** Finance Director
 > menetapkan **satu pagu untuk satu proyek per bulan** — tidak lagi per unit alat, tidak lagi ada
 > baris per divisi. Yang diperiksa saat permintaan diajukan adalah pagu proyek beserta toleransinya.
@@ -22,26 +28,25 @@
 > pembuatan draf Plant Request khusus Planner/Mechanic. Peran lain tidak melihat menunya sama sekali;
 > bila alamatnya dibuka langsung akan ditolak dengan pesan yang jelas. Tabel lengkapnya di bagian 10.
 >
-> **Perubahan v1.12:** modul **Laporan**. Halaman `/reports` kini menjadi daftar laporan (tiga laporan:
-> konsumsi anggaran, kinerja vendor, biaya peralatan), tiap laporan punya tombol **Unduh PDF** dan
-> **Unduh CSV**. Izin unduh ditegakkan: akun tanpa izin unduh tetap bisa **melihat** laporan di layar
-> tetapi tidak bisa mengunduh (gap B-12 ditutup).
+> **Perubahan v1.12:** modul **Reports**. Halaman daftar laporan menampilkan **Budget Consumption**,
+> **Vendor Performance**, dan **Equipment Cost**; tiap laporan punya tombol **Download PDF** dan
+> **Download CSV**. Akun tanpa hak unduh tetap bisa membuka laporan di layar tetapi tombol unduh tidak
+> muncul (gap B-12 ditutup).
 >
 > **Perubahan v1.11:** perbaikan **perhitungan anggaran**. Sebelumnya dua keadaan membuat angka anggaran
 > keliru: (1) permintaan yang **dibatalkan** tetap "memakan" anggaran — sekarang anggaran kembali utuh;
 > (2) setelah **barang diterima (GRPO)**, pemakaian dihitung dua kali (komitmen + aktual sekaligus) —
-> sekarang hanya dihitung sekali. Dengan perbaikan ini, angka **Pagu / Terpakai / Sisa** di halaman
-> Anggaran dan di Dashboard selalu konsisten dengan catatan transaksinya.
+> sekarang hanya dihitung sekali. Dengan perbaikan ini, angka **Ceiling / Used / Remaining** di
+> **Budget** dan **Dashboard** selalu konsisten dengan catatan transaksinya.
 >
-> **Perubahan v1.10:** halaman **Plant Request** kini punya kartu **Riwayat Pengadaan** (nomor MR/PR/PO/GRPO,
-> tanggal & penerima) dan tombol **Buat PR di SAP** (Procurement Admin/IT Manager) serta **Tandai Barang
-> Diterima** (Plant Manager, Project Manager, Logistic Foreman/PIC) sehingga status lanjutan `pr_created` →
-> `po_created` → `received` sekarang punya jalur di aplikasi, bukan hanya di SAP. Filter status & kolom
-> PR/PO/GRPO ditambahkan di daftar Plant Request (gap B-8 ditutup).
+> **Perubahan v1.10:** halaman detail Plant Request punya kartu **Procurement History** (MR/PR/PO/GRPO,
+> tanggal & penerima) dan tombol **Create PR in SAP** (Procurement Admin/IT Manager) serta **Mark Goods
+> Received** (Plant Manager, Project Manager, Logistic Foreman/PIC) sehingga alur setelah disetujui
+> bisa dilanjutkan dari aplikasi, tidak hanya di SAP (gap B-8 ditutup).
 
-> **Perubahan v1.9:** **Dashboard** kini menampilkan angka nyata (pagu, terpakai, sisa, % terpakai,
-> jumlah permintaan per status, pengadaan, DMBD hari ini, tindakan menunggu) — bukan lagi tanda "—".
-> Kartu bisa diklik, dan approver melihat peringatan **Perlu keputusan Anda** beserta jumlahnya (gap B-15 ditutup).
+> **Perubahan v1.9:** **Dashboard** menampilkan angka nyata (Ceiling, Used, Remaining, % Used, jumlah
+> permintaan per status, pengadaan, DMBD hari ini, pending actions) — bukan lagi tanda "—". Kartu bisa
+> diklik; approver melihat peringatan **Awaiting your decision: N** (gap B-15 ditutup).
 
 > **Perubahan v1.8:** pencarian harga part number kini benar-benar **per part** dari SAP
 > (harga PO terakhir → harga beli terakhir item master → harga historis permintaan sebelumnya),
@@ -52,14 +57,14 @@
 > (dikelompokkan per tipe plant, SOLD/SCRAP dikecualikan) dan mendukung alokasi tingkat **divisi
 > (tanpa unit)**; alokasi ganda untuk unit/periode yang sama ditolak (gap B-10 ditutup).
 
-> **Perubahan v1.6:** layar **DMBD** kini punya kolom **Catatan Breakdown** (wajib diisi saat status
-> Breakdown) dan daftar unit **berhalaman** dengan pencarian + filter status & proyek (gap B-9 ditutup).
+> **Perubahan v1.6:** layar **DMBD** punya kolom **Breakdown Notes** (catatan wajib saat status
+> **Breakdown**) dan daftar unit **berhalaman** dengan pencarian + filter status & proyek (gap B-9 ditutup).
 
 > **Perubahan v1.5:** koreksi tanggal dokumen dan seluruh cap tanggal di dalamnya (semula tertulis
 > 17 September 2026 — tanggal tersebut keliru, pekerjaan dan pemeriksaan dilakukan 22 September 2026).
 
-> **Perubahan v1.4:** proyek aktif sekarang **dikelola dari halaman Admin → Proyek** (tombol aktif/
-> non-aktif per proyek), dan **sinkronisasi ARKFLEET tidak lagi menimpa** pilihan manual. Proyek aktif
+> **Perubahan v1.4:** proyek aktif dikelola dari menu **Projects** (sakelar **Active** / **Off** per
+> baris), dan **Sync from ARKFLEET** tidak lagi menimpa pilihan manual. Proyek aktif
 > saat ini: **021C, 022C, 025C, APS**. Skenario S-02 ditambah langkah uji kelola proyek aktif.
 
 > **Perubahan v1.3:** bagian **Verifikasi Teknis** dihapus dari dokumen ini (dipindah ke lampiran
@@ -71,7 +76,7 @@
 > dan hanya oleh pembuatnya. Gap B-4, B-7, dan B-19 di §10 ditutup.
 
 > **Perubahan v1.1:** lima gap yang membuat alur berhenti sudah diperbaiki dan sudah live di server
-> — form Overbudget, tombol Create PO, tombol Buat Bid + kelengkapan form vendor,
+> — form Overbudget, tombol Create PO, tombol Create Bid + kelengkapan form vendor,
 > tombol pembatalan & Agree, serta form Interchange + Sign-off. Skenario S-07, S-09, S-11, S-12,
 > S-13 di bawah sudah memakai alur baru.
 
@@ -99,24 +104,24 @@ dan penulisan ke SAP produksi (PO ke SAP hanya diuji setelah Iwan menyetujui).
 Buka `http://192.168.32.149:86` → diarahkan ke `/login`. Login memakai **email + password**.
 Semua akun demo di bawah password: `password` (hanya untuk simulasi internal).
 
-| # | Peran (role) | Email | Scope proyek | Fungsi utama di simulasi |
-|---|--------------|-------|--------------|--------------------------|
-| 1 | `planner` | planner@pmb.demo | 022C | Update DMBD, buat & submit Plant Request |
-| 2 | `mechanic` | mechanic@pmb.demo | 022C | DMBD lihat saja, buat Plant Request |
-| 3 | `project_manager` | project.manager@pmb.demo | 022C | Approval step 1 Plant Request |
-| 4 | `plant_manager` | plant.manager@pmb.demo | 022C | Approval step 2, sign-off interchange |
-| 5 | `logistic_foreman` | logistic.foreman@pmb.demo | 022C | (izin ada, UI belum tersedia) |
-| 6 | `logistic_pic` | logistic.pic@pmb.demo | 022C | (izin ada, UI belum tersedia) |
-| 7 | `buyer` | buyer@pmb.demo | global | Buat Tabulation Bid, interchange |
-| 8 | `procurement_manager` | procurement.manager@pmb.demo | global | Review bid, award vendor |
-| 9 | `procurement_admin` | procurement.admin@pmb.demo | global | Create PO (ke SAP) |
-| 10 | `finance_director` | finance.director@pmb.demo | global | Set/revisi anggaran, carry-forward, approval overbudget |
-| 11 | `operation_director` | operation.director@pmb.demo | global | Approval overbudget step 2 |
-| 12 | `president_director` | president.director@pmb.demo | global | Izin approval PO (belum ada UI) |
-| 13 | `it_manager` | it.manager@pmb.demo | global | Admin user/role/proyek, SAP sync dashboard |
-| 14 | `aml_manager` / `aml_dept_head` | aml.manager@pmb.demo / aml.dept.head@pmb.demo | global | Modul Beta (component & cannibal) |
+| # | Peran (tampilan) | Email | Scope proyek | Fungsi utama di simulasi |
+|---|------------------|-------|--------------|--------------------------|
+| 1 | Planner | planner@pmb.demo | 022C | Update DMBD, buat & submit Plant Request |
+| 2 | Mechanic | mechanic@pmb.demo | 022C | DMBD lihat saja, buat Plant Request |
+| 3 | Project Manager | project.manager@pmb.demo | 022C | Approval tingkat 1 Plant Request |
+| 4 | Plant Manager | plant.manager@pmb.demo | 022C | Approval tingkat 2, sign-off interchange |
+| 5 | Logistic Foreman | logistic.foreman@pmb.demo | 022C | (izin ada, sebagian UI belum tersedia) |
+| 6 | Logistic PIC | logistic.pic@pmb.demo | 022C | (izin ada, sebagian UI belum tersedia) |
+| 7 | Buyer | buyer@pmb.demo | global | Tabulation Bids, interchange |
+| 8 | Procurement Manager | procurement.manager@pmb.demo | global | Review bid, award vendor |
+| 9 | Procurement Admin | procurement.admin@pmb.demo | global | **Create PO** ke SAP |
+| 10 | Finance Director | finance.director@pmb.demo | global | Set/revisi anggaran, carry-forward, approval overbudget |
+| 11 | Operation Director | operation.director@pmb.demo | global | Approval overbudget tingkat 2 |
+| 12 | President Director | president.director@pmb.demo | global | Izin approval PO (belum ada layar khusus) |
+| 13 | IT Manager | it.manager@pmb.demo | global | Users, Role & Permission, Projects, SAP Sync |
+| 14 | AML Manager / AML Dept Head | aml.manager@pmb.demo / aml.dept.head@pmb.demo | global | Modul Beta (Components & cannibal) |
 
-Akun non-demo: `rachmanj@gmail.com` (role `it_manager`, milik Iwan).
+Akun non-demo: `rachmanj@gmail.com` (IT Manager, milik Iwan).
 
 **Catatan penting:** role disimpan per "team" = `project_code`. User dengan scope 022C hanya
 mendapat izin hanya pada konteks proyek 022C. Akun direktur, IT, dan pengadaan tidak terikat
@@ -127,11 +132,11 @@ satu proyek sehingga izinnya berlaku untuk semua proyek.
 1. **Login dibatasi 5 percobaan per menit** (throttle). Jangan login berulang-ulang di satu menit —
    pakai jendela browser terpisah dan biarkan sesi tetap terbuka, kalau tidak akan muncul
    `429 Too Many Requests`.
-2. **User tanpa scope proyek** (director, IT Manager, buyer, procurement\*) tidak punya proyek
-   bawaan. Halaman anggaran/DMBD/plant request akan terbuka pada proyek default `000H`
-   (Head Office) atau menampilkan **semua** unit (992 unit, lintas proyek). Untuk simulasi 022C,
-   user tersebut harus memilih proyek **022C** pada dropdown Proyek di `/budget`, atau menambah
-   parameter `?project_code=022C` pada halaman plant request.
+2. **User tanpa scope proyek** (direktur, IT Manager, Buyer, Procurement\*) membuka aplikasi pada
+   **proyek aktif pertama** (saat ini **021C**). Di **topbar** muncul label **Project** (tooltip
+   *Applies to all pages*) — pilih **022C — …** agar Dashboard, Budget, DMBD, dan Reports konsisten
+   untuk simulasi 022C. Akun terikat proyek (Planner/Mechanic 022C) **tidak** melihat pemilih ini;
+   proyek mereka tetap 022C.
 
 ---
 
@@ -139,27 +144,25 @@ satu proyek sehingga izinnya berlaku untuk semua proyek.
 
 Menu sidebar muncul otomatis mengikuti izin. Yang **tidak punya menu** tetap bisa dibuka lewat URL.
 
-| Menu | URL | Izin yang dibutuhkan | Role pemilik |
-|------|-----|----------------------|--------------|
-| Dashboard | `/dashboard` | login | semua |
-| Anggaran | `/budget` | `budget.view` | semua role |
-| Buat/Revisi anggaran | `/budget/setting` | role `finance_director` | Finance Director |
-| Plant Requests | `/plant-requests` | `plant_request.create` | Planner, Mechanic |
-| DMBD | `/dmbd` | `dmbd.view` / `dmbd.update` | Planner, Mechanic, (lihat: manager, director) |
-| Tabulation Bid | `/tabulation-bids` | `tabulation_bid.create` / `review` | Buyer, Procurement Manager |
-| Reports | `/reports/...` | `reports.view` | hampir semua role |
-| Components | `/components` | `component.view` + flag beta | AML |
-| Pengguna / Role / Proyek | `/admin/users`, `/admin/roles`, `/admin/projects` | `user.manage` | IT Manager |
-| Approvals | `/approvals` | menu muncul bila role Anda termasuk approver (badge = jumlah pending) | semua approver |
-| Overbudget | `/overbudget` | izin `plant_request.create` atau `overbudget.approve.*` | Planner/Mechanic + Fin Dir + Ops Dir |
-| Cancellation | `/cancellation` | izin `cancellation.plant` / `cancellation.procurement` | Plant + Procurement |
-| Interchange | `/interchange` | izin `interchange.manage` atau role `plant_manager`/`aml_manager` | Procurement (+ sign-off Plant/AML) |
-| SAP Sync Dashboard | `/sap/sync-dashboard` | khusus peran tertentu | IT Manager, Procurement Manager, Finance Director |
+| Menu (sidebar) | Siapa biasanya melihat | Catatan |
+|----------------|------------------------|---------|
+| Dashboard | semua yang login | — |
+| Budget | semua yang login | Finance Director juga bisa **Edit Allocation** / **Create Allocation** |
+| Plant Requests | Planner, Mechanic | tombol **Create Request** |
+| DMBD | Planner, Mechanic, manajer (lihat/ubah sesuai peran) | — |
+| Approvals | approver (badge jumlah pending) | halaman **My Approvals** |
+| Overbudget | Planner, Mechanic, Finance Director, Operation Director, IT Manager | — |
+| Cancellation | Plant + Procurement | — |
+| Interchange | Procurement + sign-off Plant/AML | — |
+| SAP Sync | IT Manager, Procurement Manager, Finance Director | — |
+| Tabulation Bids | Buyer, Procurement Manager, Procurement Admin | submenu terkait bid |
+| Reports | hampir semua peran | submenu: **Report List**, **Budget Consumption**, **Vendor Performance**, **Equipment Cost** |
+| Components | AML (hanya jika fitur Beta aktif) | — |
+| Users / Role & Permission / Projects | IT Manager | — |
 
-**Catatan menu (v1.2):** semua halaman kerja kini punya menu di sidebar — **Approvals** (badge jumlah
-pending, hanya untuk role approver), **Overbudget**, **Cancellation**, **Interchange**, dan **SAP Sync**
-(muncul sesuai izin/role), selain Dashboard, Anggaran, Plant Requests, DMBD, Tabulation Bid, Reports,
-dan menu Admin untuk IT Manager.
+**Catatan menu:** **Approvals**, **Overbudget**, **Cancellation**, **Interchange**, dan **SAP Sync**
+muncul sesuai peran; yang tidak punya menu tetap bisa ditolak dengan jelas bila alamatnya dibuka
+langsung (lihat tabel §10).
 
 ---
 
@@ -213,10 +216,10 @@ selalu lewat entri ledger baru. Batas pemakaian = alokasi + carry forward, ditol
 
 | Objek | Kondisi saat ini |
 |-------|------------------|
-| Proyek aktif | `021C`, `022C`, `025C`, `APS` (diatur di **Admin → Proyek**) |
+| Proyek aktif | `021C`, `022C`, `025C`, `APS` (diatur di menu **Projects**) |
 | Proyek di cache (dari ARKFLEET) | 000H, 001H, 005P, 017C, 021C, 022C, 023C, 025C, 026C, APS |
-| Periode anggaran | `000H` Sep 2026 (open, 2 alokasi, Rp 300 jt), `022C` Sep 2026 (open, 3 alokasi, Rp 295 jt) |
-| Alokasi 022C | AC 035 / SUPPORT Rp 25 jt · ADT 001 / HAULER Rp 150 jt · E 062 / DIGGER Rp 120 jt (toleransi 10%) |
+| Periode anggaran | `000H` Sep 2026 (open, **satu pagu proyek** Rp 300 jt), `022C` Sep 2026 (open, **satu pagu** Rp 295 jt, toleransi 10%) |
+| Pagu 022C Sep 2026 | Satu baris di halaman **Budget** (bukan per unit); unit hanya dipilih di Plant Request |
 | Data unit (ARKFLEET) | API aktif; **194 unit untuk proyek 022C**, **992 unit** bila tanpa filter proyek |
 | Plant request / bid / DMBD / overbudget / cancellation / interchange | **kosong** (belum ada transaksi) |
 | Queue | `queue-plantbudget` jalan, queue kosong, `failed_jobs` kosong |
@@ -233,7 +236,7 @@ Konsekuensi: simulasi dimulai dari nol transaksi. Semua nomor dokumen akan berur
 |---|---------|------|------------------------|
 | P-1 | Pastikan aplikasi hidup | buka `http://192.168.32.149:86` | redirect ke `/login`, halaman tampil |
 | P-2 | Pastikan data unit tersedia | login Planner → `/dmbd` | tabel terisi **194 unit** untuk proyek 022C (dari ARKFLEET). Kalau kosong → integrasi ARKFLEET bermasalah |
-| P-3 | Pastikan anggaran ada | login Finance Director → `/budget` pilih 022C | tab Sep 2026 dengan 3 alokasi |
+| P-3 | Pastikan anggaran ada | login Finance Director → topbar **Project** = 022C → menu **Budget** | tab Sep 2026 status **open** dengan **satu baris** pagu proyek |
 | P-4 | Pastikan proses latar belakang hidup | minta Dea memastikan di sisi server | perubahan DMBD & sinkronisasi berjalan, tidak menumpuk |
 | P-5 | Siapkan akun per peran | tabel §2 | cukup buka 3–4 browser berbeda (mode incognito) agar sesi tidak tertukar |
 | P-6 | Catat angka awal | catat anggaran & jumlah dokumen yang ada sebelum mulai (lihat layar, atau minta Dea cetak ringkasannya) | angka awal tercatat untuk pembanding |
@@ -252,49 +255,44 @@ Kolom temuan dipakai di lembar observasi §9.
 
 **Login:** `finance.director@pmb.demo`
 
-1. Buka `/dashboard` → sapaan nama user, tanggal hari ini, tag proyek aktif, dan angka nyata:
-   - **Anggaran September 2026** untuk proyek **000H**: Pagu **Rp 300,0 jt**, Terpakai **Rp 0**,
-     Sisa **Rp 300,0 jt**, % Terpakai **0,0%** (= 2 baris alokasi).
-   - Bagian **Permintaan**, **Pengadaan**, dan **Tindakan Menunggu** (semua bernilai 0 sebelum ada
-     transaksi). Kartu bisa diklik ke halaman terkait.
-   - Catat angka Pagu ini untuk dibandingkan dengan halaman `/budget` pada langkah 2 — harus sama.
-2. Buka `/budget` → pilih proyek **022C** pada dropdown Proyek.
-   - Diharapkan: tab periode Sep 2026 status `open` berisi **satu baris pagu proyek**
-     (kolom Pagu / Carry Fwd / Komitmen / Aktual / Sisa / % Terpakai / Toleransi).
-   - **Mulai 23 September 2026 anggaran bersifat global per proyek** — tidak lagi dipecah per unit
-     alat. Jadi wajar bila hanya ada satu baris untuk satu bulan, dan kolom unit tidak ada lagi.
-3. Klik tombol **Buat/Ubah Alokasi** (kanan atas) → halaman `/budget/setting`.
-4. Isi form: Proyek = `022C`, Bulan Periode = **Oktober 2026**,
-   **Total Anggaran Proyek** = mis. Rp 250.000.000, Toleransi = 10%.
-   - Tidak ada lagi pilihan unit alat atau baris per divisi di halaman ini — anggaran memang
-     ditetapkan untuk proyek secara keseluruhan.
-5. Klik **Simpan Anggaran**.
-   - Diharapkan: kembali ke `/budget`, muncul tab **2026-10** berisi **satu baris** pagu proyek
-     Rp 250.000.000 (Toleransi 10%).
-6. Uji revisi: buka lagi **Buat/Ubah Alokasi** untuk proyek & bulan yang sama → form menampilkan
-   nilai yang sudah ada. Ubah Total Anggaran menjadi Rp 240.000.000 → **Simpan**.
-   - Diharapkan: pagu berubah menjadi Rp 240.000.000, **baris tetap satu**, dan perubahan tercatat
-     sebagai revisi resmi (pembalikan nilai lama + pagu baru) — bukan penimpaan diam-diam.
-7. Uji batas pagu proyek: minta Planner mengajukan permintaan (skenario S-04) yang totalnya masih
-   di dalam pagu + toleransi → permintaan bisa diajukan. Bila totalnya melebihi pagu + toleransi,
-   sistem mengarahkan ke jalur **Overbudget** (skenario S-11) dengan pesan yang menyebut pagu,
-   pemakaian, dan batas toleransinya.
-8. (Opsional) Bandingkan: buka `/plant-requests/create` sebagai Planner → di layar permintaan
-   terlihat **sisa pagu proyek**, sedangkan unit alat tetap dipilih — unit hanya untuk riwayat dan
-   analisis, bukan sumber pagu.
-9. Buka laporan **Konsumsi Anggaran** (`/reports/budget-consumption?project_code=022C`) →
-   ringkasan berisi pagu/komitmen/aktual/sisa **proyek**, dan rincian per unit muncul di bagian
-   bawah **dari data permintaan** (kosong bila belum ada permintaan).
-10. Klik **Jalankan Carry Forward** pada tab periode yang masih `open`.
-   - Diharapkan: periode menjadi `locked`, alokasi bulan berikutnya dibuat otomatis dengan
-     kolom **Carry Fwd** terisi sebesar sisa anggaran.
+1. Buka menu **Dashboard** → sapaan (*Good morning/afternoon/evening*), tanggal hari ini, tag kode
+   proyek, dan kartu **Budget …** (mis. September 2026) dengan **Ceiling**, **Used**, **Remaining**,
+   **% Used** (angka nyata, bukan "—"). Bagian **Requests**, **Procurement** (jika tampil), dan
+   **Pending Actions** bernilai 0 sebelum ada transaksi. Kartu bisa diklik.
+2. Di **topbar**, pastikan pemilih **Project** menunjukkan proyek yang ingin diuji (mis. **022C — …**).
+   Buka menu **Budget** → pemilih **Project:** di halaman (sama dengan konteks topbar).
+   - Diharapkan: tab periode Sep 2026 berlabel status **open** berisi **satu baris** pagu proyek
+     dengan kolom **Ceiling**, **Carry Fwd**, **Committed**, **Actual**, **Remaining**, **% Used**
+     (bisa menampilkan teks **Within limit** / **Near limit** / **Over limit**), **Tolerance**, dan
+     **Actions** (Finance Director).
+3. Klik **Edit Allocation** atau **Create Allocation** (kanan atas) → halaman **Set Budget Ceiling**.
+4. Isi form: **Project** = 022C, **Period Month** = Oktober 2026, **Total Project Budget (IDR)** =
+   mis. Rp 250.000.000, **Tolerance (%)** = 10. (Opsional: **Notes (optional)**.)
+   - Tidak ada pilihan unit — anggaran global per proyek.
+5. Klik **Save Budget Ceiling**.
+   - Diharapkan: kembali ke **Budget**, tab **2026-10** dengan satu baris **Ceiling** Rp 250.000.000
+     dan **Tolerance** 10%.
+6. Uji **revisi** periode yang sama: buka lagi **Edit Allocation** untuk Oktober 2026.
+   - Diharapkan: banner *This period already has a ceiling. Saving will revise that period (not add a new row).*
+   - Ubah **Total Project Budget (IDR)** menjadi Rp 240.000.000 → klik **Save Ceiling Revision**.
+   - Diharapkan: **Ceiling** berubah menjadi Rp 240.000.000, **baris tetap satu** (revisi resmi,
+     bukan baris baru).
+   - Alternatif: di tabel **Budget**, klik **Revise** pada baris periode yang masih bisa diedit →
+     ubah angka → **Save** / **Cancel**.
+7. Uji batas pagu: minta Planner menjalankan S-04 dengan total masih dalam pagu + toleransi → **Submit**
+   berhasil. Bila total melebihi batas, muncul peringatan *Exceeds …% cap — submit will trigger
+   Overbudget workflow* dan alur **Overbudget** (S-11).
+8. (Opsional) Sebagai Planner, **Create Request** → bagian **2. Project Budget** menampilkan
+   **Project budget remaining**; unit dipilih di **1. Unit / Equipment** hanya untuk riwayat/analisis.
+9. Menu **Reports** → **Budget Consumption** → ringkasan per proyek; rincian per unit dari data
+   permintaan (kosong jika belum ada permintaan).
+10. Pada tab periode status **open**, klik **Run Carry Forward**.
+   - Diharapkan: periode berstatus **locked**; periode berikutnya terbentuk dengan **Carry Fwd**
+     terisi sisa anggaran.
 
 **Cara memastikan (tanpa alat teknis)**
-- Tabel **Anggaran** menampilkan angka Komitmen / Aktual / Varians yang berubah setelah revisi.
-- Periode yang sudah di-carry forward tampil dengan penanda status **locked** pada tab bulannya,
-  dan tombol revisi tidak muncul lagi.
-- Bila ingin melihat jejak perubahan angkanya (reversal lalu alokasi baru), minta Dea menampilkan
-  riwayat anggaran.
+- Kolom **Committed** / **Actual** / **Remaining** di **Budget** berubah setelah revisi atau transaksi.
+- Setelah carry forward, tab bulan tersebut berlabel **locked** dan tidak bisa direvisi lagi.
 
 **Uji negatif**
 - Coba buka `/budget/setting` dengan akun Planner → harus **403** (bukan 404).
@@ -305,18 +303,17 @@ Kolom temuan dipakai di lembar observasi §9.
 
 **Login:** `it.manager@pmb.demo`
 
-1. Menu **Pengguna / Role & Permission / Proyek** tampil di sidebar.
-2. `/admin/projects` → klik **Sinkronkan dari ARKFLEET**.
-   - Diharapkan: daftar proyek dari ARKFLEET masuk; status aktif saat ini `021C`, `022C`, `025C`, `APS`.
-   - Catat: daftar proyek dan status aktif diambil dari data aplikasi, jadi tetap tampil walau ARKFLEET
-     sedang tidak bisa dihubungi (ada peringatan di atas tabel).
-3. Uji kelola proyek aktif: geser tombol **Aktif** pada proyek `023C` menjadi aktif → muncul notifikasi;
-   lalu klik **Sinkronkan dari ARKFLEET** lagi.
-   - Diharapkan: `023C` **tetap aktif** setelah sinkronisasi (pilihan manual tidak tertimpa). Setelah itu
-     kembalikan `023C` ke non-aktif.
-4. `/admin/users` → **Tambah pengguna**: nama "Uji Planner 025C", email `uji.planner@pmb.demo`,
-   password ≥ 8 karakter, division `plant`, project scope `025C`, aktif.
-5. Assign role user baru: pilih role `planner` dengan project code `025C` → simpan.
+1. Menu **Users**, **Role & Permission**, dan **Projects** tampil di sidebar.
+2. Buka **Projects** → klik **Sync from ARKFLEET**.
+   - Diharapkan: daftar proyek terbarui; yang **Active** saat ini `021C`, `022C`, `025C`, `APS`.
+   - Bila ARKFLEET tidak terjangkau, muncul peringatan **ARKFLEET unreachable**; daftar tetap tampil
+     dari data tersimpan.
+3. Uji kelola proyek aktif: pada baris `023C`, aktifkan sakelar **Active** (notifikasi aktivasi);
+   lalu **Sync from ARKFLEET** lagi.
+   - Diharapkan: `023C` **tetap Active** (pilihan manual tidak tertimpa). Kemudian nonaktifkan lagi (**Off**).
+4. Buka **Users** → **Add User**: nama "Uji Planner 025C", email `uji.planner@pmb.demo`,
+   password ≥ 8 karakter, division plant, project scope 025C, aktif.
+5. Assign peran user baru: peran **Planner** dengan scope proyek 025C → simpan.
 6. Uji login akun baru itu di jendela lain → berhasil, menu Plant Requests + DMBD muncul.
 7. `/admin/roles` → lihat daftar permission per role → tambah/hapus satu permission pada role
    `planner`, lalu login ulang sebagai planner untuk melihat efeknya.
@@ -336,22 +333,21 @@ Finance Director).
 **Login:** `planner@pmb.demo` (untuk ubah status), lalu ulangi sebagai `mechanic@pmb.demo` (uji batas)
 
 1. Buka menu **DMBD** → judul menampilkan tanggal laporan dan nama proyek yang sedang dilihat.
-2. Kenali baris filternya: kotak **cari unit** (kode/deskripsi), filter **status**
-   (Semua/RFU/Standby/Breakdown), filter **proyek** (termasuk **Semua proyek**), dan ringkasan
-   jumlah RFU / Standby / Breakdown hari ini.
+2. Kenali filter: **Search unit code / description**, filter status (**All Statuses** / **Ready for Use**
+   / **Standby** / **Breakdown**), filter proyek (**All Projects** bila tersedia), dan ringkasan
+   **Today:** dengan tag jumlah per status.
 3. Daftar unit sekarang **berhalaman** (25/50/100 per halaman, bisa diganti di bawah tabel) —
    tidak lagi menampilkan ratusan unit sekaligus. Coba pindah halaman dan pakai kotak pencarian
    untuk menemukan **E 062**.
 4. Ubah status unit lain menjadi **Standby** lewat dropdown → tersimpan otomatis.
 5. Ubah status **E 062** menjadi **Breakdown**:
-   - Diharapkan: muncul jendela **Catatan Breakdown** (wajib, minimal 5 karakter). Isi penyebabnya,
-     mis. "Hose bocor, menunggu part" → simpan.
-   - Kolom **Catatan Breakdown** pada baris E 062 kini terisi; klik teksnya untuk melihat catatan penuh.
-6. Klik tombol **Ubah Catatan** pada baris yang sama → ubah isi catatan (status tidak berubah) → simpan.
-7. Pakai filter **status = Breakdown** → hanya unit berstatus breakdown yang tampil; ringkasan di atas
-   tabel tetap menunjukkan total seluruh unit (bukan hanya halaman/filter aktif).
-8. Login sebagai `mechanic@pmb.demo` → layar DMBD **hanya bisa dilihat**: status tampil sebagai label
-   (tanpa dropdown), kolom catatan tetap terbaca, dan tombol Aksi tidak muncul.
+   - Diharapkan: modal **Breakdown Cause Note** dengan field **Note** (wajib, minimal 5 karakter).
+     Isi mis. "Hose bocor, menunggu part" → **Save**.
+   - Kolom **Breakdown Notes** pada baris E 062 terisi; teks panjang bisa dibaca lewat tooltip.
+6. Klik **Edit Note** (atau **Add Note**) pada baris yang sama → ubah catatan → **Save**.
+7. Filter status **Breakdown** → hanya unit breakdown; ringkasan **Today:** tetap total seluruh unit.
+8. Login sebagai `mechanic@pmb.demo` → DMBD **hanya lihat**: status sebagai tag (tanpa dropdown),
+   **Breakdown Notes** terbaca, kolom **Actions** tidak muncul.
 
 **Cara memastikan (tanpa alat teknis)**
 - Buka ulang halaman **DMBD**: status dan catatan yang baru diisi tetap ada untuk tanggal hari ini.
@@ -364,46 +360,37 @@ Finance Director).
 
 **Login:** `planner@pmb.demo` (scope 022C)
 
-1. Menu **Plant Requests** → tombol **Buat Request** → halaman `/plant-requests/create`.
-2. Bagian **1. Unit / Equipment**: pilih unit `E 062 — …` (ketik "E 062" pada dropdown pencarian).
-   - Diharapkan: field **Unit Code** dan **Plant Type** terisi otomatis (read-only).
-3. Isi **SAP MR ID** dengan angka > 0, mis. `900001`.
-   - Penting: nomor MR adalah **syarat submit**; draft dengan MR ID 0 tidak bisa di-submit.
-4. Bagian **2. Budget Allocation**: pilih `E 062 · DIGGER` (alokasi Rp 120 jt, sisa penuh),
-   perhatikan panel ringkas Alokasi / Komitmen+Aktual / Sisa / Penggunaan.
-5. Bagian **3. Line Items**: baris pertama sudah tersedia.
-   - Part Number: masukkan kode item SAP yang benar, mis. `SP-A30T` → klik **Cari harga** (atau
-     biarkan; harga juga dicari otomatis saat field ditinggalkan). Perhatikan **tag sumber harga**
-     (SAP Price / Tabulation / Manual / Belum ada) dan **referensi harga** di sampingnya, mis.
-     `PO 260206551 · 2026-09-22` atau `Harga beli terakhir (item master SAP)`.
-   - Uji juga part yang tidak punya harga di SAP (mis. `CE-SMALLFILTER`): hasilnya 0,00 dengan
-     penanda "Belum ada" dan pesan *Harga tidak ditemukan — isi manual*. Ini bukan error.
-   - Nama Material, UOM (EA/PCS/SET/…), Qty, Harga Estimasi (boleh diisi manual).
-   - Klik **Tambah baris** untuk item kedua (mis. P/N `SEAL-KIT-002`, qty 2), lalu isi harganya.
-6. Bagian **4. Ringkasan**: sekaligus cek **Estimasi Total** dan **Proyeksi Penggunaan Budget**
-   (bar progress: hijau < 90%, kuning 90–110%, merah > 110%).
-7. Klik **Simpan Draft** → diarahkan ke halaman detail request dengan nomor `PMB-REQ-202609-0001`.
-8. Pada halaman detail klik **Submit**.
-   - Diharapkan: status berubah `draft` → `pending_pm`, muncul baris approval step 1
-     (`project_manager`) dan step 2 (`plant_manager`) dengan keputusan `pending`.
+1. Pastikan topbar **Project** = 022C. Menu **Plant Requests** → **Create Request**.
+2. Bagian **1. Unit / Equipment**: **Select Unit** → pilih `E 062 — …` (cari "E 062").
+   - **Unit Code** dan **Plant Type** terisi otomatis (read-only).
+3. **SAP MR ID** > 0, mis. `900001` (bantuan layar: *Enter after MR is created in SAP — use 0 for draft*).
+   - MR wajib sebelum **Submit**; MR = 0 hanya untuk draf.
+4. Bagian **2. Project Budget**: panel **Ceiling (allocation + carry forward)**, **Committed + Actual**,
+   **Project budget remaining**, **Utilization** (progress bar).
+5. Bagian **3. Line Items**:
+   - **Part Number** mis. `SP-A30T` → **Look up price** (atau otomatis saat field ditinggalkan).
+     Tag sumber: **SAP Price** / **Tabulation** / **Manual** / **None**; referensi harga di samping.
+   - Part tanpa harga: tag **None**, teks *Price not found — enter manually* — bukan error.
+   - Isi **Material Name**, **UOM**, **Qty**, **Estimated Price** bila perlu.
+   - **Add line** untuk baris kedua.
+6. Bagian **4. Summary**: **Estimated Total**, **Projected Budget Utilization** (progress + **Within limit**
+   / **Near limit** / **Over limit**).
+7. **Save Draft** → detail request `PMB-REQ-202609-0001`.
+8. Klik **Submit** → status **Pending Project Manager**, lalu menunggu **Pending Plant Manager**.
 
 **Cara memastikan (tanpa alat teknis)**
-- Daftar **Plant Requests** menampilkan nomor `PMB-REQ-…`, unit, total estimasi, dan status terbaru.
-- Halaman **Anggaran** untuk proyek yang sama menunjukkan kolom Komitmen bertambah sebesar total request.
-- Halaman detail request menampilkan dua baris persetujuan (Project Manager lalu Plant Manager)
-  dengan status menunggu.
+- Daftar **Plant Requests**: nomor, **Unit**, **Total Est.**, status berlabel Inggris (mis. **Draft**).
+- **Budget** proyek yang sama: kolom **Committed** naik sesuai total request.
 
 **Uji negatif 1 — melewati batas 110%**
-Buat request baru pada alokasi **AC 035** (Rp 25 jt) dengan total ≈ Rp 30 jt lalu **Submit**.
-- Diharapkan: sistem **menolak submit** dan mengarahkan ke halaman Overbudget dengan parameter
-  (plant request, alokasi, jumlah, % kelebihan). Catat apakah form pengajuan overbudget tersedia.
+Buat request baru dengan **Estimated Total** mendekati seluruh pagu 022C (mis. total besar yang
+membuat **Projected Budget Utilization** melebihi cap) lalu coba **Submit**.
+- Diharapkan: diarahkan ke alur **Overbudget** dengan form **Submit Overbudget Request** (S-11).
 
 **Uji negatif 2 — submit tanpa MR**
-Buat draft dengan SAP MR ID = 0 → klik Submit → diharapkan ditolak (HTTP 403 / tak ada akses).
-**Perbaikan alur (v1.2):** draft seperti ini sekarang bisa diperbaiki — buka detailnya, klik
-**Ubah Draft**, isi SAP MR ID dan/atau perbaiki baris material, lalu **Simpan Perubahan**; setelah itu
-Submit berhasil. Uji juga: draft bisa diedit **hanya oleh pembuatnya** (planner lain di proyek yang
-sama harus mendapat 403), dan **hanya selama status `draft`** (setelah submit tombol Ubah Draft hilang).
+Draf dengan SAP MR ID = 0 → **Submit** ditolak. Perbaiki lewat **Edit Draft** → isi MR / baris →
+**Save Changes** → **Submit** lagi. Draf hanya bisa diedit **pembuat** dan selama status **Draft**
+(setelah submit, **Edit Draft** hilang).
 
 **Uji batas scope proyek:** setelah login sebagai planner 022C, coba buka
 `/plant-requests/create?project_code=021C` → daftar unit/alokasi mengikuti konteks proyek;
@@ -417,17 +404,12 @@ catat apakah user bisa bekerja di luar scope-nya (temuan penting untuk audit).
 
 1. Buka menu **Approvals** di sidebar (menu ini muncul untuk role approver, dengan badge jumlah
    approval yang menunggu).
-2. Diharapkan: tabel berisi 1 baris `PlantRequest` dengan role `project_manager`, status pending.
-3. Klik **Decide** → pilih **Approve** → isi Remarks "Sesuai kebutuhan breakdown E 062" → OK.
-4. Buka `/plant-requests/{id}` untuk melihat status.
-   - Diharapkan: status `pending_plant_mgr`, approval step 1 = `approved` (dengan nama approver),
-     step 2 masih `pending`.
-5. Uji **Return**: ulangi pada request lain, pilih **Return** dengan alasan.
-   - Diharapkan: status request kembali `draft` dan komitmen anggaran **dibalik** (ledger
-     `reversal` positif muncul kembali).
-6. Uji **Reject**: request dengan status `rejected`, komitmen juga dibalik.
-7. Uji negatif: coba Approve baris step 2 (role `plant_manager`) sebagai PM → tidak boleh
-   (tombol tidak tampil / ditolak).
+2. Tabel **Pending Approvals**: satu baris tipe PlantRequest, kolom **Role** **Project Manager**.
+3. **Decide** → modal **Approval Decision** → **Approve** → **Remarks** → OK.
+4. Buka detail Plant Request → status **Pending Plant Manager**; langkah Project Manager disetujui.
+5. Uji **Return** pada request lain → status kembali **Draft**; komitmen anggaran dibalik.
+6. Uji **Reject** → status **Rejected**; komitmen dibalik.
+7. Uji negatif: Project Manager tidak bisa memutuskan baris yang memerlukan **Plant Manager**.
 
 ---
 
@@ -435,12 +417,11 @@ catat apakah user bisa bekerja di luar scope-nya (temuan penting untuk audit).
 
 **Login:** `plant.manager@pmb.demo` (022C)
 
-1. Menu **Approvals** → baris `PlantRequest` role `plant_manager` → **Decide → Approve**.
-2. Buka detail request → status akhir **`approved`**.
-   - Diharapkan: kedua baris approval `approved`, dokumen siap diteruskan ke pengadaan.
-3. Perhatikan: **belum ada** tombol lanjutan untuk membuat PR / mengubah status ke
-   `pr_created` / `po_created` / `received` — catat sebagai temuan (status tersebut ada di
-   model tetapi belum punya jalur UI).
+1. Menu **Approvals** → baris PlantRequest, **Role** **Plant Manager** → **Decide** → **Approve**.
+2. Detail request → status **Approved**; siap ke pengadaan.
+3. Perhatikan tombol **Create PR in SAP** (Procurement Admin/IT Manager) dan **Mark Goods Received**
+   (peran logistic/plant sesuai izin) serta kartu **Procurement History** — jalur lanjutan setelah
+   approved (lihat juga B-8 di §10).
 
 ---
 
@@ -448,13 +429,11 @@ catat apakah user bisa bekerja di luar scope-nya (temuan penting untuk audit).
 
 **Login:** `buyer@pmb.demo`
 
-1. Menu **Tabulation Bid** → klik tombol **Buat Bid** (kanan atas; hanya muncul untuk Buyer).
-2. Isi **SAP PR ID** (mis. `PR-100001` — data uji). Untuk setiap vendor isi:
-   **Kode Vendor**, **Nama Vendor**, **Harga**, **Ketersediaan Stok** (Ready / Indent / Partial),
-   **Syarat Pembayaran** (opsional), **Catatan** (opsional).
-3. Baris vendor mulai dengan 2. Klik **Tambah Vendor** untuk menambah (maksimum 3) atau **Hapus**
-   pada baris ketiga untuk kembali ke 2.
-4. Klik **Simpan**.
+1. Menu **Tabulation Bids** → **Create Bid** (hanya Buyer).
+2. **SAP PR ID** (mis. `PR-100001`). Per vendor: **Vendor Code**, **Vendor Name**, **Price**,
+   **Stock Availability** (**Ready** / **Indent** / **Partial**), **Payment Terms**, **Remarks**.
+3. Mulai dengan 2 vendor. **Add Vendor** (maks. 3) atau **Remove** pada vendor ke-3.
+4. Klik **Save**.
    - Diharapkan berhasil: nomor `PMB-BID-202609-0001`, status `pending_proc_mgr`, vendor otomatis
      diurutkan menurut harga (rank 1 = termurah), dan satu approval untuk `procurement_manager`.
    - Kalau ada field yang kosong, pesan validasi muncul di bawah field (tidak lagi gagal senyap).
@@ -487,15 +466,11 @@ yang bisa review & award; Create PO untuk Procurement Admin).
 1. Buka bid yang sudah di-award (`/tabulation-bids/{id}`). Halaman menampilkan **vendor pemenang**
    beserta harga, dan tombol **Create PO** (muncul hanya untuk Procurement Admin yang bukan pembuat
    bid — pemisahan tugas).
-2. Klik **Create PO** → muncul konfirmasi: *"Tindakan ini akan membuat Purchase Order nyata di SAP B1
-   melalui antrian sinkronisasi…"*.
-3. **Peringatan:** klik **Buat PO** hanya bila Iwan sudah menyetujui penulisan ke SAP. Setelah klik:
-   job `CreateSapPurchaseOrder` masuk antrean `sap-writes`; bila sukses, `sap_po_id` terisi dan status
-   bid menjadi `po_created`.
-4. Buka `/sap/sync-dashboard` (IT Manager / Procurement Manager / Finance Director) → baris log
-   `create_po` dengan status success/failed.
-5. Kalau SAP belum siap, job gagal dan `sap_sync_failed` menjadi true dengan `sap_po_id = PENDING_SAP`
-   — catat pesan errornya di lembar temuan (ini jalur yang benar, bukan crash).
+2. **Create PO** → konfirmasi **Create Purchase Order in SAP?** dengan teks *This will create a real
+   Purchase Order in SAP B1 via the sync queue…* → **Create PO** hanya setelah Iwan menyetujui tulis SAP.
+3. Buka menu **SAP Sync** (IT Manager / Procurement Manager / Finance Director) → log aktivitas
+   **create_po** sukses atau gagal.
+4. Bila SAP belum siap, sinkron gagal — catat pesan error di lembar temuan (perilaku normal, bukan crash).
 
 **Uji negatif:** login sebagai Buyer (pembuat bid) lalu buka bid yang sama → tombol **Create PO**
 tidak muncul; memaksa URL/aksi tetap ditolak server.
@@ -506,12 +481,11 @@ tidak muncul; memaksa URL/aksi tetap ditolak server.
 
 **Login:** `president.director@pmb.demo`, lalu `logistic.foreman@pmb.demo`
 
-1. Sebagai President Director: buka `/dashboard`, `/budget`, `/reports/*`.
-   - Izin `po.approve` ada di database tetapi **belum ada halaman approval PO** (approval PO
-     saat ini dilakukan di SAP). Catat sebagai temuan.
-2. Sebagai Logistic Foreman: menu yang muncul hanya Dashboard, Anggaran, DMBD, Reports.
-   Izin `logistic.stock_check` dan `grpo.verify` belum punya halaman — catat sebagai temuan
-   (kebutuhan alur "cek stok → buat PR" belum tersedia di UI).
+1. Sebagai President Director: buka **Dashboard**, **Budget**, **Reports**.
+   - Hak menyetujui PO ada di sistem tetapi **belum ada layar approval PO** (approval PO di SAP).
+     Catat sebagai temuan.
+2. Sebagai Logistic Foreman: menu **Dashboard**, **Budget**, **DMBD**, **Reports**.
+   Sebagian hak logistic (cek stok, verifikasi GRPO) belum punya layar — catat sebagai temuan.
 
 ---
 
@@ -519,97 +493,73 @@ tidak muncul; memaksa URL/aksi tetap ditolak server.
 
 1. Dari **S-04 uji negatif 1** sistem mengarahkan ke `/overbudget/create?...` dengan data terisi
    otomatis (plant request, alokasi, jumlah, % kelebihan).
-2. Diharapkan: muncul kartu **Ajukan Overbudget** berisi ringkasan angka + kolom **Justifikasi**
-   (wajib, minimal 10 karakter).
-3. Isi justifikasi (mis. "Harga naik karena kurs; unit E 062 harus segera RFU") → klik
-   **Ajukan Overbudget**. Diharapkan: nomor `PMB-OB-202609-0001`, status `pending_fin_dir`,
-   dan muncul approval untuk `finance_director` lalu `operation_director`.
-4. Login **Finance Director** → `/approvals` → baris `OverbudgetRequest` → **Approve**
-   (uji juga **Reject** pada request kedua: status `rejected`, tidak ada entri ledger).
-5. Login **Operation Director** → `/approvals` → **Approve**.
-   - Diharapkan setelah kedua approval: status `approved`, ledger mendapat entri **`overbudget`**
-     positif, dan plant request yang tertahan berubah dari `draft` menjadi `pending_pm`
-     (lanjut ke S-05).
-6. Buka `/overbudget` sebagai Planner → baris request terlihat dengan kolom Jumlah, Over %, Status.
-   Tombol **Ajukan Overbudget Baru** juga tersedia untuk Planner/Mechanic.
+2. Kartu **Submit Overbudget Request** dengan ringkasan angka + field **Justification** (wajib, min. 10
+   karakter).
+3. Isi justifikasi → **Submit Overbudget** → nomor `PMB-OB-202609-0001`, status **Pending Finance
+   Director**, lalu menunggu **Operation Director**.
+4. Login **Finance Director** → **Approvals** → OverbudgetRequest → **Approve** (uji **Reject** pada
+   request kedua → **Rejected**).
+5. Login **Operation Director** → **Approve**.
+   - Setelah keduanya: status **Approved**; plant request tertahan lanjut ke **Pending Project Manager**
+     (S-05); pagu efektif naik.
+6. Sebagai Planner, menu **Overbudget** → tabel **Overbudget Requests** (kolom **Amount**, **Over %**,
+   **Status**); tombol **New Overbudget Request**.
 
 **Cara memastikan (tanpa alat teknis)**
-- Halaman **Overbudget** menampilkan nomor `PMB-OB-…`, jumlah, % kelebihan, dan status terbaru.
-- Setelah kedua approval, halaman **Anggaran** menunjukkan tambahan anggaran, dan plant request yang
-  tertahan berubah menjadi menunggu Project Manager.
+- **Budget** menunjukkan penyesuaian pagu/pemakaian setelah overbudget disetujui.
 
 ---
 
 ### S-12 · Cancellation (Plant ↔ Procurement)
 
-1. Buka `/plant-requests/{id}` untuk request yang sudah lewat approval → tombol
-   **Ajukan Pembatalan** (muncul untuk Planner, Mechanic, Project Manager, Plant Manager, dan
-   pihak Procurement).
-2. Klik **Ajukan Pembatalan** → modal berisi **Tahap PO** (Created / Approved / Sent, default
-   Created) dan **Alasan** (wajib) → klik **Ajukan**.
-   - Diharapkan: nomor permintaan muncul di `/cancellation` dengan status `pending`,
-     `initiated_by` = plant, dan `budget_reversal_amount` = total request.
-3. Login akun **pihak lawan** (kalau plant yang mengajukan → Procurement: Buyer / Procurement
-   Manager / Procurement Admin) → `/cancellation` → kolom Aksi menampilkan tombol **Agree** →
-   klik.
-   - Diharapkan: status cancellation `approved`, plant request menjadi `cancelled`,
-     **komitmen anggaran dibalik** (ledger `reversal` positif).
-4. Uji aturan stage-gate: ajukan pembatalan dengan **Tahap PO = Sent** sebagai Plant →
-   ditolak server (pesan "Cannot cancel: PO has been sent", HTTP 422). Pembatalan PO yang sudah
-   `sent` hanya bisa lewat Procurement.
-5. Uji pembatasan: buka `/cancellation` sebagai Planner dan coba setujui permintaan yang
-   diajukan Procurement → tombol **Agree** tidak muncul (hanya pihak lawan yang boleh).
+1. Detail Plant Request yang sudah disetujui → **Request Cancellation** (peran plant/procurement
+   sesuai izin).
+2. Modal **Request Cancellation**: **PO Stage** (**Created** / **Approved** / **Sent**), **Reason**
+   (wajib) → **Submit**. Peringatan: *Plant cannot cancel after PO is Sent — the server will reject the request.*
+3. Menu **Cancellation** → baris **Cancellation Requests** (**Initiated By**, **PO Stage**,
+   **Reversal Amount**, **Status** **Pending**).
+4. Login pihak lawan (Plant mengajukan → Procurement) → **Agree**.
+   - Plant Request **Cancelled**; **Committed** di **Budget** turun.
+5. Uji **PO Stage** = **Sent** sebagai Plant → ditolak (pesan server bahwa PO sudah **Sent**).
+6. Planner tidak melihat **Agree** pada permintaan yang harus disetujui Procurement.
 
 **Cara memastikan (tanpa alat teknis)**
-- Halaman **Cancellation** menampilkan baris permintaan (pengaju, tahap PO, jumlah pembatalan, status).
-- Setelah disetujui: status Plant Request menjadi **cancelled**, dan kolom Komitmen di halaman
-  Anggaran turun sesuai nilai pembatalan.
+- Status Plant Request **Cancelled**; angka **Budget** konsisten setelah pembatalan.
 
 ---
 
 ### S-13 · Interchange (Procurement + sign-off Plant)
 
-1. Buka `/interchange` sebagai **Buyer** → kartu **Tambah Mapping** tampil di atas tabel.
-2. Isi **Genuine P/N**, **OEM P/N**, **Nama Material** (semua wajib) → klik **Tambah Mapping**.
-   - Diharapkan: baris baru muncul dengan penanda SAP **Pending** dan kolom Sign-off kosong.
-3. Login sebagai **Plant Manager** (atau AML Manager) → `/interchange` → klik **Sign-off Teknis**
-   pada baris tersebut.
-   - Diharapkan: `technical_signoff_by` terisi nama penanda tangan, job `SyncInterchangeToSap`
-     masuk antrean, penanda SAP berubah setelah job sukses.
-4. Uji negatif: sebagai **Buyer** (pembuat mapping) tombol **Sign-off Teknis** tidak muncul;
-   memaksa aksi ditolak server.
+1. Menu **Interchange** sebagai **Buyer** → kartu **Add Mapping**.
+2. **Genuine P/N**, **OEM P/N**, **Material Name** → **Add Mapping**.
+   - Baris baru: kolom **SAP** tag **Pending**; **Signed off by** kosong.
+3. Login **Plant Manager** atau **AML Manager** → **Technical Sign-off** pada baris tersebut.
+   - **Signed off by** terisi; **SAP** menjadi **Synced** setelah sinkronisasi berhasil.
+4. Buyer (pembuat mapping) tidak melihat **Technical Sign-off**.
 
 ---
 
 ### S-14 · Laporan, unduh PDF/CSV, dan batas izin unduh (v1.12)
 
-1. Klik menu **Reports** → terbuka **daftar laporan** (`/reports`) berisi tiga laporan.
-2. **Konsumsi Anggaran** → `/reports/budget-consumption?project_code=022C&month=2026-09`
-   → ringkasan **per proyek** (Pagu / Komitmen / Aktual / Sisa / % Terpakai) terisi sesuai catatan
-     anggaran, dan bagian rincian **per unit** terisi dari data permintaan (kosong bila belum ada
-     permintaan pada periode itu).
-3. **Biaya Peralatan** → `/reports/equipment-cost?project_code=022C&month=2026-09`.
-4. **Kinerja Vendor** → `/reports/vendor-performance` → daftar vendor + % indent.
-5. **Uji unduh sebagai Finance Director** (`finance.director@pmb.demo`, punya izin unduh):
-   - Tekan **Unduh PDF** dan **Unduh CSV** pada ketiga laporan → berkas benar-benar terunduh
-     dan isinya ada barisnya (bukan halaman kosong).
-6. **Uji batas izin sebagai Planner** (`planner@pmb.demo`, **tanpa** izin unduh):
-   - Laporan tetap bisa **dibuka** di layar, tetapi tombol unduh **tidak muncul**.
-   - Bila alamat unduh dibuka langsung (`/reports/budget-consumption/export/pdf`) →
-     **ditolak (tidak boleh terunduh)**. Ini yang benar: melihat boleh, mengunduh tidak.
-7. Alamat dengan jenis laporan yang salah (mis. `/reports/laporan-ngawur/export/pdf`) →
-   pesan "jenis laporan tidak ditemukan" (bukan halaman rusak).
+1. Menu **Reports** → **Report List** — teks *Select a report to view details and download data.*
+   Tiga tautan: **Budget Consumption**, **Vendor Performance**, **Equipment Cost**.
+2. **Budget Consumption** (konteks proyek 022C, bulan 2026-09) → ringkasan per proyek; rincian per
+   unit dari permintaan.
+3. **Equipment Cost** dan **Vendor Performance** — buka masing-masing layar laporan.
+4. Sebagai **Finance Director** (boleh unduh): **Download PDF** dan **Download CSV** pada ketiga
+   laporan → berkas terunduh berisi data.
+5. Sebagai **Planner** (tanpa hak unduh): laporan tetap terbuka; tombol **Download PDF** / **Download CSV**
+   **tidak muncul**; percobaan unduh langsung ditolak.
+6. Jenis laporan tidak dikenal → pesan **Report type not found.** (bukan halaman rusak).
 
 ---
 
 ### S-15 · Modul Beta (Component & Cannibal) — opsional
 
-Modul ini di balik feature flag `FEATURE_CANNIBAL_BETA` (default **nonaktif** → `/components`
-dan `/cannibal-requests` menjawab **404**).
+Modul ini **nonaktif** secara default di lingkungan uji (halaman Components tidak tersedia).
 
-1. Catat kondisi default: AML Manager mencoba `/components` → 404.
-2. Bila Iwan ingin menguji: aktifkan flag di `.env` server, jalankan
-   `php artisan config:clear` + `php artisan optimize` di container `php82`, lalu ulangi:
+1. Catat kondisi default: AML Manager membuka menu **Components** → halaman tidak ditemukan.
+2. Bila Iwan ingin menguji: minta IT mengaktifkan fitur Beta di server, lalu ulangi:
    - AML Manager: `/components` → pohon komponen (housing → inner → critical) — perlu data
      terlebih dahulu (belum ada form input di UI).
    - Planner/Mechanic: `/cannibal-requests/create` → form memakai **Equipment ID & DMBD Entry ID
@@ -621,32 +571,26 @@ dan `/cannibal-requests` menjawab **404**).
 
 ### S-16 · Dashboard — angka nyata & peringatan keputusan (semua role)
 
-Tujuan: memastikan angka di Dashboard **sama** dengan halaman Anggaran, dan peringatan keputusan
-benar-benar terlihat oleh approver.
+Tujuan: angka Dashboard **sama** dengan **Budget**, dan peringatan approver terlihat.
 
-1. Login `finance.director@pmb.demo` → `/dashboard`.
-   - Diharapkan: Pagu **Rp 300,0 jt**, Terpakai **Rp 0**, Sisa **Rp 300,0 jt**, % Terpakai **0,0%**
-     (periode September 2026, proyek **000H**).
-   - Bagian **DMBD Hari Ini** **tidak muncul** untuk role ini (tidak berhak) — ini benar, bukan error.
-2. Login `project.manager@pmb.demo` → proyek **022C** → Pagu **Rp 295,0 jt** (3 alokasi),
-   **DMBD Hari Ini** menampilkan **194 unit aktif**.
-   - Karena role ini adalah *approver*, bagian **Permintaan** tetap muncul walaupun tidak berhak
-     membuat permintaan; bila ada permintaan menunggu, akan tampil kotak
-     **Perlu keputusan Anda: N** yang bisa diklik menuju halaman Approvals.
-3. Login `planner@pmb.demo` → bagian **Permintaan** muncul dengan hitungan draf/menunggu/disetujui;
-   bagian DMBD menampilkan hitungan **Ready for Use / Standby / Breakdown** hari ini
-   (0 sebelum ada catatan harian).
-4. Bandingkan **Pagu / Terpakai / Sisa** di Dashboard dengan halaman **Anggaran** proyek yang sama:
-   harus **sama persis** (keduanya memakai rumus resmi yang sama: pagu = alokasi + carry forward;
-   terpakai = komitmen + aktual). Bila berbeda, catat di lembar observasi.
-5. Klik salah satu kartu angka → berpindah ke halaman terkait (Anggaran, Permintaan, DMBD, Pengadaan,
-   Overbudget, Pembatalan, Interchange).
-6. **Uji konteks proyek (v1.14).** Login `finance.director@pmb.demo` → halaman terbuka di proyek
-   **021C** (bukan 000H) dan di header ada **pemilih proyek aktif**. Ganti ke **022C** → semua halaman
-   (Dashboard, Anggaran, DMBD, Laporan) ikut pindah ke 022C. Login `planner@pmb.demo` (terikat 022C) →
-   pemilih proyek **tidak muncul** dan proyeknya tetap 022C.
-7. Bila ARKFLEET sedang tidak bisa dihubungi, bagian DMBD menampilkan pesan
-   *Data unit sedang tidak tersedia* — bukan angka palsu, dan halaman tetap terbuka.
+1. Login `finance.director@pmb.demo` → **Dashboard** (pilih proyek di topbar bila perlu).
+   - Kartu **Budget …**: **Ceiling**, **Used**, **Remaining**, **% Used** konsisten dengan menu **Budget**.
+   - **DMBD Today** tidak muncul untuk peran ini — normal.
+2. Login `project.manager@pmb.demo` → topbar/tag **022C** → **Ceiling** ≈ Rp 295 jt (satu pagu proyek);
+   **DMBD Today** → *194 active units* bila data unit tersedia.
+   - Bagian **Requests** tampil untuk approver; bila ada tugas, peringatan **Awaiting your decision: N**
+     (klik → **Approvals**).
+3. Login `planner@pmb.demo` → **Requests**: **Draft**, **Waiting for Approval**, **Approved This Month**,
+   **Rejected**; **DMBD Today**: **Ready for Use**, **Standby**, **Breakdown**.
+4. Bandingkan **Ceiling / Used / Remaining** Dashboard dengan **Budget** — harus sama. Bila beda, catat
+   di lembar observasi.
+5. Klik kartu → navigasi ke **Budget**, **Plant Requests**, **DMBD**, **Procurement**, **Overbudget**,
+   **Cancellation**, **Interchange**.
+6. **Konteks proyek:** Finance Director membuka di **021C** (proyek aktif pertama); topbar **Project**
+   (tooltip *Applies to all pages*) → ganti **022C** → Dashboard/Budget/DMBD/Reports ikut. Planner 022C:
+   pemilih **Project** tidak muncul.
+7. Bila master unit tidak tersedia: Dashboard **DMBD Today** → *Unit data is currently unavailable*;
+   form Plant Request bisa memperingatkan *Unit data unavailable (check ARKFLEET connection)*.
 
 ---
 
@@ -655,19 +599,21 @@ benar-benar terlihat oleh approver.
 | Waktu | Pelaku | Kegiatan | Skenario |
 |-------|--------|----------|----------|
 | 00:00–00:10 | Dea/moderator | Pre-flight §6, bagikan akun & URL | P-1…P-6 |
-| 00:10–00:25 | Finance Director | Periksa anggaran 022C, buat periode Okt, revisi 1 alokasi | S-01 |
+| 00:10–00:25 | Finance Director | Periksa Budget 022C, buat periode Okt, revisi pagu proyek | S-01 |
 | 00:25–00:35 | Planner | Update DMBD (1 breakdown, 2 standby) | S-03 |
 | 00:35–00:55 | Planner | Buat 2 plant request (satu wajar, satu melewati 110%) | S-04 |
 | 00:55–01:05 | Project Manager | Approve 1, return 1 | S-05 |
-| 01:05–01:15 | Plant Manager | Approve lanjutan sampai `approved` | S-06 |
+| 01:05–01:15 | Plant Manager | Approve lanjutan sampai status **Approved** | S-06 |
 | 01:15–01:30 | Buyer → Proc. Manager | Buat bid 3 vendor, approve, award termurah | S-07, S-08 |
 | 01:30–01:40 | IT Manager | Sinkron proyek, tambah user, cek SAP dashboard | S-02 |
 | 01:40–01:55 | Semua | Laporan + ekspor, catat temuan | S-14 |
 | 01:55–02:00 | Moderator | Rekap temuan & prioritas perbaikan | §9 |
 
-Hasil yang diharapkan di akhir sesi: **2 plant request** (1 `approved`, 1 kembali `draft`/`rejected`),
-**1 tabulation bid** `forwarded_admin` dengan award, **≥3 entri DMBD**, ledger berisi
-`allocation`, `commitment`, `reversal`, **1 periode Okt 2026**, dan **daftar temuan** terisi.
+Hasil yang diharapkan di akhir sesi: **2 permintaan suku cadang** (1 berstatus **Approved**,
+1 kembali ke **Draft** atau **Rejected**), **1 perbandingan vendor** yang sudah diteruskan ke
+Procurement Admin beserta pemenangnya, **minimal 3 catatan DMBD**, **catatan anggaran** proyek
+yang bertambah (pagu, komitmen, dan pembatalan bila ada), **1 periode Oktober 2026** pada halaman
+Budget, dan **daftar temuan** terisi.
 
 ---
 
@@ -698,23 +644,23 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 | # | Modul | Kondisi |
 |---|-------|---------|
 | B-1 | ✅ Overbudget | **Diperbaiki 22 Sep 2026** — form pengajuan (prefill + justifikasi) sudah tersedia; sebelumnya alur berhenti di halaman daftar |
-| B-2 | ✅ Cancellation | **Diperbaiki 22 Sep 2026** — tombol Ajukan Pembatalan di halaman Plant Request + tombol Agree di halaman Cancellation |
-| B-3 | ✅ Interchange | **Diperbaiki 22 Sep 2026** — form pemetaan Genuine↔OEM + tombol Sign-off Teknis |
+| B-2 | ✅ Cancellation | **Diperbaiki 22 Sep 2026** — tombol **Request Cancellation** di Plant Request + **Agree** di **Cancellation Requests** |
+| B-3 | ✅ Interchange | **Diperbaiki 22 Sep 2026** — **Add Mapping** + **Technical Sign-off** |
 | B-4 | ✅ Approvals | **Diperbaiki 22 Sep 2026 (v1.2)** — menu sidebar dengan badge jumlah pending, muncul untuk role approver |
-| B-5 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol "Buat Bid" + form vendor lengkap (ketersediaan stok, syarat pembayaran, catatan); sebelumnya penyimpanan selalu gagal validasi |
+| B-5 | ✅ Tabulation Bids | **Diperbaiki 22 Sep 2026** — **Create Bid** + form vendor (**Stock Availability**, **Payment Terms**, **Remarks**); sebelumnya penyimpanan gagal validasi |
 | B-6 | ✅ Tabulation Bid | **Diperbaiki 22 Sep 2026** — tombol Create PO tersedia (Procurement Admin, bukan pembuat bid) |
-| B-7 | ✅ Plant Request | **Diperbaiki 22 Sep 2026 (v1.2)** — ada halaman **Edit draft** (`/plant-requests/{id}/edit`, tombol "Ubah Draft"): unit, alokasi, SAP MR ID dan baris material bisa diperbaiki; hanya pembuat & hanya status `draft` |
-| B-8 | ✅ Status lanjutan | **Diperbaiki 22 Sep 2026 (v1.10)** — kartu Riwayat Pengadaan menampilkan nomor MR/PR/PO/GRPO; tombol "Buat PR di SAP" (Procurement Admin/IT Manager) dan "Tandai Barang Diterima" (Plant Manager/Project Manager/Logistic Foreman/PIC) memajukan status `approved` → `pr_created` → `po_created` → `received` langsung dari aplikasi. **Catatan:** menekan "Tandai Barang Diterima" mengubah status & mencatat nomor GRPO, tetapi angka **aktual** anggaran baru terisi otomatis setelah dokumen GRPO terbaca dari SAP — jadi wajar bila sesaat setelah ditekan angka anggaran masih tampil sebagai komitmen |
-| B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Catatan Breakdown** (wajib saat status Breakdown) + daftar unit berhalaman (25/50/100) dengan pencarian, filter status & filter proyek, serta ringkasan status harian |
+| B-7 | ✅ Plant Request | **Diperbaiki 22 Sep 2026 (v1.2)** — **Edit Draft** / **Save Changes**: unit, SAP MR ID, baris material; hanya pembuat & status **Draft** |
+| B-8 | ✅ Status lanjutan | **Diperbaiki 22 Sep 2026 (v1.10)** — kartu **Procurement History**; **Create PR in SAP** dan **Mark Goods Received** memajukan alur setelah **Approved**. **Catatan:** **Actual** di **Budget** bisa menyusul setelah GRPO terbaca dari SAP |
+| B-9 | ✅ DMBD | **Diperbaiki 22 Sep 2026** — kolom **Breakdown Notes** + paginasi 25/50/100, **All Statuses**, **All Projects**, ringkasan **Today:** |
 | B-10 | ⤴️ Digantikan | **22 Sep 2026** pilihan unit memakai daftar nyata ARKFLEET per proyek (SOLD/SCRAP dikecualikan) plus alokasi tingkat divisi. **Sejak 23 Sep 2026 cara ini DIGANTIKAN** oleh aturan baru: anggaran ditetapkan **global per proyek** — lihat catatan v1.15 di atas dan skenario S-01 |
-| B-11 | ✅ Harga | **Diperbaiki 22 Sep 2026** — harga diambil **per part number** dari SAP (harga PO terakhir, lalu harga beli terakhir di item master), dengan **referensi** yang terlihat (mis. "PO 260206551 · 2026-09-22"); bila SAP tidak punya data dipakai harga historis part yang sama dari permintaan sebelumnya, dan hanya kalau semuanya kosong harga 0,00 + "Belum ada". Sekaligus diperbaiki: koneksi baca SAP yang selama ini gagal sehingga pencarian harga selalu nihil |
-| B-12 | ✅ Laporan | **Diperbaiki 22 Sep 2026** — layar laporan kini punya tombol **Unduh PDF** dan **Unduh CSV** (tersembunyi untuk yang tidak berhak), tersedia untuk ketiga laporan (konsumsi anggaran, kinerja vendor, biaya peralatan). Izin unduh (**reports.export**) sekarang benar-benar ditegakkan: tanpa izin → ditolak, sedangkan melihat laporan tetap boleh |
+| B-11 | ✅ Harga | **Diperbaiki 22 Sep 2026** — **Look up price** per part dari SAP dengan referensi di layar; sumber **SAP Price** / **Tabulation** / **Manual** / **None**; teks *Price not found — enter manually* bila kosong |
+| B-12 | ✅ Reports | **Diperbaiki 22 Sep 2026** — **Download PDF** dan **Download CSV** pada **Budget Consumption**, **Vendor Performance**, **Equipment Cost**; tanpa hak unduh tombol tidak muncul |
 | B-13 | SAP Sync | Hanya bisa dibuka IT Manager, Procurement Manager, dan Finance Director |
 | B-14 | Beta | Modul **Components** dan **Cannibal** (fitur tahap Beta) belum diaktifkan, jadi halamannya belum bisa dibuka |
-| B-15 | ✅ Dashboard | **Diperbaiki 22 Sep 2026** — kartu "—" diganti angka nyata: pagu/terpakai/sisa/% terpakai bulan ini, jumlah permintaan per status, peringatan *Perlu keputusan Anda* untuk approver, pengadaan (bid menunggu review/PO), DMBD hari ini, dan tindakan menunggu. Angka dihitung dengan rumus yang sama seperti halaman Anggaran; kartu bisa diklik ke halaman terkait |
+| B-15 | ✅ Dashboard | **Diperbaiki 22 Sep 2026** — **Ceiling/Used/Remaining/% Used**, **Requests**, **Procurement**, **DMBD Today**, **Pending Actions**, peringatan **Awaiting your decision**; angka selaras dengan **Budget** |
 | B-16 | ✅ Batas akses | **Diperbaiki 22 Sep 2026** — membuat draf Plant Request kini hanya bisa dilakukan **Planner** dan **Mechanic** (menunya pun hanya muncul untuk mereka). Akun lain yang membuka alamat pembuatan draf akan ditolak dengan pesan yang jelas |
 | B-17 | ✅ Batas akses | **Diperbaiki 22 Sep 2026** — kelima halaman itu kini **hanya bisa dibuka peran yang terlibat** (lihat tabel menu per peran di bawah); role lain tidak melihat menunya dan alamatnya ditolak. Hak aksi tetap seperti sebelumnya |ibatasi adalah tindakannya (menyetujui, menetapkan vendor, menyimpan) |
-| B-18 | ✅ Proyek bawaan | **Diperbaiki 22 Sep 2026 (v1.14)** — akun tanpa ikatan proyek (direktur/pengadaan/IT) kini terbuka di **proyek aktif pertama** (saat ini **021C**, bukan 000H), dan di header muncul **pemilih proyek aktif** (021C/022C/025C/APS) yang berlaku untuk semua halaman. Layar DMBD ikut proyek terpilih (021C = 99 unit, bukan lagi 992 unit lintas proyek). Akun yang terikat proyek tetap terkunci — pemilihnya tidak muncul dan percobaan mengganti ditolak. Catatan: pilihan **Semua Proyek** di DMBD tetap ada, tetapi hanya untuk akun yang boleh berganti proyek |
+| B-18 | ✅ Proyek bawaan | **Diperbaiki 22 Sep 2026 (v1.14)** — akun global terbuka di proyek aktif pertama (**021C**); topbar **Project** (*Applies to all pages*) untuk 021C/022C/025C/APS. DMBD ikut proyek terpilih. Akun terikat proyek: pemilih tidak muncul. Di DMBD, **All Projects** hanya untuk yang boleh ganti proyek |
 | B-19 | ✅ Menu sidebar | **Diperbaiki 22 Sep 2026 (v1.2)** — Approvals, Overbudget, Cancellation, Interchange, dan SAP Sync sudah punya menu |
 
 ### Tabel menu per peran (setelah v1.13) — dipakai saat simulasi
@@ -722,18 +668,18 @@ di server, jadi skenario terkait kini normal, bukan temuan.
 Tanda ✓ = menu muncul dan halaman bisa dibuka. Tanda — = menu **tidak muncul** dan bila alamatnya
 dibuka langsung akan **ditolak** dengan pesan yang jelas.
 
-| Peran | Approvals | Tabulation Bid | Overbudget | Pembatalan | Interchange | Buat Permintaan |
-|-------|-----------|----------------|------------|------------|-------------|-----------------|
+| Peran | Approvals | Tabulation Bids | Overbudget | Cancellation | Interchange | Create Request |
+|-------|-----------|-----------------|------------|--------------|-------------|----------------|
 | Planner & Mechanic | — | — | ✓ | ✓ | — | ✓ |
 | Project Manager | ✓ | — | ✓ | ✓ | ✓ | — |
 | Plant Manager | ✓ | — | ✓ | ✓ | ✓ | — |
 | Buyer | — | ✓ | — | ✓ | ✓ | — |
-| Procurement Manager & Admin | ✓ | ✓ | — | ✓ | ✓ | — |
+| Procurement Manager & Procurement Admin | ✓ | ✓ | — | ✓ | ✓ | — |
 | Finance Director & Operation Director | ✓ | — | ✓ | — | — | — |
 | President Director | ✓ | ✓ | — | — | — | — |
-| AML Manager | ✓ | — | — | — | ✓ (untuk sign-off) | — |
+| AML Manager | ✓ | — | — | — | ✓ (sign-off) | — |
 | IT Manager | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| Logistic Foreman & PIC | — | — | — | — | — | — |
+| Logistic Foreman & Logistic PIC | — | — | — | — | — | — |
 
 Sumber aturan: rantai persetujuan dan pemisahan tugas di dokumen konsep. Bila kamu (penguji) merasa
 sebuah peran seharusnya boleh membuka salah satu halaman di atas, catat di lembar observasi — daftar
@@ -746,12 +692,12 @@ peran diambil dari satu tempat saja sehingga mudah disesuaikan.
 | Gejala | Sebab yang paling mungkin | Tindakan |
 |--------|---------------------------|----------|
 | Login gagal / muncul peringatan "terlalu banyak percobaan" | sistem membatasi 5 kali login per menit | tunggu 1 menit, lalu login lagi — jangan login berulang cepat |
-| Halaman anggaran/plant request menampilkan proyek **000H** atau unit dari banyak proyek | akun direktur/pengadaan tidak terikat satu proyek | pilih proyek yang dituju pada dropdown **Proyek** di halaman Anggaran |
-| Daftar unit kosong / muncul pesan "Data unit belum tersedia (cek koneksi ARKFLEET)" | koneksi ke sistem ARKFLEET (master unit) sedang bermasalah | laporkan ke Dea/IT; unit tidak bisa dipilih sampai koneksi pulih |
+| Halaman Budget/DMBD menampilkan proyek atau unit yang tidak diharapkan | akun direktur/pengadaan tidak terikat satu proyek | pilih **022C — …** di pemilih **Project** di topbar (tooltip *Applies to all pages*) |
+| Daftar unit kosong / peringatan *Unit data is currently unavailable* atau *Unit data unavailable (check ARKFLEET connection)* | koneksi ke ARKFLEET bermasalah | laporkan ke Dea/IT; unit tidak bisa dipilih sampai koneksi pulih |
 | Halaman putih atau muncul "Page expired" | sesi login kedaluwarsa | refresh halaman, login ulang |
 | Muncul "403" / akses ditolak padahal seharusnya boleh | akun tidak punya izin untuk proyek tersebut | laporkan ke Dea — periksa penempatan proyek akun Anda |
-| Submit Plant Request tidak jalan | nomor **SAP MR ID** masih 0, atau total melebihi batas 110% | buka detail draft → **Ubah Draft** → isi MR ID; kalau total melebihi batas, sistem mengarahkan ke alur Overbudget |
-| Periode anggaran tidak bisa direvisi | periode tersebut sudah ditutup (locked) atau bulan lalu | hanya bulan berjalan & bulan ke depan yang bisa direvisi Finance Director |
+| **Submit** Plant Request tidak jalan | **SAP MR ID** masih 0, atau total melebihi batas toleransi | **Edit Draft** → isi MR; bila melebihi cap, ikuti alur **Overbudget** |
+| Periode **Budget** tidak bisa direvisi | tab periode berlabel **locked** | hanya periode terbuka yang bisa **Revise** / **Edit Allocation** (Finance Director) |
 | Tombol yang dicari tidak muncul | tombol memang hanya tampil untuk peran tertentu/pada status tertentu | cek tabel §3 (peran) dan status dokumen di §12.1, lalu catat di lembar temuan bila menurut Anda seharusnya muncul |
 
 ---
@@ -760,18 +706,19 @@ peran diambil dari satu tempat saja sehingga mudah disesuaikan.
 
 ### 12.1 Status dokumen
 
-| Dokumen | Status | Arti |
-|---------|--------|------|
-| Plant Request | `draft` | baru dibuat, masih bisa diubah pembuatnya |
-| | `pending_pm` | menunggu Project Manager |
-| | `pending_plant_mgr` | menunggu Plant Manager |
-| | `approved` | kedua approval selesai, komitmen anggaran aktif |
-| | `rejected` / `cancelled` | ditolak / dibatalkan, komitmen dibalik |
-| | `pr_created`, `po_created`, `received` | disiapkan untuk tahap SAP (belum ada jalur UI) |
-| Tabulation Bid | `draft` → `pending_proc_mgr` → `forwarded_admin` → `po_created` → `closed` | urutan pengadaan |
-| Overbudget | `pending_fin_dir` → `pending_ops_dir` → `approved` / `rejected` | |
-| Cancellation | `pending` → `approved` / `rejected` | |
-| DMBD | `rfu` / `standby` / `breakdown` | kondisi unit harian |
+
+| Dokumen | Status di layar | Arti |
+|---------|-----------------|------|
+| Plant Request | Draft | baru dibuat, masih bisa diubah pembuatnya |
+| Plant Request | Pending Project Manager | menunggu persetujuan Project Manager |
+| Plant Request | Pending Plant Manager | menunggu persetujuan Plant Manager |
+| Plant Request | Approved | kedua persetujuan selesai; anggaran tercatat sebagai komitmen |
+| Plant Request | PR Created / PO Created / Received | sudah masuk tahap pengadaan di SAP; nomor PR/PO/GRPO tampil di kartu **Riwayat Pengadaan** |
+| Plant Request | Rejected / Cancelled | ditolak atau dibatalkan; komitmen anggaran dibalik |
+| Tabulation Bid | Draft → Pending Procurement Manager → Forwarded to Procurement Admin → PO Created → Closed | urutan pengadaan |
+| Overbudget | Pending Finance Director → Pending Operation Director → Approved / Rejected | jalur permintaan yang melebihi pagu |
+| Cancellation | Pending → Approved / Rejected | jalur pembatalan |
+| DMBD | Ready for Use / Standby / Breakdown | kondisi unit harian |
 
 ### 12.2 URL penting
 
@@ -779,11 +726,11 @@ peran diambil dari satu tempat saja sehingga mudah disesuaikan.
 |--------|-----|
 | Login | `/login` |
 | Dashboard | `/dashboard` |
-| Anggaran | `/budget` · `/budget/setting` |
+| Budget | `/budget` · `/budget/setting` |
 | Plant Request | `/plant-requests` · `/plant-requests/create` |
 | DMBD | `/dmbd` |
 | Approval | `/approvals` |
-| Tabulation Bid | `/tabulation-bids` · `/tabulation-bids/create` |
+| Tabulation Bids | `/tabulation-bids` · `/tabulation-bids/create` |
 | Overbudget | `/overbudget` |
 | Cancellation | `/cancellation` |
 | Interchange | `/interchange` |
@@ -819,5 +766,5 @@ peran diambil dari satu tempat saja sehingga mudah disesuaikan.
 
 ---
 
-*Dokumen ini dibuat dari pemeriksaan aplikasi dan data pada 22 September 2026.
+*Dokumen ini dibuat dari pemeriksaan aplikasi dan data pada 23 September 2026 (v1.16).
 Setiap kali aplikasi diperbarui, daftar batasan (§10) perlu diperiksa ulang oleh Dea.*
