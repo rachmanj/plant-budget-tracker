@@ -3,7 +3,6 @@
 namespace Tests\Feature\Budget;
 
 use App\Models\BudgetPeriod;
-use App\Services\Arkfleet\EquipmentCache;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesScopedUsers;
@@ -20,7 +19,7 @@ class BudgetSettingEquipmentTest extends TestCase
         $this->seed(RoleAndPermissionSeeder::class);
     }
 
-    public function test_setting_sends_equipment_only_for_selected_project_excluding_sold_and_scrap(): void
+    public function test_setting_does_not_load_equipment_list(): void
     {
         \App\Models\ProjectCache::create([
             'project_code' => 'MBL',
@@ -30,76 +29,52 @@ class BudgetSettingEquipmentTest extends TestCase
 
         $finance = $this->makeFinanceDirector();
 
-        $this->mock(EquipmentCache::class, function ($mock) {
-            $mock->shouldReceive('list')
-                ->once()
-                ->with(['project_code' => 'MBL'])
-                ->andReturn([
-                    'stale' => false,
-                    'data' => [
-                        $this->item(['id' => 1, 'unit_no' => 'E-002', 'plant_type' => 'DIGGER', 'unitstatus' => 'ACTIVE']),
-                        $this->item(['id' => 2, 'unit_no' => 'E-001', 'plant_type' => 'HAULER', 'unitstatus' => 'ACTIVE']),
-                        $this->item(['id' => 3, 'unit_no' => 'E-003', 'plant_type' => 'SUPPORT', 'unitstatus' => 'SOLD']),
-                        $this->item(['id' => 4, 'unit_no' => 'E-004', 'plant_type' => 'HEAVY EQUIPMENT', 'unitstatus' => 'SCRAP']),
-                        $this->item(['id' => 5, 'unit_no' => 'E-005', 'plant_type' => 'HEAVY EQUIPMENT', 'unitstatus' => 'ACTIVE']),
-                    ],
-                ]);
-        });
-
         $this->actingAs($finance)
             ->withoutVite()
             ->get('/budget/setting?project_code=MBL')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('stale', false)
-                ->where('equipment', [
-                    [
-                        'id' => 2,
-                        'unit_code' => 'E-001',
-                        'description' => 'Unit description',
-                        'plant_type' => 'HAULER',
-                        'unitstatus' => 'ACTIVE',
-                        'plant_type_mapped' => 'HAULER',
-                    ],
-                    [
-                        'id' => 1,
-                        'unit_code' => 'E-002',
-                        'description' => 'Unit description',
-                        'plant_type' => 'DIGGER',
-                        'unitstatus' => 'ACTIVE',
-                        'plant_type_mapped' => 'DIGGER',
-                    ],
-                    [
-                        'id' => 5,
-                        'unit_code' => 'E-005',
-                        'description' => 'Unit description',
-                        'plant_type' => 'HEAVY EQUIPMENT',
-                        'unitstatus' => 'ACTIVE',
-                        'plant_type_mapped' => null,
-                    ],
-                ])
+                ->component('Budget/Setting', false)
+                ->missing('equipment')
+                ->missing('stale')
+                ->has('existingAllocation')
             );
     }
 
-    public function test_setting_returns_stale_true_and_empty_equipment_when_arkfleet_unreachable(): void
+    public function test_setting_returns_existing_allocation_for_project_and_month(): void
     {
-        $finance = $this->makeFinanceDirector();
+        \App\Models\ProjectCache::create([
+            'project_code' => 'MBL',
+            'project_name' => 'MBL',
+            'is_active' => true,
+        ]);
 
-        $this->mock(EquipmentCache::class, function ($mock) {
-            $mock->shouldReceive('list')->andThrow(new \RuntimeException('ARKFLEET unreachable'));
-        });
+        $finance = $this->makeFinanceDirector();
+        $periodMonth = now()->startOfMonth();
+
+        $period = BudgetPeriod::factory()->create([
+            'project_code' => 'MBL',
+            'period_month' => $periodMonth,
+            'created_by' => $finance->id,
+            'status' => 'open',
+        ]);
+
+        app(\App\Services\Budget\BudgetEngine::class)->createAllocation($period, [
+            'allocated_amount' => '12500000.00',
+            'tolerance_pct' => '12.00',
+        ], $finance);
 
         $this->actingAs($finance)
             ->withoutVite()
-            ->get('/budget/setting?project_code=MBL')
+            ->get('/budget/setting?project_code=MBL&period_month='.$periodMonth->toDateString())
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('equipment', [])
-                ->where('stale', true)
+                ->where('existingAllocation.allocated_amount', '12500000.00')
+                ->where('existingAllocation.tolerance_pct', '12.00')
             );
     }
 
-    public function test_store_with_real_unit_persists_global_allocation_without_equipment_link(): void
+    public function test_store_creates_single_global_allocation_for_new_period(): void
     {
         $finance = $this->makeFinanceDirector();
 
@@ -108,15 +83,8 @@ class BudgetSettingEquipmentTest extends TestCase
             ->post('/budget', [
                 'project_code' => 'MBL',
                 'period_month' => now()->startOf('month')->toDateString(),
-                'allocations' => [
-                    [
-                        'equipment_id' => 501,
-                        'unit_code_cache' => 'E-501',
-                        'plant_type_cache' => 'HAULER',
-                        'allocated_amount' => 12000000,
-                        'tolerance_pct' => 10,
-                    ],
-                ],
+                'allocated_amount' => 12000000,
+                'tolerance_pct' => 10,
             ]);
 
         $response->assertRedirect(route('budget.index', ['project_code' => 'MBL']));
@@ -127,63 +95,10 @@ class BudgetSettingEquipmentTest extends TestCase
             'plant_type_cache' => null,
             'allocated_amount' => '12000000.00',
         ]);
-    }
 
-    public function test_store_division_row_persists_as_global_allocation(): void
-    {
-        $finance = $this->makeFinanceDirector();
-
-        $response = $this->actingAs($finance)
-            ->withoutVite()
-            ->post('/budget', [
-                'project_code' => 'MBL',
-                'period_month' => now()->startOf('month')->toDateString(),
-                'allocations' => [
-                    [
-                        'equipment_id' => null,
-                        'unit_code_cache' => null,
-                        'plant_type_cache' => 'SUPPORT',
-                        'allocated_amount' => 8000000,
-                        'tolerance_pct' => 10,
-                    ],
-                ],
-            ]);
-
-        $response->assertRedirect(route('budget.index', ['project_code' => 'MBL']));
-
-        $this->assertDatabaseHas('budget_allocations', [
-            'equipment_id' => null,
-            'unit_code_cache' => null,
-            'plant_type_cache' => null,
-            'allocated_amount' => '8000000.00',
-        ]);
-    }
-
-    public function test_store_rejects_duplicate_equipment_in_same_payload(): void
-    {
-        $finance = $this->makeFinanceDirector();
-
-        $this->actingAs($finance)
-            ->withoutVite()
-            ->post('/budget', [
-                'project_code' => 'MBL',
-                'period_month' => now()->startOf('month')->toDateString(),
-                'allocations' => [
-                    [
-                        'equipment_id' => 601,
-                        'unit_code_cache' => 'E-601',
-                        'plant_type_cache' => 'HAULER',
-                        'allocated_amount' => 1000000,
-                    ],
-                    [
-                        'equipment_id' => 601,
-                        'unit_code_cache' => 'E-601',
-                        'plant_type_cache' => 'HAULER',
-                        'allocated_amount' => 2000000,
-                    ],
-                ],
-            ])
-            ->assertInvalid(['allocations.1.equipment_id' => 'Unit ini dialokasikan lebih dari sekali dalam satu periode.']);
+        $period = BudgetPeriod::query()->where('project_code', 'MBL')->first();
+        $this->assertNotNull($period);
+        $this->assertCount(1, $period->allocations);
     }
 
     public function test_store_revises_existing_period_budget_instead_of_second_allocation_row(): void
@@ -207,14 +122,8 @@ class BudgetSettingEquipmentTest extends TestCase
             ->post('/budget', [
                 'project_code' => 'MBL',
                 'period_month' => $periodMonth->toDateString(),
-                'allocations' => [
-                    [
-                        'equipment_id' => 701,
-                        'unit_code_cache' => 'E-701',
-                        'plant_type_cache' => 'DIGGER',
-                        'allocated_amount' => 8000000,
-                    ],
-                ],
+                'allocated_amount' => 8000000,
+                'tolerance_pct' => 10,
             ])
             ->assertRedirect(route('budget.index', ['project_code' => 'MBL']));
 
@@ -223,7 +132,7 @@ class BudgetSettingEquipmentTest extends TestCase
         $this->assertSame('8000000.00', (string) $period->allocations->first()->allocated_amount);
     }
 
-    public function test_store_rejects_unit_row_without_plant_type(): void
+    public function test_store_rejects_empty_or_non_numeric_allocated_amount(): void
     {
         $finance = $this->makeFinanceDirector();
 
@@ -232,26 +141,57 @@ class BudgetSettingEquipmentTest extends TestCase
             ->post('/budget', [
                 'project_code' => 'MBL',
                 'period_month' => now()->startOf('month')->toDateString(),
-                'allocations' => [
-                    [
-                        'equipment_id' => 801,
-                        'unit_code_cache' => 'E-801',
-                        'allocated_amount' => 4000000,
-                    ],
-                ],
+                'tolerance_pct' => 10,
             ])
-            ->assertInvalid(['allocations.0.plant_type_cache' => 'Tipe plant wajib dipilih untuk alokasi per unit.']);
+            ->assertInvalid(['allocated_amount' => 'Total anggaran wajib diisi.']);
+
+        $this->actingAs($finance)
+            ->withoutVite()
+            ->post('/budget', [
+                'project_code' => 'MBL',
+                'period_month' => now()->startOf('month')->toDateString(),
+                'allocated_amount' => 'bukan-angka',
+                'tolerance_pct' => 10,
+            ])
+            ->assertInvalid(['allocated_amount' => 'Total anggaran harus berupa angka.']);
     }
 
-    private function item(array $overrides = []): array
+    public function test_store_rejects_tolerance_outside_zero_to_hundred(): void
     {
-        return array_merge([
-            'id' => 1,
-            'unit_no' => 'E-001',
-            'description' => 'Unit description',
-            'plant_type' => 'DIGGER',
-            'unitstatus' => 'ACTIVE',
-            'project_code' => 'MBL',
-        ], $overrides);
+        $finance = $this->makeFinanceDirector();
+
+        $this->actingAs($finance)
+            ->withoutVite()
+            ->post('/budget', [
+                'project_code' => 'MBL',
+                'period_month' => now()->startOf('month')->toDateString(),
+                'allocated_amount' => 1000000,
+                'tolerance_pct' => 101,
+            ])
+            ->assertInvalid(['tolerance_pct' => 'Toleransi maksimal 100%.']);
+
+        $this->actingAs($finance)
+            ->withoutVite()
+            ->post('/budget', [
+                'project_code' => 'MBL',
+                'period_month' => now()->startOf('month')->toDateString(),
+                'allocated_amount' => 1000000,
+                'tolerance_pct' => -1,
+            ])
+            ->assertInvalid(['tolerance_pct' => 'Toleransi minimal 0%.']);
+    }
+
+    public function test_budget_index_does_not_expose_equipment_on_setting_route(): void
+    {
+        $finance = $this->makeFinanceDirector();
+
+        $this->actingAs($finance)
+            ->withoutVite()
+            ->get('/budget?project_code=MBL')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Budget/Index', false)
+                ->missing('equipment')
+            );
     }
 }

@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Alert, Button, Card, DatePicker, Form, InputNumber, Select, Space, Tag, Typography } from 'antd';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, DatePicker, Form, Input, InputNumber, Select, Typography } from 'antd';
 import dayjs from 'dayjs';
 import AppLayout from '@/Layouts/AppLayout';
 
@@ -10,93 +9,100 @@ interface ProjectOption {
     project_name: string;
 }
 
-interface EquipmentOption {
-    id: number;
-    unit_code: string | null;
-    description: string | null;
-    plant_type: string | null;
-    unitstatus: string | null;
-    plant_type_mapped: 'DIGGER' | 'HAULER' | 'SUPPORT' | null;
-}
-
-interface AllocationInput {
-    equipment_id?: number | null;
-    unit_code_cache?: string | null;
-    plant_type_cache?: 'DIGGER' | 'HAULER' | 'SUPPORT' | null;
-    allocated_amount: number;
-    tolerance_pct?: number;
-    memo?: string;
+interface ExistingAllocation {
+    allocated_amount: string;
+    tolerance_pct: string;
+    memo: string | null;
 }
 
 interface BudgetSettingProps {
     projects: ProjectOption[];
     defaultProjectCode?: string | null;
-    equipment: EquipmentOption[];
-    stale?: boolean;
+    defaultPeriodMonth: string;
+    existingAllocation: ExistingAllocation | null;
 }
 
-const DIVISION_VALUE = '';
-
-function equipmentOptionLabel(item: EquipmentOption): string {
-    return `${item.unit_code ?? '—'} — ${item.description ?? '—'} (${item.unitstatus ?? '—'})`;
-}
-
-export default function BudgetSetting({ projects, defaultProjectCode, equipment, stale }: BudgetSettingProps) {
-    const { data, setData, post, processing, errors } = useForm<{
-        project_code: string;
-        period_month: string;
-        status: string;
-        allocations: AllocationInput[];
-    }>({
+export default function BudgetSetting({
+    projects,
+    defaultProjectCode,
+    defaultPeriodMonth,
+    existingAllocation,
+}: BudgetSettingProps) {
+    const { data, setData, post, processing, errors } = useForm({
         project_code: defaultProjectCode ?? projects[0]?.project_code ?? '',
-        period_month: dayjs().startOf('month').format('YYYY-MM-DD'),
+        period_month: defaultPeriodMonth,
         status: 'open',
-        allocations: [
-            {
-                equipment_id: null,
-                unit_code_cache: null,
-                allocated_amount: 0,
-                tolerance_pct: 10,
-                plant_type_cache: 'DIGGER',
-            },
-        ],
+        allocated_amount: existingAllocation
+            ? parseFloat(existingAllocation.allocated_amount)
+            : 0,
+        tolerance_pct: existingAllocation ? parseFloat(existingAllocation.tolerance_pct) : 10,
+        memo: existingAllocation?.memo ?? '',
     });
 
-    const equipmentGroups = useMemo(() => {
-        const groups = new Map<string, EquipmentOption[]>();
-        for (const item of equipment) {
-            const groupLabel = item.plant_type ?? 'Tidak diketahui';
-            if (!groups.has(groupLabel)) {
-                groups.set(groupLabel, []);
-            }
-            groups.get(groupLabel)!.push(item);
-        }
-        return Array.from(groups.entries());
-    }, [equipment]);
+    useEffect(() => {
+        setData({
+            project_code: defaultProjectCode ?? projects[0]?.project_code ?? '',
+            period_month: defaultPeriodMonth,
+            status: 'open',
+            allocated_amount: existingAllocation
+                ? parseFloat(existingAllocation.allocated_amount)
+                : 0,
+            tolerance_pct: existingAllocation ? parseFloat(existingAllocation.tolerance_pct) : 10,
+            memo: existingAllocation?.memo ?? '',
+        });
+    }, [defaultProjectCode, defaultPeriodMonth, existingAllocation]);
 
-    const equipmentById = useMemo(() => {
-        const map = new Map<number, EquipmentOption>();
-        for (const item of equipment) {
-            map.set(item.id, item);
-        }
-        return map;
-    }, [equipment]);
+    const isRevision = existingAllocation !== null;
 
     const submit = () => {
         post('/budget');
     };
 
+    const reloadContext = (projectCode: string, periodMonth: string) => {
+        router.get(
+            '/budget/setting',
+            { project_code: projectCode, period_month: periodMonth },
+            { preserveState: true, replace: true },
+        );
+    };
+
     const changeProject = (projectCode: string) => {
         setData('project_code', projectCode);
-        router.get('/budget/setting', { project_code: projectCode }, { preserveState: true, replace: true });
+        reloadContext(projectCode, data.period_month);
+    };
+
+    const changePeriodMonth = (value: dayjs.Dayjs | null) => {
+        const periodMonth = value ? value.startOf('month').format('YYYY-MM-DD') : '';
+        setData('period_month', periodMonth);
+        if (periodMonth) {
+            reloadContext(data.project_code, periodMonth);
+        }
     };
 
     return (
-        <AppLayout title="Buat Alokasi Anggaran">
-            <Head title="Buat Alokasi" />
+        <AppLayout title="Atur Pagu Anggaran">
+            <Head title="Atur Pagu Anggaran" />
             <Card>
+                <Typography.Paragraph type="secondary" style={{ marginBottom: 16 }}>
+                    Tetapkan pagu global untuk seluruh proyek pada bulan periode yang dipilih. Tidak ada
+                    pembagian per unit alat.
+                </Typography.Paragraph>
+
+                {isRevision && (
+                    <Alert
+                        type="info"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        message="Periode ini sudah memiliki pagu. Menyimpan akan merevisi pagu periode tersebut (bukan menambah baris baru)."
+                    />
+                )}
+
                 <Form layout="vertical" onFinish={submit}>
-                    <Form.Item label="Proyek" validateStatus={errors.project_code ? 'error' : undefined}>
+                    <Form.Item
+                        label="Proyek"
+                        validateStatus={errors.project_code ? 'error' : undefined}
+                        help={errors.project_code}
+                    >
                         <Select
                             value={data.project_code}
                             onChange={changeProject}
@@ -107,164 +113,66 @@ export default function BudgetSetting({ projects, defaultProjectCode, equipment,
                         />
                     </Form.Item>
 
-                    <Form.Item label="Bulan Periode" validateStatus={errors.period_month ? 'error' : undefined}>
+                    <Form.Item
+                        label="Bulan Periode"
+                        validateStatus={errors.period_month ? 'error' : undefined}
+                        help={errors.period_month}
+                    >
                         <DatePicker
                             picker="month"
                             style={{ width: '100%' }}
-                            value={dayjs(data.period_month)}
-                            onChange={(d) =>
-                                setData('period_month', d ? d.startOf('month').format('YYYY-MM-DD') : '')
-                            }
+                            value={data.period_month ? dayjs(data.period_month) : null}
+                            onChange={changePeriodMonth}
                         />
                     </Form.Item>
 
-                    {stale && (
-                        <Alert
-                            type="warning"
-                            showIcon
-                            style={{ marginBottom: 16 }}
-                            message="Data unit dari ARKFLEET belum bisa diambil — alokasi per unit tidak bisa dipilih sekarang. Gunakan alokasi tingkat divisi atau coba lagi nanti."
-                        />
-                    )}
-
-                    <Typography.Title level={5}>Baris Alokasi</Typography.Title>
-
-                    {data.allocations.map((row, index) => {
-                        const isPerUnit = row.equipment_id !== null && row.equipment_id !== undefined;
-
-                        return (
-                            <Space key={index} align="start" style={{ display: 'flex', marginBottom: 16 }} wrap>
-                                <Form.Item label="Unit Code">
-                                    <Select
-                                        showSearch
-                                        optionFilterProp="label"
-                                        disabled={stale}
-                                        style={{ width: 260 }}
-                                        value={isPerUnit ? String(row.equipment_id) : DIVISION_VALUE}
-                                        onChange={(v) => {
-                                            const next = [...data.allocations];
-                                            if (v === DIVISION_VALUE) {
-                                                next[index] = {
-                                                    ...next[index],
-                                                    equipment_id: null,
-                                                    unit_code_cache: null,
-                                                };
-                                            } else {
-                                                const eq = equipmentById.get(Number(v));
-                                                next[index] = {
-                                                    ...next[index],
-                                                    equipment_id: eq?.id ?? null,
-                                                    unit_code_cache: eq?.unit_code ?? null,
-                                                    plant_type_cache:
-                                                        eq?.plant_type_mapped ?? next[index].plant_type_cache,
-                                                };
-                                            }
-                                            setData('allocations', next);
-                                        }}
-                                    >
-                                        <Select.Option value={DIVISION_VALUE} label="— Divisi (tanpa unit) —">
-                                            — Divisi (tanpa unit) —
-                                        </Select.Option>
-                                        {equipmentGroups.map(([groupLabel, items]) => (
-                                            <Select.OptGroup key={groupLabel} label={groupLabel}>
-                                                {items.map((item) => (
-                                                    <Select.Option
-                                                        key={item.id}
-                                                        value={String(item.id)}
-                                                        label={equipmentOptionLabel(item)}
-                                                    >
-                                                        {equipmentOptionLabel(item)}
-                                                    </Select.Option>
-                                                ))}
-                                            </Select.OptGroup>
-                                        ))}
-                                    </Select>
-                                </Form.Item>
-                                <Form.Item label="Tingkat">
-                                    <Tag color={isPerUnit ? 'blue' : 'default'}>
-                                        {isPerUnit ? 'Per unit' : 'Divisi'}
-                                    </Tag>
-                                </Form.Item>
-                                <Form.Item label="Tipe Plant">
-                                    <Select
-                                        style={{ width: 120 }}
-                                        value={row.plant_type_cache ?? undefined}
-                                        onChange={(v) => {
-                                            const next = [...data.allocations];
-                                            next[index] = { ...next[index], plant_type_cache: v };
-                                            setData('allocations', next);
-                                        }}
-                                        options={[
-                                            { value: 'DIGGER', label: 'DIGGER' },
-                                            { value: 'HAULER', label: 'HAULER' },
-                                            { value: 'SUPPORT', label: 'SUPPORT' },
-                                        ]}
-                                    />
-                                </Form.Item>
-                                <Form.Item label="Jumlah (IDR)">
-                                    <InputNumber
-                                        style={{ width: 180 }}
-                                        min={0}
-                                        value={row.allocated_amount}
-                                        onChange={(v) => {
-                                            const next = [...data.allocations];
-                                            next[index] = { ...next[index], allocated_amount: Number(v ?? 0) };
-                                            setData('allocations', next);
-                                        }}
-                                    />
-                                </Form.Item>
-                                <Form.Item label="Toleransi %">
-                                    <InputNumber
-                                        min={0}
-                                        max={100}
-                                        value={row.tolerance_pct ?? 10}
-                                        onChange={(v) => {
-                                            const next = [...data.allocations];
-                                            next[index] = { ...next[index], tolerance_pct: Number(v ?? 10) };
-                                            setData('allocations', next);
-                                        }}
-                                    />
-                                </Form.Item>
-                                {data.allocations.length > 1 && (
-                                    <Button
-                                        type="text"
-                                        danger
-                                        icon={<MinusCircleOutlined />}
-                                        onClick={() =>
-                                            setData(
-                                                'allocations',
-                                                data.allocations.filter((_, i) => i !== index)
-                                            )
-                                        }
-                                    />
-                                )}
-                            </Space>
-                        );
-                    })}
-
-                    <Button
-                        type="dashed"
-                        icon={<PlusOutlined />}
-                        onClick={() =>
-                            setData('allocations', [
-                                ...data.allocations,
-                                {
-                                    equipment_id: null,
-                                    unit_code_cache: null,
-                                    allocated_amount: 0,
-                                    tolerance_pct: 10,
-                                    plant_type_cache: 'DIGGER',
-                                },
-                            ])
-                        }
-                        style={{ marginBottom: 24 }}
+                    <Form.Item
+                        label="Total Anggaran Proyek (IDR)"
+                        validateStatus={errors.allocated_amount ? 'error' : undefined}
+                        help={errors.allocated_amount}
+                        required
                     >
-                        Tambah Baris
-                    </Button>
+                        <InputNumber
+                            style={{ width: '100%' }}
+                            min={0}
+                            value={data.allocated_amount}
+                            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                            parser={(v) => Number(v?.replace(/\./g, '') ?? 0)}
+                            onChange={(v) => setData('allocated_amount', Number(v ?? 0))}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Toleransi (%)"
+                        validateStatus={errors.tolerance_pct ? 'error' : undefined}
+                        help={errors.tolerance_pct}
+                        required
+                    >
+                        <InputNumber
+                            style={{ width: '100%' }}
+                            min={0}
+                            max={100}
+                            value={data.tolerance_pct}
+                            onChange={(v) => setData('tolerance_pct', Number(v ?? 10))}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Catatan (opsional)"
+                        validateStatus={errors.memo ? 'error' : undefined}
+                        help={errors.memo}
+                    >
+                        <Input.TextArea
+                            rows={3}
+                            value={data.memo}
+                            onChange={(e) => setData('memo', e.target.value)}
+                            maxLength={500}
+                        />
+                    </Form.Item>
 
                     <Form.Item>
                         <Button type="primary" htmlType="submit" loading={processing}>
-                            Simpan Anggaran
+                            {isRevision ? 'Simpan Revisi Pagu' : 'Simpan Pagu Anggaran'}
                         </Button>
                     </Form.Item>
                 </Form>

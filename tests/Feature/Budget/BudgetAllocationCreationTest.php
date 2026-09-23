@@ -29,14 +29,8 @@ class BudgetAllocationCreationTest extends TestCase
                 'project_code' => 'MBL',
                 'period_month' => now()->startOfMonth()->toDateString(),
                 'status' => 'open',
-                'allocations' => [
-                    [
-                        'allocated_amount' => 25000000,
-                        'tolerance_pct' => 10,
-                        'plant_type_cache' => 'DIGGER',
-                        'unit_code_cache' => 'E-042',
-                    ],
-                ],
+                'allocated_amount' => 25000000,
+                'tolerance_pct' => 10,
             ]);
 
         $response->assertRedirect(route('budget.index', ['project_code' => 'MBL']));

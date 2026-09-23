@@ -2,15 +2,13 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { Button, Card, InputNumber, Select, Space, Table, Tabs, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import AppLayout from '@/Layouts/AppLayout';
 import BudgetProgressBar from '@/Components/BudgetProgressBar';
 import { formatIdr } from '@/hooks/useCurrency';
 
 interface AllocationRow {
     id: number;
-    equipment_id: number | null;
-    unit_code_cache: string | null;
-    plant_type_cache: string | null;
     allocated_amount: string;
     tolerance_pct: string;
     carry_forward_in: string;
@@ -53,6 +51,11 @@ const statusColors: Record<string, string> = {
     closed: 'error',
 };
 
+function settingUrl(projectCode: string, periodMonth: string): string {
+    const params = new URLSearchParams({ project_code: projectCode, period_month: periodMonth });
+    return `/budget/setting?${params.toString()}`;
+}
+
 export default function BudgetIndex({
     projectCode,
     projects,
@@ -61,7 +64,7 @@ export default function BudgetIndex({
     isFinanceDirector,
 }: BudgetIndexProps) {
     const [activeMonth, setActiveMonth] = useState(
-        () => periods.find((p) => p.status === 'open')?.period_month ?? periods[0]?.period_month ?? ''
+        () => periods.find((p) => p.status === 'open')?.period_month ?? periods[0]?.period_month ?? '',
     );
     const [editingId, setEditingId] = useState<number | null>(null);
     const { data, setData, patch, processing } = useForm({
@@ -88,27 +91,17 @@ export default function BudgetIndex({
     const submitRevise = (allocationId: number) => {
         patch(`/budget/allocations/${allocationId}`, {
             onSuccess: () => {
-                message.success('Alokasi direvisi');
+                message.success('Pagu direvisi');
                 setEditingId(null);
             },
-            onError: () => message.error('Gagal merevisi alokasi'),
+            onError: () => message.error('Gagal merevisi pagu'),
         });
     };
 
     const columns: ColumnsType<AllocationRow> = useMemo(() => {
         const base: ColumnsType<AllocationRow> = [
             {
-                title: 'Unit',
-                dataIndex: 'unit_code_cache',
-                render: (value, row) => value ?? (row.equipment_id ? `EQ-${row.equipment_id}` : 'Divisi'),
-            },
-            {
-                title: 'Tipe',
-                dataIndex: 'plant_type_cache',
-                render: (value) => value ?? '—',
-            },
-            {
-                title: 'Alokasi',
+                title: 'Pagu',
                 dataIndex: 'allocated_amount',
                 align: 'right',
                 render: (value, row) =>
@@ -143,7 +136,7 @@ export default function BudgetIndex({
                 render: (value) => formatIdr(value),
             },
             {
-                title: 'Varians',
+                title: 'Sisa',
                 dataIndex: 'variance',
                 align: 'right',
                 render: (value) => (
@@ -152,11 +145,24 @@ export default function BudgetIndex({
                     </Typography.Text>
                 ),
             },
+            {
+                title: '% Terpakai',
+                dataIndex: 'utilization_pct',
+                width: 200,
+                render: (value, row) => (
+                    <BudgetProgressBar
+                        utilizationPct={value}
+                        committed={row.committed_amount}
+                        actual={row.actual_amount}
+                        cap={row.tolerance_cap}
+                    />
+                ),
+            },
         ];
 
         if (isFinanceDirector) {
             base.push({
-                title: 'Toleransi %',
+                title: 'Toleransi',
                 dataIndex: 'tolerance_pct',
                 render: (value, row) =>
                     row.is_editable && editingId === row.id ? (
@@ -169,22 +175,6 @@ export default function BudgetIndex({
                     ) : (
                         `${value}%`
                     ),
-            });
-        }
-
-        if (!isFinanceDirector) {
-            base.push({
-                title: 'Penggunaan',
-                key: 'utilization',
-                width: 200,
-                render: (_, row) => (
-                    <BudgetProgressBar
-                        utilizationPct={row.utilization_pct}
-                        committed={row.committed_amount}
-                        actual={row.actual_amount}
-                        cap={row.tolerance_cap}
-                    />
-                ),
             });
         }
 
@@ -218,7 +208,7 @@ export default function BudgetIndex({
         }
 
         return base;
-    }, [activePeriod, data, editingId, isFinanceDirector, processing, setData, patch]);
+    }, [activePeriod, data, editingId, isFinanceDirector, processing, setData]);
 
     const tabItems = periods.map((period) => ({
         key: period.period_month,
@@ -234,16 +224,23 @@ export default function BudgetIndex({
             <Card
                 style={{ opacity: period.is_locked ? 0.75 : 1 }}
                 extra={
-                    canManage && period.status === 'open' ? (
-                        <Button
-                            size="small"
-                            onClick={() =>
-                                router.post(`/budget/${period.id}/carry-forward`, {}, { preserveScroll: true })
-                            }
-                        >
-                            Jalankan Carry Forward
-                        </Button>
-                    ) : null
+                    <Space wrap>
+                        {canManage && (
+                            <Button type="primary" href={settingUrl(projectCode, period.period_month)}>
+                                {period.allocations.length > 0 ? 'Ubah Alokasi' : 'Buat Alokasi'}
+                            </Button>
+                        )}
+                        {canManage && period.status === 'open' ? (
+                            <Button
+                                size="small"
+                                onClick={() =>
+                                    router.post(`/budget/${period.id}/carry-forward`, {}, { preserveScroll: true })
+                                }
+                            >
+                                Jalankan Carry Forward
+                            </Button>
+                        ) : null}
+                    </Space>
                 }
             >
                 <Table
@@ -252,7 +249,7 @@ export default function BudgetIndex({
                     dataSource={period.allocations}
                     pagination={false}
                     size="small"
-                    locale={{ emptyText: 'Belum ada alokasi untuk periode ini.' }}
+                    locale={{ emptyText: 'Belum ada pagu untuk periode ini.' }}
                 />
             </Card>
         ),
@@ -273,9 +270,9 @@ export default function BudgetIndex({
                             label: `${p.project_code} — ${p.project_name}`,
                         }))}
                     />
-                    {canManage && (
-                        <Button type="primary" href="/budget/setting">
-                            Buat Alokasi
+                    {canManage && activePeriod && (
+                        <Button type="primary" href={settingUrl(projectCode, activePeriod.period_month)}>
+                            {activePeriod.allocations.length > 0 ? 'Ubah Alokasi' : 'Buat Alokasi'}
                         </Button>
                     )}
                 </Space>
@@ -286,14 +283,19 @@ export default function BudgetIndex({
                             Belum ada periode anggaran untuk proyek ini.
                             {canManage && ' Gunakan "Buat Alokasi" untuk memulai.'}
                         </Typography.Text>
+                        {canManage && (
+                            <div style={{ marginTop: 16 }}>
+                                <Button
+                                    type="primary"
+                                    href={settingUrl(projectCode, dayjs().startOf('month').format('YYYY-MM-DD'))}
+                                >
+                                    Buat Alokasi
+                                </Button>
+                            </div>
+                        )}
                     </Card>
                 ) : (
-                    <Tabs
-                        activeKey={activeMonth}
-                        onChange={setActiveMonth}
-                        items={tabItems}
-                        type="card"
-                    />
+                    <Tabs activeKey={activeMonth} onChange={setActiveMonth} items={tabItems} type="card" />
                 )}
             </Space>
         </AppLayout>

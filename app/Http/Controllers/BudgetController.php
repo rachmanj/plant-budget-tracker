@@ -8,10 +8,8 @@ use App\Models\BudgetAllocation;
 use App\Models\BudgetPeriod;
 use App\Models\ProjectCache;
 use App\Services\Arkfleet\ArkfleetClient;
-use App\Services\Arkfleet\EquipmentCache;
 use App\Services\Budget\BudgetEngine;
 use App\Services\Budget\VarianceCalculator;
-use App\Support\PlantTypeResolver;
 use App\Support\ProjectContext;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -21,13 +19,10 @@ use Inertia\Response;
 
 class BudgetController extends Controller
 {
-    private const NON_ALLOCATABLE_STATUSES = ['SOLD', 'SCRAP'];
-
     public function __construct(
         private readonly BudgetEngine $budgetEngine,
         private readonly VarianceCalculator $varianceCalculator,
         private readonly ArkfleetClient $arkfleetClient,
-        private readonly EquipmentCache $equipmentCache,
     ) {}
 
     public function index(Request $request): Response
@@ -37,7 +32,7 @@ class BudgetController extends Controller
 
         $periods = BudgetPeriod::query()
             ->rollingWindow($projectCode)
-            ->with(['allocations' => fn ($q) => $q->orderBy('unit_code_cache')])
+            ->with(['allocations'])
             ->orderBy('period_month')
             ->get()
             ->map(function (BudgetPeriod $period) use ($user) {
@@ -51,9 +46,6 @@ class BudgetController extends Controller
                     'is_locked' => in_array($period->status, ['locked', 'closed'], true),
                     'allocations' => $period->allocations->map(fn (BudgetAllocation $allocation) => [
                         'id' => $allocation->id,
-                        'equipment_id' => $allocation->equipment_id,
-                        'unit_code_cache' => $allocation->unit_code_cache,
-                        'plant_type_cache' => $allocation->plant_type_cache,
                         'allocated_amount' => (string) $allocation->allocated_amount,
                         'tolerance_pct' => (string) $allocation->tolerance_pct,
                         'carry_forward_in' => (string) $allocation->carry_forward_in,
@@ -84,66 +76,43 @@ class BudgetController extends Controller
     {
         $this->authorize('create', BudgetAllocation::class);
 
-        $user = $request->user();
-
         $projectCode = ProjectContext::resolve($request);
 
         $projects = ProjectCache::query()
             ->orderBy('project_code')
             ->get(['project_code', 'project_name']);
 
-        [$equipment, $stale] = $this->loadAllocatableEquipment($projectCode);
+        $periodMonthInput = $request->query('period_month');
+        $periodMonth = $periodMonthInput
+            ? Carbon::parse((string) $periodMonthInput)->startOfMonth()
+            : now()->startOfMonth();
+
+        $existingAllocation = null;
+
+        if ($projectCode) {
+            $period = BudgetPeriod::query()
+                ->where('project_code', $projectCode)
+                ->whereDate('period_month', $periodMonth->toDateString())
+                ->with('allocations')
+                ->first();
+
+            $allocation = $period?->allocations->first();
+
+            if ($allocation) {
+                $existingAllocation = [
+                    'allocated_amount' => (string) $allocation->allocated_amount,
+                    'tolerance_pct' => (string) $allocation->tolerance_pct,
+                    'memo' => null,
+                ];
+            }
+        }
 
         return Inertia::render('Budget/Setting', [
             'projects' => $projects,
             'defaultProjectCode' => $projectCode,
-            'equipment' => $equipment,
-            'stale' => $stale,
+            'defaultPeriodMonth' => $periodMonth->format('Y-m-d'),
+            'existingAllocation' => $existingAllocation,
         ]);
-    }
-
-    /**
-     * @return array{0: list<array<string, mixed>>, 1: bool}
-     */
-    private function loadAllocatableEquipment(?string $projectCode): array
-    {
-        if ($projectCode === null) {
-            return [[], false];
-        }
-
-        try {
-            $result = $this->equipmentCache->list(['project_code' => $projectCode]);
-        } catch (\Throwable) {
-            return [[], true];
-        }
-
-        $stale = (bool) ($result['stale'] ?? false);
-        $items = $result['data'] ?? [];
-
-        $items = array_values(array_filter(
-            $items,
-            fn (array $item) => ! in_array(
-                strtoupper(trim((string) ($item['unitstatus'] ?? ''))),
-                self::NON_ALLOCATABLE_STATUSES,
-                true
-            )
-        ));
-
-        usort(
-            $items,
-            fn (array $a, array $b) => strnatcasecmp((string) ($a['unit_no'] ?? ''), (string) ($b['unit_no'] ?? ''))
-        );
-
-        $equipment = array_map(fn (array $item) => [
-            'id' => (int) ($item['id'] ?? 0),
-            'unit_code' => $item['unit_no'] ?? null,
-            'description' => $item['description'] ?? null,
-            'plant_type' => $item['plant_type'] ?? null,
-            'unitstatus' => $item['unitstatus'] ?? null,
-            'plant_type_mapped' => PlantTypeResolver::fromArkfleet($item['plant_type'] ?? null),
-        ], $items);
-
-        return [$equipment, $stale];
     }
 
     public function store(StoreBudgetAllocationRequest $request): RedirectResponse
@@ -176,7 +145,13 @@ class BudgetController extends Controller
             ]
         );
 
-        $this->budgetEngine->allocate($period, $validated['allocations'], $request->user());
+        $this->budgetEngine->allocate($period, [
+            [
+                'allocated_amount' => $validated['allocated_amount'],
+                'tolerance_pct' => $validated['tolerance_pct'],
+                'memo' => $validated['memo'] ?? null,
+            ],
+        ], $request->user());
 
         return redirect()
             ->route('budget.index', ['project_code' => $validated['project_code']])

@@ -36,9 +36,8 @@ class BudgetAllocationPolicyTest extends TestCase
             ->post('/budget', [
                 'project_code' => 'MBL',
                 'period_month' => now()->startOfMonth()->toDateString(),
-                'allocations' => [
-                    ['allocated_amount' => 1000000],
-                ],
+                'allocated_amount' => 1000000,
+                'tolerance_pct' => 10,
             ])
             ->assertForbidden();
     }

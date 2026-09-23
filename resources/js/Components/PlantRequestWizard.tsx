@@ -450,23 +450,28 @@ export default function PlantRequestWizard({
                                     onChange={(v) => setData('budget_allocation_id', v)}
                                     optionLabelProp="label"
                                 >
-                                    {allocations.map((a) => (
+                                    {allocations.map((a) => {
+                                        const allocationLabel =
+                                            a.unit_code_cache != null && a.unit_code_cache !== ''
+                                                ? `${a.unit_code_cache}${a.plant_type_cache ? ` · ${a.plant_type_cache}` : ''}`
+                                                : 'Pagu proyek';
+
+                                        return (
                                         <Select.Option
                                             key={a.id}
                                             value={a.id}
-                                            label={`${a.unit_code_cache} · ${a.plant_type_cache}`}
+                                            label={allocationLabel}
                                         >
                                             <div>
-                                                <div>
-                                                    {a.unit_code_cache} · {a.plant_type_cache}
-                                                </div>
+                                                <div>{allocationLabel}</div>
                                                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                                                     {formatIdr(a.allocated_amount)} · Sisa{' '}
                                                     {formatIdr(a.remaining)}
                                                 </Typography.Text>
                                             </div>
                                         </Select.Option>
-                                    ))}
+                                        );
+                                    })}
                                 </Select>
                                 {errors.budget_allocation_id && (
                                     <Typography.Text type="danger">
