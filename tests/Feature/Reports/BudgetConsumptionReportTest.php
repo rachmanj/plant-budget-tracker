@@ -70,21 +70,17 @@ class BudgetConsumptionReportTest extends TestCase
     {
         $finance = $this->makeFinanceDirector();
         $allocation = $this->makeAllocation($finance, amount: '10000000.00');
-        $allocation->update(['plant_type_cache' => 'DIGGER']);
-
-        $period = $allocation->period;
-        $other = app(\App\Services\Budget\BudgetEngine::class)->createAllocation($period, [
-            'allocated_amount' => '5000000.00',
-            'plant_type_cache' => 'HAULER',
-            'equipment_id' => 99,
-            'unit_code_cache' => 'E-099',
-        ], $finance);
 
         $report = app(BudgetConsumptionReport::class);
-        $diggers = $report->byPlantType('MBL', 'DIGGER', now()->startOfMonth());
+        $month = now()->startOfMonth();
+
+        $this->assertCount(0, $report->byPlantType('MBL', 'DIGGER', $month));
+
+        $allocation->update(['plant_type_cache' => 'DIGGER']);
+
+        $diggers = $report->byPlantType('MBL', 'DIGGER', $month);
 
         $this->assertCount(1, $diggers);
         $this->assertSame($allocation->id, $diggers[0]['allocation_id']);
-        $this->assertNotSame($other->id, $diggers[0]['allocation_id']);
     }
 }

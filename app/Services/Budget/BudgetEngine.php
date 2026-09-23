@@ -14,9 +14,8 @@ class BudgetEngine
     public function allocate(BudgetPeriod $period, array $allocationsData, User $actor): BudgetPeriod
     {
         return DB::transaction(function () use ($period, $allocationsData, $actor) {
-            foreach ($allocationsData as $data) {
-                $this->createAllocation($period, $data, $actor);
-            }
+            $payload = $this->consolidateAllocationPayload($allocationsData);
+            $this->createAllocation($period, $payload, $actor);
 
             $this->syncPeriodEditability($period);
 
@@ -28,14 +27,31 @@ class BudgetEngine
     {
         return DB::transaction(function () use ($period, $data, $actor) {
             $amount = $this->normalizeAmount($data['allocated_amount'] ?? '0');
+            $tolerancePct = isset($data['tolerance_pct'])
+                ? $this->normalizeAmount((string) $data['tolerance_pct'])
+                : null;
+
+            $existing = BudgetAllocation::query()
+                ->where('budget_period_id', $period->id)
+                ->first();
+
+            if ($existing) {
+                return $this->reviseAllocation(
+                    $existing,
+                    $amount,
+                    $actor,
+                    $data['memo'] ?? 'Allocation revision',
+                    $tolerancePct
+                );
+            }
 
             $allocation = BudgetAllocation::create([
                 'budget_period_id' => $period->id,
-                'equipment_id' => $data['equipment_id'] ?? null,
-                'unit_code_cache' => $data['unit_code_cache'] ?? null,
-                'plant_type_cache' => $data['plant_type_cache'] ?? null,
+                'equipment_id' => null,
+                'unit_code_cache' => null,
+                'plant_type_cache' => null,
                 'allocated_amount' => $amount,
-                'tolerance_pct' => $data['tolerance_pct'] ?? '10.00',
+                'tolerance_pct' => $tolerancePct ?? '10.00',
                 'is_editable' => $this->computeIsEditable($period),
             ]);
 
@@ -386,6 +402,40 @@ class BudgetEngine
             ->sum('amount');
 
         return $this->normalizeAmount((string) $sum);
+    }
+
+    private function consolidateAllocationPayload(array $allocationsData): array
+    {
+        $total = '0.00';
+        $maxTolerance = null;
+        $memo = null;
+
+        foreach ($allocationsData as $data) {
+            $total = bcadd($total, $this->normalizeAmount($data['allocated_amount'] ?? '0'), 2);
+
+            if (isset($data['tolerance_pct'])) {
+                $candidate = $this->normalizeAmount((string) $data['tolerance_pct']);
+                if ($maxTolerance === null || bccomp($candidate, $maxTolerance, 2) > 0) {
+                    $maxTolerance = $candidate;
+                }
+            }
+
+            if (! empty($data['memo'])) {
+                $memo = $data['memo'];
+            }
+        }
+
+        $payload = ['allocated_amount' => $total];
+
+        if ($maxTolerance !== null) {
+            $payload['tolerance_pct'] = $maxTolerance;
+        }
+
+        if ($memo !== null) {
+            $payload['memo'] = $memo;
+        }
+
+        return $payload;
     }
 
     private function normalizeAmount(string $amount): string

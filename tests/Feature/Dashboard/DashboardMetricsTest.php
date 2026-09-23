@@ -36,20 +36,12 @@ class DashboardMetricsTest extends TestCase
 
         $engine = app(BudgetEngine::class);
 
-        $allocationA = $engine->createAllocation($period, [
-            'allocated_amount' => '10000000.00',
-            'equipment_id' => 1,
-            'unit_code_cache' => 'E-001',
+        $allocation = $engine->createAllocation($period, [
+            'allocated_amount' => '15000000.00',
         ], $finance);
 
-        $allocationB = $engine->createAllocation($period, [
-            'allocated_amount' => '5000000.00',
-            'equipment_id' => 2,
-            'unit_code_cache' => 'E-002',
-        ], $finance);
-
-        $engine->postCommitment($allocationA, '4000000.00', 'plant_request', 1001, $planner, 'Commit A');
-        $engine->postCommitment($allocationB, '1500000.00', 'plant_request', 2001, $planner, 'Commit B');
+        $engine->postCommitment($allocation, '4000000.00', 'plant_request', 1001, $planner, 'Commit A');
+        $engine->postCommitment($allocation, '1500000.00', 'plant_request', 2001, $planner, 'Commit B');
 
         $metrics = app(DashboardMetrics::class)->for($planner, 'MBL');
 
@@ -58,7 +50,7 @@ class DashboardMetricsTest extends TestCase
         $this->assertSame('5500000.00', $metrics['budget']['used']);
         $this->assertSame('9500000.00', $metrics['budget']['remaining']);
         $this->assertEqualsWithDelta(36.67, $metrics['budget']['usedPct'], 0.01);
-        $this->assertSame(2, $metrics['budget']['allocationCount']);
+        $this->assertSame(1, $metrics['budget']['allocationCount']);
         $this->assertTrue($metrics['budget']['available']);
         $this->assertTrue($metrics['period']['exists']);
     }
@@ -77,35 +69,18 @@ class DashboardMetricsTest extends TestCase
 
         $engine = app(BudgetEngine::class);
 
-        $allocationA = $engine->createAllocation($period, [
-            'allocated_amount' => '10000000.00',
-            'equipment_id' => 1,
-            'unit_code_cache' => 'E-001',
+        $allocation = $engine->createAllocation($period, [
+            'allocated_amount' => '15000000.00',
         ], $finance);
 
-        $allocationB = $engine->createAllocation($period, [
-            'allocated_amount' => '5000000.00',
-            'equipment_id' => 2,
-            'unit_code_cache' => 'E-002',
-        ], $finance);
+        $engine->postCommitment($allocation, '4000000.00', 'plant_request', 1001, $planner, 'Commit A');
+        $engine->postActual($allocation, '3800000.00', 5001, $finance, 'GRPO A');
+        $engine->postCommitment($allocation, '1000000.00', 'plant_request', 2001, $planner, 'Commit B');
 
-        // Allocation A: partial commitment followed by a GRPO actual.
-        $engine->postCommitment($allocationA, '4000000.00', 'plant_request', 1001, $planner, 'Commit A');
-        $engine->postActual($allocationA, '3800000.00', 5001, $finance, 'GRPO A');
+        $allocation->refresh();
 
-        // Allocation B: outstanding commitment only, no actual yet.
-        $engine->postCommitment($allocationB, '1000000.00', 'plant_request', 2001, $planner, 'Commit B');
-
-        $allocationA->refresh();
-        $allocationB->refresh();
-
-        // Ground truth: BudgetAllocation::variance / utilization_pct accessors.
-        $expectedBase = bcadd(
-            bcadd((string) $allocationA->allocated_amount, (string) $allocationA->carry_forward_in, 2),
-            bcadd((string) $allocationB->allocated_amount, (string) $allocationB->carry_forward_in, 2),
-            2
-        );
-        $expectedVarianceSum = bcadd((string) $allocationA->variance, (string) $allocationB->variance, 2);
+        $expectedBase = bcadd((string) $allocation->allocated_amount, (string) $allocation->carry_forward_in, 2);
+        $expectedVarianceSum = (string) $allocation->variance;
         $expectedUsed = bcsub($expectedBase, $expectedVarianceSum, 2);
         $expectedUsedPct = round(((float) $expectedUsed / (float) $expectedBase) * 100, 2);
 

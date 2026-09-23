@@ -59,7 +59,6 @@ class BudgetCarryForwardTest extends TestCase
 
         $nextAllocation = BudgetAllocation::query()
             ->where('budget_period_id', $nextPeriod->id)
-            ->where('equipment_id', $allocation->equipment_id)
             ->first();
 
         $this->assertNotNull($nextAllocation);
@@ -157,7 +156,6 @@ class BudgetCarryForwardTest extends TestCase
 
         $nextAllocation = BudgetAllocation::query()
             ->where('budget_period_id', $nextPeriod->id)
-            ->where('equipment_id', $allocation->equipment_id)
             ->first();
 
         $this->assertSame(1, BudgetLedger::query()

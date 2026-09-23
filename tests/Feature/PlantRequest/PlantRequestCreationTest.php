@@ -62,7 +62,7 @@ class PlantRequestCreationTest extends TestCase
                 ->where('equipment.0.unit_code', 'E-042')
                 ->has('allocations', 1)
                 ->where('allocations.0.id', $allocation->id)
-                ->where('allocations.0.unit_code_cache', 'E-042')
+                ->where('allocations.0.unit_code_cache', null)
             );
     }
 

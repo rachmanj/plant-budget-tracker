@@ -99,7 +99,7 @@ class BudgetSettingEquipmentTest extends TestCase
             );
     }
 
-    public function test_store_with_real_unit_persists_equipment_link(): void
+    public function test_store_with_real_unit_persists_global_allocation_without_equipment_link(): void
     {
         $finance = $this->makeFinanceDirector();
 
@@ -122,13 +122,14 @@ class BudgetSettingEquipmentTest extends TestCase
         $response->assertRedirect(route('budget.index', ['project_code' => 'MBL']));
 
         $this->assertDatabaseHas('budget_allocations', [
-            'equipment_id' => 501,
-            'unit_code_cache' => 'E-501',
-            'plant_type_cache' => 'HAULER',
+            'equipment_id' => null,
+            'unit_code_cache' => null,
+            'plant_type_cache' => null,
+            'allocated_amount' => '12000000.00',
         ]);
     }
 
-    public function test_store_division_row_persists_with_null_unit_code(): void
+    public function test_store_division_row_persists_as_global_allocation(): void
     {
         $finance = $this->makeFinanceDirector();
 
@@ -153,7 +154,8 @@ class BudgetSettingEquipmentTest extends TestCase
         $this->assertDatabaseHas('budget_allocations', [
             'equipment_id' => null,
             'unit_code_cache' => null,
-            'plant_type_cache' => 'SUPPORT',
+            'plant_type_cache' => null,
+            'allocated_amount' => '8000000.00',
         ]);
     }
 
@@ -184,7 +186,7 @@ class BudgetSettingEquipmentTest extends TestCase
             ->assertInvalid(['allocations.1.equipment_id' => 'Unit ini dialokasikan lebih dari sekali dalam satu periode.']);
     }
 
-    public function test_store_rejects_equipment_already_allocated_in_same_period(): void
+    public function test_store_revises_existing_period_budget_instead_of_second_allocation_row(): void
     {
         $finance = $this->makeFinanceDirector();
         $periodMonth = now()->startOfMonth();
@@ -197,9 +199,6 @@ class BudgetSettingEquipmentTest extends TestCase
         ]);
 
         app(\App\Services\Budget\BudgetEngine::class)->createAllocation($period, [
-            'equipment_id' => 701,
-            'unit_code_cache' => 'E-701',
-            'plant_type_cache' => 'DIGGER',
             'allocated_amount' => '5000000.00',
         ], $finance);
 
@@ -213,11 +212,15 @@ class BudgetSettingEquipmentTest extends TestCase
                         'equipment_id' => 701,
                         'unit_code_cache' => 'E-701',
                         'plant_type_cache' => 'DIGGER',
-                        'allocated_amount' => 3000000,
+                        'allocated_amount' => 8000000,
                     ],
                 ],
             ])
-            ->assertInvalid(['allocations.0.equipment_id' => 'Unit ini sudah punya alokasi pada periode tersebut.']);
+            ->assertRedirect(route('budget.index', ['project_code' => 'MBL']));
+
+        $period->refresh();
+        $this->assertCount(1, $period->allocations);
+        $this->assertSame('8000000.00', (string) $period->allocations->first()->allocated_amount);
     }
 
     public function test_store_rejects_unit_row_without_plant_type(): void
