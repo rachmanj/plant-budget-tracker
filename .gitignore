@@ -22,3 +22,4 @@ yarn-error.log
 /.vscode
 /.zed
 .hermes-task-prompt.md
+.hermes/
