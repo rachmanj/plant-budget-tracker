@@ -76,3 +76,41 @@ Temuan tambahan:
 4. Server .13 bukan hanya host proc-app: ada 16 aplikasi lain di `C:\xampp\htdocs`
    (dashboard, dds, eld, gamma, gen-ledger, genaf, ild, moca, notulen-ai, p2h, sap-bridge,
    work-orders, dll.) — jangan menyentuh yang lain.
+
+## 5. Keputusan lampiran & kapasitas server (25 Sep 2026)
+
+Iwan menyetujui **lampiran PR ikut dimigrasikan**, sehingga total berkas yang dipindahkan
+**± 7,7 GB** (PO 639 MB + PR 7,08 GB).
+
+Pengukuran kapasitas server tujuan (saphire-two, 192.168.32.149 — juga host DDS):
+
+| Item | Nilai |
+|---|---|
+| Disk total / terpakai / **kosong** | 246 GB / 30 GB / **206 GB (13%)** |
+| DDS (pemakai terbesar) | 9,2 GB (folder `storage` 8,3 GB) |
+| ESD | 410 MB |
+| PMB sebelum migrasi | 524 MB (folder `storage` baru 712 KB) |
+| Basis data MySQL `plant_budget_tracker` | 3 MB |
+| Docker image / container / build cache | 5,5 GB / 332 MB / 2,7 GB (dapat dibersihkan) |
+| **Sesudah migrasi** | PMB ± 8,2 GB; sisa disk tetap **± 198 GB** |
+
+Kesimpulan: kapasitas bukan penghambat. Catatan pelaksanaan: berkas disimpan di folder aplikasi
+(`storage/app/public/...`) — bukan di dalam layer container — dan backup folder PMB akan naik dari
+0,5 GB menjadi ± 8 GB (dump basis data tidak terpengaruh, hanya 3 MB).
+
+## 6. Hasil pemindahan lampiran (25 Sep 2026)
+
+**Lampiran PO** — selesai dan terverifikasi:
+
+- Arsip 608.278.959 byte (581 MB), SHA-256 `6261d9bcb1ca366455c6ddbc97386902a882a18748d3d79dc55164afd3db5ecf`
+- Isi 3.146 berkas · **3.141 baris basis data semuanya ada** · **ukuran cocok untuk seluruh 3.141** (0 tidak cocok)
+- 5 berkas "yatim" di disk (tidak tercatat di basis data), tidak dianggap data resmi
+
+**Lampiran PR** — selesai dan terverifikasi:
+
+- Arsip 7.445.995.520 byte (**6,93 GB**), SHA-256 `36fc06c9ebef184c1bc2…` (berkas `.sha256` tersimpan bersama arsip)
+- Isi 22.314 berkas · **22.306 berkas pendaftarannya cocok dengan basis data dan ukurannya identik** (0 tidak cocok)
+- **5 berkas** masuk ke server **saat penyalinan sedang berjalan** sehingga tidak ikut terekam (wajar; dapat diambil ulang kapan saja)
+- **Temuan mutu data di proc-app sendiri** (bukan akibat pemindahan): **25 baris** `pr_attachments` **rujukannya menggantung** — baris ada di basis data tetapi berkasnya **tidak ada di disk**; dan **8 berkas yatim** (ada di disk, tidak tercatat di basis data). Sebelum migrasi ke PMB, baris menggantung ini perlu keputusan: dibiarkan sebagai arsip (tanpa berkas) atau dihapus.
+
+Letak arsip sementara di mesin Dea: `~/proc-app-legacy/` (po_attachments.zip 581 MB + pr_attachments.tar 7,0 GB, total 8,2 GB) — bahan mentah untuk Fase 5.
