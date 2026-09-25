@@ -69,7 +69,20 @@ class CreateSapPurchaseRequest implements ShouldQueue
             ];
         })->all();
 
-        $payload = ['DocumentLines' => $lines];
+        $projectCode = $plantRequest->project_code;
+        $reference = "PMB plant request #{$plantRequest->id}";
+        if ($projectCode) {
+            $reference .= " - {$projectCode}";
+        }
+
+        $today = now()->startOfDay();
+        $payload = [
+            'DocDate' => $today->toDateString(),
+            'DocDueDate' => $today->copy()->addDays(30)->toDateString(),
+            'RequriedDate' => $today->copy()->addDays(30)->toDateString(),
+            'Comments' => $reference,
+            'DocumentLines' => $lines,
+        ];
 
         try {
             $result = $sapService->createPurchaseRequest($payload);

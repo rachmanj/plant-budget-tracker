@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\InterchangeMap;
 use App\Models\PlantRequest;
 use App\Models\SapSyncLog;
 use App\Models\TabulationBid;
@@ -76,17 +77,40 @@ class CreateSapPurchaseOrder implements ShouldQueue
                 throw new \RuntimeException('No awarded vendor for PO creation.');
             }
 
-            $payload = [
-                'CardCode' => $vendor->vendor_code,
-                'DocDate' => now()->toDateString(),
-                'DocumentLines' => [
-                    ['ItemDescription' => "PR {$bid->sap_pr_id}", 'Quantity' => 1, 'UnitPrice' => (float) $vendor->price],
-                ],
-            ];
-
             $log->increment('attempts');
 
             try {
+                $plantRequest = PlantRequest::with('lines')
+                    ->where('sap_pr_no', $bid->sap_pr_id)
+                    ->first();
+
+                if (! $plantRequest) {
+                    throw new \RuntimeException("Awarded plant request not found for PR {$bid->sap_pr_id}");
+                }
+
+                $documentLines = $plantRequest->lines->map(function ($line) {
+                    $partNumber = $line->part_number;
+                    if ($line->interchange_map_id) {
+                        $map = InterchangeMap::find($line->interchange_map_id);
+                        $partNumber = $map?->genuine_part_number ?? $partNumber;
+                    }
+
+                    return [
+                        'ItemCode' => $partNumber,
+                        'Quantity' => $line->qty,
+                        'UnitPrice' => (float) $line->unit_price_est,
+                    ];
+                })->all();
+
+                $today = now()->startOfDay();
+                $payload = [
+                    'CardCode' => $vendor->vendor_code,
+                    'DocDate' => $today->toDateString(),
+                    'DocDueDate' => $today->copy()->addDays(30)->toDateString(),
+                    'Comments' => "PMB tabulation bid #{$bid->id} - PR {$bid->sap_pr_id}",
+                    'DocumentLines' => $documentLines,
+                ];
+
                 $result = $sapService->createPurchaseOrder($payload);
                 $poId = (string) ($result['DocEntry'] ?? 'PENDING_SAP');
 

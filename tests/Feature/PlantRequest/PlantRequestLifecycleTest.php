@@ -6,6 +6,7 @@ use App\Jobs\CreateSapPurchaseOrder;
 use App\Jobs\CreateSapPurchaseRequest;
 use App\Models\BudgetLedger;
 use App\Models\PlantRequest;
+use App\Models\PlantRequestLine;
 use App\Models\TabulationBid;
 use App\Models\TabulationBidAward;
 use App\Models\TabulationBidVendor;
@@ -40,6 +41,7 @@ class PlantRequestLifecycleTest extends TestCase
             'status' => 'approved',
             'sap_pr_no' => 'PR-9001',
         ]);
+        PlantRequestLine::factory()->create(['plant_request_id' => $plantRequest->id]);
 
         $bid = $this->createAwardedBid($buyer, 'PR-9001');
 
@@ -69,6 +71,7 @@ class PlantRequestLifecycleTest extends TestCase
             'sap_grpo_no' => 'GRPO-1',
             'received_at' => now(),
         ]);
+        PlantRequestLine::factory()->create(['plant_request_id' => $plantRequest->id]);
 
         $bid = $this->createAwardedBid($buyer, 'PR-9002');
 
@@ -84,21 +87,20 @@ class PlantRequestLifecycleTest extends TestCase
         $this->assertSame('received', $plantRequest->status);
     }
 
-    public function test_create_po_job_does_nothing_when_no_matching_plant_request(): void
+    public function test_create_po_job_fails_when_no_matching_plant_request(): void
     {
         $buyer = $this->makeUserWithRole('buyer');
         $bid = $this->createAwardedBid($buyer, 'PR-UNMATCHED');
 
         $sapService = Mockery::mock(SapService::class);
-        $sapService->shouldReceive('createPurchaseOrder')
-            ->once()
-            ->andReturn(['DocEntry' => 77003]);
+        $sapService->shouldNotReceive('createPurchaseOrder');
 
         $job = new CreateSapPurchaseOrder($bid->id);
-        $job->handle($sapService, app(SapCircuitBreaker::class));
 
-        $bid->refresh();
-        $this->assertSame('po_created', $bid->status);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Awarded plant request not found');
+
+        $job->handle($sapService, app(SapCircuitBreaker::class));
     }
 
     public function test_plant_manager_can_receive_plant_request_at_po_created_status(): void
