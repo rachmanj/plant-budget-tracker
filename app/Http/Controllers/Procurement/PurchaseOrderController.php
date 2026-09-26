@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PurchaseOrderController extends Controller
@@ -383,19 +384,48 @@ class PurchaseOrderController extends Controller
      */
     private function mentionableUsers(): array
     {
-        return User::query()
+        $registrar = app(PermissionRegistrar::class);
+        $previousTeamId = $registrar->getPermissionsTeamId();
+
+        $candidates = User::query()
             ->where('is_active', true)
-            ->permission('procurement.view')
             ->orderBy('name')
-            ->limit(50)
-            ->get(['id', 'name', 'email'])
-            ->map(fn (User $user) => [
+            ->get(['id', 'name', 'email', 'project_code_scope']);
+
+        $teamKey = fn (User $user): string => is_string($user->project_code_scope) && $user->project_code_scope !== ''
+            ? $user->project_code_scope
+            : '';
+
+        $permittedIds = [];
+        foreach ($candidates->groupBy($teamKey) as $teamId => $users) {
+            setPermissionsTeamId($teamId);
+            foreach ($users as $user) {
+                $user->unsetRelation('roles');
+                $user->unsetRelation('permissions');
+                if ($user->can('procurement.view')) {
+                    $permittedIds[$user->id] = true;
+                }
+            }
+        }
+
+        setPermissionsTeamId($previousTeamId);
+
+        $result = [];
+        foreach ($candidates as $user) {
+            if (! isset($permittedIds[$user->id])) {
+                continue;
+            }
+            $result[] = [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-            ])
-            ->values()
-            ->all();
+            ];
+            if (count($result) >= 50) {
+                break;
+            }
+        }
+
+        return $result;
     }
 
     private function syncCommentMentions(DocumentComment $comment, string $body): void
@@ -432,14 +462,39 @@ class PurchaseOrderController extends Controller
     {
         $needle = strtolower($token);
 
-        return User::query()
+        $user = User::query()
             ->where('is_active', true)
-            ->permission('procurement.view')
             ->where(function (Builder $query) use ($needle) {
                 $query->whereRaw('LOWER(email) = ?', [$needle])
                     ->orWhereRaw('LOWER(SUBSTRING_INDEX(email, \'@\', 1)) = ?', [$needle]);
             })
             ->first();
+
+        if ($user === null || ! $this->candidateHasProcurementView($user)) {
+            return null;
+        }
+
+        return $user;
+    }
+
+    private function candidateHasProcurementView(User $candidate): bool
+    {
+        $registrar = app(PermissionRegistrar::class);
+        $previousTeamId = $registrar->getPermissionsTeamId();
+
+        $teamId = is_string($candidate->project_code_scope) && $candidate->project_code_scope !== ''
+            ? $candidate->project_code_scope
+            : '';
+
+        setPermissionsTeamId($teamId);
+        $candidate->unsetRelation('roles');
+        $candidate->unsetRelation('permissions');
+
+        $allowed = $candidate->can('procurement.view');
+
+        setPermissionsTeamId($previousTeamId);
+
+        return $allowed;
     }
 
     private function filteredQuery(Request $request, ?string $forcedProjectCode = null): Builder

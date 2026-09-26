@@ -11,6 +11,7 @@ use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\Concerns\CreatesScopedUsers;
 use Tests\TestCase;
 
@@ -133,6 +134,154 @@ class PurchaseOrderCommentTest extends TestCase
             1,
             DocumentCommentMention::query()->where('document_comment_id', $comment->id)->count()
         );
+    }
+
+    public function test_mention_to_plant_user_in_other_project_team_is_stored_and_shown(): void
+    {
+        $admin = $this->makeGlobalUserWithRole('procurement_admin');
+        $globalBuyer = User::factory()->create([
+            'is_active' => true,
+            'email' => 'buyer.mention@example.com',
+            'project_code_scope' => null,
+        ]);
+        setPermissionsTeamId('');
+        $globalBuyer->assignRole('buyer');
+
+        $plantManager = User::factory()->create([
+            'is_active' => true,
+            'name' => 'Plant Manager 022C',
+            'email' => 'plant.manager@pmb.demo',
+            'project_code_scope' => '022C',
+        ]);
+        setPermissionsTeamId('022C');
+        $plantManager->assignRole('plant_manager');
+
+        $order = $this->createPurchaseOrder(['project_code' => 'MBL']);
+
+        $this->actingAs($admin)
+            ->withoutVite()
+            ->post('/procurement/purchase-orders/'.$order->id.'/comments', [
+                'body' => 'Please align @buyer.mention and @plant.manager',
+            ])
+            ->assertRedirect();
+
+        $comment = DocumentComment::query()->first();
+        $this->assertNotNull($comment);
+        $this->assertDatabaseHas('document_comment_mentions', [
+            'document_comment_id' => $comment->id,
+            'user_id' => $globalBuyer->id,
+        ]);
+        $this->assertDatabaseHas('document_comment_mentions', [
+            'document_comment_id' => $comment->id,
+            'user_id' => $plantManager->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->withoutVite()
+            ->get('/procurement/purchase-orders/'.$order->id)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('comments.0.mentioned_names', function ($names) use ($globalBuyer) {
+                    $list = collect($names)->all();
+
+                    return count($list) === 2
+                        && in_array('Plant Manager 022C', $list, true)
+                        && in_array($globalBuyer->name, $list, true);
+                })
+            );
+    }
+
+    public function test_mentionable_users_includes_plant_users_for_global_comment_author(): void
+    {
+        $admin = $this->makeGlobalUserWithRole('procurement_admin');
+        $plantManager = User::factory()->create([
+            'is_active' => true,
+            'email' => 'plant.manager@pmb.demo',
+            'project_code_scope' => '022C',
+        ]);
+        setPermissionsTeamId('022C');
+        $plantManager->assignRole('plant_manager');
+
+        $order = $this->createPurchaseOrder();
+
+        $this->actingAs($admin)
+            ->withoutVite()
+            ->get('/procurement/purchase-orders/'.$order->id)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('mentionableUsers')
+                ->where('mentionableUsers', fn ($users) => collect($users)->contains(
+                    fn (array $row) => $row['email'] === 'plant.manager@pmb.demo'
+                ))
+            );
+    }
+
+    public function test_global_author_duplicate_mentions_are_not_doubled_in_database(): void
+    {
+        $admin = $this->makeGlobalUserWithRole('procurement_admin');
+        $plantManager = User::factory()->create([
+            'is_active' => true,
+            'email' => 'plant.manager@pmb.demo',
+            'project_code_scope' => '022C',
+        ]);
+        setPermissionsTeamId('022C');
+        $plantManager->assignRole('plant_manager');
+
+        $order = $this->createPurchaseOrder();
+
+        $this->actingAs($admin)
+            ->withoutVite()
+            ->post('/procurement/purchase-orders/'.$order->id.'/comments', [
+                'body' => '@plant.manager please see @plant.manager',
+            ])
+            ->assertRedirect();
+
+        $comment = DocumentComment::query()->first();
+        $this->assertNotNull($comment);
+        $this->assertSame(
+            1,
+            DocumentCommentMention::query()->where('document_comment_id', $comment->id)->count()
+        );
+    }
+
+    public function test_mention_resolution_preserves_comment_author_permission_team_context(): void
+    {
+        $registrar = app(PermissionRegistrar::class);
+        $admin = $this->makeGlobalUserWithRole('procurement_admin');
+
+        $plantManager = User::factory()->create([
+            'is_active' => true,
+            'email' => 'plant.manager@pmb.demo',
+            'project_code_scope' => '022C',
+        ]);
+        setPermissionsTeamId('022C');
+        $plantManager->assignRole('plant_manager');
+
+        setPermissionsTeamId('');
+        $admin->unsetRelation('roles');
+        $admin->unsetRelation('permissions');
+        $teamBefore = $registrar->getPermissionsTeamId();
+        $canCommentBefore = $admin->can('po.comment');
+
+        $order = $this->createPurchaseOrder();
+
+        $this->actingAs($admin)
+            ->withoutVite()
+            ->post('/procurement/purchase-orders/'.$order->id.'/comments', [
+                'body' => 'FYI @plant.manager',
+            ])
+            ->assertRedirect();
+
+        $teamAfter = $registrar->getPermissionsTeamId();
+        $admin->unsetRelation('roles');
+        $admin->unsetRelation('permissions');
+        setPermissionsTeamId($teamBefore);
+        $canCommentAfter = $admin->can('po.comment');
+
+        $this->assertSame('', $teamBefore);
+        $this->assertSame($teamBefore, $teamAfter);
+        $this->assertTrue($canCommentBefore);
+        $this->assertTrue($canCommentAfter);
     }
 
     public function test_unknown_mention_is_ignored_without_failing(): void

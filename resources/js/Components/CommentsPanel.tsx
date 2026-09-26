@@ -54,7 +54,7 @@ export default function CommentsPanel({
     const mentionMenu: MenuProps = {
         items: mentionableUsers.map((user) => ({
             key: String(user.id),
-            label: `${user.name} (${user.email})`,
+            label: `${user.name} ${mentionHandle(user.email)}`,
             onClick: () => insertMention(user.email),
         })),
     };
