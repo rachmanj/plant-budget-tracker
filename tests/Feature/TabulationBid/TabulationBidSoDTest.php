@@ -87,6 +87,14 @@ class TabulationBidSoDTest extends TestCase
             'awarded_at' => now(),
         ]);
 
+        $bid->approvals()->create([
+            'step_order' => 1,
+            'required_role' => 'procurement_manager',
+            'decision' => 'approved',
+            'approver_id' => $buyer->id,
+            'acted_at' => now(),
+        ]);
+
         return $bid;
     }
 }

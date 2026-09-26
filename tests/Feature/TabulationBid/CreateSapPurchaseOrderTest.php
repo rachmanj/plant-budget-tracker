@@ -64,7 +64,7 @@ class CreateSapPurchaseOrderTest extends TestCase
         $sapService->shouldNotReceive('createPurchaseOrder');
 
         $job = new CreateSapPurchaseOrder($bid->id);
-        $job->handle($sapService, app(SapCircuitBreaker::class));
+        $job->handle($sapService, app(SapCircuitBreaker::class), app(\App\Services\Approval\ApprovalEngine::class));
 
         $this->assertSame('99999', $bid->fresh()->sap_po_id);
     }
@@ -83,8 +83,9 @@ class CreateSapPurchaseOrderTest extends TestCase
         $breaker = app(SapCircuitBreaker::class);
         $job = new CreateSapPurchaseOrder($bid->id);
 
-        $job->handle($sapService, $breaker);
-        $job->handle($sapService, $breaker);
+        $engine = app(\App\Services\Approval\ApprovalEngine::class);
+        $job->handle($sapService, $breaker, $engine);
+        $job->handle($sapService, $breaker, $engine);
 
         $bid->refresh();
         $this->assertSame('54321', $bid->sap_po_id);
@@ -118,7 +119,7 @@ class CreateSapPurchaseOrderTest extends TestCase
             ->andReturn(['DocEntry' => 11111]);
 
         $job = new CreateSapPurchaseOrder($bid->id);
-        $job->handle($sapService, app(SapCircuitBreaker::class));
+        $job->handle($sapService, app(SapCircuitBreaker::class), app(\App\Services\Approval\ApprovalEngine::class));
 
         $this->assertNotNull($captured);
         $this->assertSame('V-SAP', $captured['CardCode']);
@@ -139,7 +140,7 @@ class CreateSapPurchaseOrderTest extends TestCase
         $job = new CreateSapPurchaseOrder($bid->id);
 
         try {
-            $job->handle($sapService, app(SapCircuitBreaker::class));
+            $job->handle($sapService, app(SapCircuitBreaker::class), app(\App\Services\Approval\ApprovalEngine::class));
             $this->fail('Expected job to throw when plant request is missing.');
         } catch (\RuntimeException $e) {
             $this->assertStringContainsString('Awarded plant request not found', $e->getMessage());
@@ -197,6 +198,14 @@ class CreateSapPurchaseOrderTest extends TestCase
             'tabulation_bid_vendor_id' => $vendor->id,
             'awarded_by' => $buyer->id,
             'awarded_at' => now(),
+        ]);
+
+        $bid->approvals()->create([
+            'step_order' => 1,
+            'required_role' => 'procurement_manager',
+            'decision' => 'approved',
+            'approver_id' => $buyer->id,
+            'acted_at' => now(),
         ]);
 
         return $bid;

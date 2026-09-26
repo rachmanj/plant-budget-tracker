@@ -98,6 +98,14 @@ class UiGapsTest extends TestCase
             'awarded_at' => now(),
         ]);
 
+        $bid->approvals()->create([
+            'step_order' => 1,
+            'required_role' => 'procurement_manager',
+            'decision' => 'approved',
+            'approver_id' => $buyer->id,
+            'acted_at' => now(),
+        ]);
+
         $this->actingAsProject($admin)
             ->withoutVite()
             ->get(route('tabulation-bids.show', $bid))
@@ -105,6 +113,7 @@ class UiGapsTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('TabulationBid/Review', false)
                 ->where('can.createPo', true)
+                ->where('poCreate.enabled', true)
             );
 
         $this->actingAsProject($buyer)

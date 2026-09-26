@@ -6,6 +6,7 @@ use App\Models\InterchangeMap;
 use App\Models\PlantRequest;
 use App\Models\SapSyncLog;
 use App\Models\TabulationBid;
+use App\Services\Approval\ApprovalEngine;
 use App\Services\Sap\SapCircuitBreaker;
 use App\Services\Sap\SapService;
 use Illuminate\Bus\Queueable;
@@ -33,7 +34,7 @@ class CreateSapPurchaseOrder implements ShouldQueue
         return [10, 30, 90];
     }
 
-    public function handle(SapService $sapService, SapCircuitBreaker $breaker): void
+    public function handle(SapService $sapService, SapCircuitBreaker $breaker, ApprovalEngine $approvalEngine): void
     {
         if ($breaker->isOpen('service_layer')) {
             $this->release(60);
@@ -51,6 +52,14 @@ class CreateSapPurchaseOrder implements ShouldQueue
 
         try {
             $bid = TabulationBid::with('award.vendor')->findOrFail($this->tabulationBidId);
+
+            if (! $approvalEngine->isFullyApproved($bid)) {
+                Log::warning('Skipping SAP PO creation: tabulation bid approvals incomplete.', [
+                    'tabulation_bid_id' => $this->tabulationBidId,
+                ]);
+
+                return;
+            }
 
             if ($bid->sap_po_id) {
                 return;

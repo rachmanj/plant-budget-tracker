@@ -47,6 +47,7 @@ class RoleAndPermissionSeeder extends Seeder
             'reports.export',
             'procurement.view',
             'procurement.sync',
+            'procurement.settings',
         ];
 
         foreach ($permissions as $permission) {
@@ -81,14 +82,14 @@ class RoleAndPermissionSeeder extends Seeder
             'project_manager' => ['budget.view', 'plant_request.approve.pm', 'plant_request.receive', 'dmbd.view', 'cancellation.plant', 'reports.view', 'procurement.view', 'po.comment'],
             'plant_manager' => ['budget.view', 'plant_request.approve.plant_mgr', 'plant_request.receive', 'dmbd.view', 'cancellation.plant', 'cannibal.approve.1', 'component.view', 'reports.view', 'reports.export', 'procurement.view', 'po.comment'],
             'buyer' => ['budget.view', 'tabulation_bid.create', 'cancellation.procurement', 'interchange.manage', 'reports.view', 'procurement.view', 'po.attach', 'po.comment'],
-            'procurement_manager' => ['budget.view', 'tabulation_bid.review', 'cancellation.procurement', 'interchange.manage', 'reports.view', 'reports.export', 'procurement.view', 'procurement.sync', 'po.attach', 'po.comment'],
+            'procurement_manager' => ['budget.view', 'tabulation_bid.review', 'cancellation.procurement', 'interchange.manage', 'reports.view', 'reports.export', 'procurement.view', 'procurement.sync', 'procurement.settings', 'po.attach', 'po.comment'],
             'procurement_admin' => ['budget.view', 'po.create', 'cancellation.procurement', 'interchange.manage', 'reports.view', 'procurement.view', 'procurement.sync', 'po.attach', 'po.comment'],
             'logistic_foreman' => ['budget.view', 'logistic.stock_check', 'plant_request.receive', 'dmbd.view', 'grpo.verify', 'reports.view'],
             'logistic_pic' => ['budget.view', 'logistic.stock_check', 'plant_request.receive', 'dmbd.view', 'grpo.verify', 'reports.view'],
-            'finance_director' => ['budget.view', 'budget.set', 'overbudget.approve.fin_dir', 'grpo.verify', 'reports.view', 'reports.export', 'procurement.view'],
+            'finance_director' => ['budget.view', 'budget.set', 'overbudget.approve.fin_dir', 'grpo.verify', 'reports.view', 'reports.export', 'procurement.view', 'procurement.settings'],
             'operation_director' => ['budget.view', 'overbudget.approve.ops_dir', 'dmbd.view', 'component.view', 'cannibal.approve.3', 'reports.view', 'reports.export', 'procurement.view'],
             'president_director' => ['budget.view', 'po.approve', 'dmbd.view', 'component.view', 'cannibal.approve.4', 'reports.view', 'reports.export', 'procurement.view'],
-            'it_manager' => ['budget.view', 'project.setup', 'user.manage', 'dmbd.view', 'reports.view', 'procurement.view', 'procurement.sync', 'po.attach', 'po.comment'],
+            'it_manager' => ['budget.view', 'project.setup', 'user.manage', 'dmbd.view', 'reports.view', 'procurement.view', 'procurement.sync', 'procurement.settings', 'po.attach', 'po.comment'],
             'aml_manager' => ['budget.view', 'component.maintain', 'component.view', 'cannibal.approve.2', 'reports.view', 'reports.export'],
             'aml_dept_head' => ['budget.view', 'component.maintain', 'component.view', 'reports.view'],
         ];

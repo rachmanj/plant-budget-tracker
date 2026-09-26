@@ -93,6 +93,9 @@ function resolveMenuState(pathname: string): { selectedKeys: string[]; openKeys:
     if (path.startsWith('/procurement/purchase-orders')) {
         return { selectedKeys: ['purchase-orders'], openKeys: [] };
     }
+    if (path.startsWith('/procurement/settings')) {
+        return { selectedKeys: ['procurement-settings'], openKeys: [] };
+    }
     if (path.startsWith('/tabulation-bids')) {
         return { selectedKeys: ['tabulation-bids'], openKeys: [] };
     }
@@ -241,6 +244,13 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         menuItems.push({
             key: 'purchase-orders',
             label: <Link href="/procurement/purchase-orders">Purchase Orders</Link>,
+        });
+    }
+
+    if (can.includes('procurement.settings')) {
+        menuItems.push({
+            key: 'procurement-settings',
+            label: <Link href="/procurement/settings">Procurement Settings</Link>,
         });
     }
 

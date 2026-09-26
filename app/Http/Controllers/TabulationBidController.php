@@ -6,6 +6,7 @@ use App\Jobs\CreateSapPurchaseOrder;
 use App\Models\TabulationBid;
 use App\Models\TabulationBidAward;
 use App\Support\ApprovalChains;
+use App\Support\ProcurementSettings;
 use App\Services\Approval\ApprovalEngine;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -75,16 +76,49 @@ class TabulationBidController extends Controller
             ->with('success', 'Tabulation bid created.');
     }
 
-    public function show(TabulationBid $tabulationBid): Response
+    public function show(Request $request, TabulationBid $tabulationBid): Response
     {
         $tabulationBid->load(['vendors', 'award.vendor', 'buyer', 'approvals']);
 
+        $fullyApproved = $this->approvalEngine->isFullyApproved($tabulationBid);
+        $currentStep = $this->approvalEngine->currentStep($tabulationBid);
+        $winnerPrice = $tabulationBid->award?->vendor?->price;
+        $directorThreshold = ProcurementSettings::poDirectorThreshold();
+        $directorRequired = $winnerPrice !== null
+            && (float) $winnerPrice > $directorThreshold;
+
+        $createPoDisabledReason = null;
+        if (! $tabulationBid->award) {
+            $createPoDisabledReason = 'A winning vendor must be awarded before creating a purchase order.';
+        } elseif (! $fullyApproved) {
+            $createPoDisabledReason = 'Purchase order creation is blocked while approval is still in progress.';
+        } elseif ($tabulationBid->sap_po_id) {
+            $createPoDisabledReason = 'A purchase order has already been created for this bid.';
+        }
+
+        $showCreatePoButton = $request->user()?->hasRole('procurement_admin')
+            && $request->user()->id !== $tabulationBid->created_by;
+
         return Inertia::render('TabulationBid/Review', [
             'bid' => $tabulationBid,
+            'approvalStatus' => [
+                'fullyApproved' => $fullyApproved,
+                'currentStepOrder' => $currentStep?->step_order,
+                'currentRequiredRole' => $currentStep?->required_role,
+                'totalSteps' => $tabulationBid->approvals->count(),
+                'directorRequired' => $directorRequired,
+                'winnerAmount' => $winnerPrice !== null ? (string) $winnerPrice : null,
+                'directorThreshold' => number_format($directorThreshold, 2, '.', ''),
+            ],
+            'poCreate' => [
+                'visible' => $showCreatePoButton,
+                'enabled' => Gate::allows('createPo', $tabulationBid) && $fullyApproved && ! $tabulationBid->sap_po_id,
+                'disabledReason' => $createPoDisabledReason,
+            ],
             'can' => [
                 'review' => Gate::allows('review', $tabulationBid),
                 'award' => Gate::allows('award', $tabulationBid),
-                'createPo' => Gate::allows('createPo', $tabulationBid),
+                'createPo' => Gate::allows('createPo', $tabulationBid) && $fullyApproved && ! $tabulationBid->sap_po_id,
             ],
         ]);
     }
@@ -121,10 +155,28 @@ class TabulationBidController extends Controller
                 'awarded_at' => now(),
             ]);
 
-            $tabulationBid->update([
-                'status' => 'forwarded_admin',
-                'reviewed_by' => $request->user()->id,
-            ]);
+            $poChain = ApprovalChains::tabulationBidPoChainForValue($vendor->price);
+            $needsPresidentDirector = count($poChain) > 1;
+
+            if ($needsPresidentDirector) {
+                if (! $tabulationBid->approvals()->where('step_order', 2)->exists()) {
+                    $tabulationBid->approvals()->create([
+                        'step_order' => 2,
+                        'required_role' => 'president_director',
+                        'decision' => 'pending',
+                    ]);
+                }
+
+                $tabulationBid->update([
+                    'status' => 'pending_presdir',
+                    'reviewed_by' => $request->user()->id,
+                ]);
+            } else {
+                $tabulationBid->update([
+                    'status' => 'forwarded_admin',
+                    'reviewed_by' => $request->user()->id,
+                ]);
+            }
         });
 
         return back()->with('success', 'Vendor awarded.');
@@ -133,6 +185,14 @@ class TabulationBidController extends Controller
     public function createPo(TabulationBid $tabulationBid): RedirectResponse
     {
         $this->authorize('createPo', $tabulationBid);
+
+        if (! $tabulationBid->award) {
+            return back()->with('error', 'A winning vendor must be awarded before creating a purchase order.');
+        }
+
+        if (! $this->approvalEngine->isFullyApproved($tabulationBid)) {
+            return back()->with('error', 'Purchase order creation is blocked while approval is still in progress.');
+        }
 
         if ($tabulationBid->sap_po_id) {
             return back()->with('error', 'PO already created.');

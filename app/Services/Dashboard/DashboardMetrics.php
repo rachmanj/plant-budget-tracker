@@ -9,6 +9,7 @@ use App\Models\DmbdEntry;
 use App\Models\InterchangeMap;
 use App\Models\OverbudgetRequest;
 use App\Models\PlantRequest;
+use App\Models\RequestApproval;
 use App\Models\TabulationBid;
 use App\Models\TabulationBidAward;
 use App\Models\User;
@@ -179,12 +180,25 @@ class DashboardMetrics
                 )
                 ->first();
 
-            $myStatuses = array_values($this->roleStatusMap('PlantRequest', $user));
+            $awaitingMyDecision = (int) RequestApproval::query()
+                ->where('decision', 'pending')
+                ->whereIn('required_role', $user->getRoleNames())
+                ->where(function (Builder $query) use ($projectCode) {
+                    $query->where('approvable_type', '!=', PlantRequest::class)
+                        ->orWhereHasMorph('approvable', [PlantRequest::class], function (Builder $plantQuery) use ($projectCode) {
+                            $plantQuery->whereHas(
+                                'allocation.period',
+                                fn (Builder $periodQuery) => $periodQuery->where('project_code', $projectCode)
+                            );
+                        });
+                })
+                ->count();
 
-            $awaitingMyDecision = 0;
-            if ($myStatuses !== []) {
-                $awaitingMyDecision = (int) $this->plantRequestsQuery($projectCode)
-                    ->whereIn('status', $myStatuses)
+            $roleStatusMap = $this->roleStatusMap('PlantRequest', $user);
+            if ($roleStatusMap !== []) {
+                $awaitingMyDecision += (int) $this->plantRequestsQuery($projectCode)
+                    ->whereIn('status', array_values($roleStatusMap))
+                    ->whereDoesntHave('approvals', fn (Builder $q) => $q->where('decision', 'pending'))
                     ->count();
             }
 

@@ -28,6 +28,7 @@ class ApprovalEngine
         ],
         'TabulationBid' => [
             1 => 'pending_proc_mgr',
+            2 => 'pending_presdir',
         ],
     ];
 

@@ -51,7 +51,7 @@ class PlantRequestLifecycleTest extends TestCase
             ->andReturn(['DocEntry' => 77001]);
 
         $job = new CreateSapPurchaseOrder($bid->id);
-        $job->handle($sapService, app(SapCircuitBreaker::class));
+        $job->handle($sapService, app(SapCircuitBreaker::class), app(\App\Services\Approval\ApprovalEngine::class));
 
         $plantRequest->refresh();
         $this->assertSame('po_created', $plantRequest->status);
@@ -81,7 +81,7 @@ class PlantRequestLifecycleTest extends TestCase
             ->andReturn(['DocEntry' => 77002]);
 
         $job = new CreateSapPurchaseOrder($bid->id);
-        $job->handle($sapService, app(SapCircuitBreaker::class));
+        $job->handle($sapService, app(SapCircuitBreaker::class), app(\App\Services\Approval\ApprovalEngine::class));
 
         $plantRequest->refresh();
         $this->assertSame('received', $plantRequest->status);
@@ -100,7 +100,7 @@ class PlantRequestLifecycleTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Awarded plant request not found');
 
-        $job->handle($sapService, app(SapCircuitBreaker::class));
+        $job->handle($sapService, app(SapCircuitBreaker::class), app(\App\Services\Approval\ApprovalEngine::class));
     }
 
     public function test_plant_manager_can_receive_plant_request_at_po_created_status(): void
@@ -310,6 +310,14 @@ class PlantRequestLifecycleTest extends TestCase
             'tabulation_bid_vendor_id' => $vendor->id,
             'awarded_by' => $buyer->id,
             'awarded_at' => now(),
+        ]);
+
+        $bid->approvals()->create([
+            'step_order' => 1,
+            'required_role' => 'procurement_manager',
+            'decision' => 'approved',
+            'approver_id' => $buyer->id,
+            'acted_at' => now(),
         ]);
 
         return $bid;

@@ -4,6 +4,24 @@ namespace App\Support;
 
 class ApprovalChains
 {
+    /**
+     * PO approval chain for PMB-created tabulation bids (value-aware step 2).
+     *
+     * @return list<array{step_order: int, required_role: string}>
+     */
+    public static function tabulationBidPoChainForValue(float|string $winnerPrice): array
+    {
+        $chain = [
+            ['step_order' => 1, 'required_role' => 'procurement_manager'],
+        ];
+
+        if ((float) $winnerPrice > ProcurementSettings::poDirectorThreshold()) {
+            $chain[] = ['step_order' => 2, 'required_role' => 'president_director'];
+        }
+
+        return $chain;
+    }
+
     /** @var list<string> */
     private const CHAIN_TYPES = [
         'PlantRequest',

@@ -14,6 +14,7 @@ use App\Http\Controllers\DmbdController;
 use App\Http\Controllers\InterchangeController;
 use App\Http\Controllers\OverbudgetController;
 use App\Http\Controllers\PlantRequestController;
+use App\Http\Controllers\Procurement\ProcurementSettingsController;
 use App\Http\Controllers\Procurement\PurchaseOrderController;
 use App\Http\Controllers\ProjectContextController;
 use App\Http\Controllers\ReportController;
@@ -88,6 +89,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/{sapPurchaseOrder}/comments', [PurchaseOrderController::class, 'storeComment'])->name('comments.store');
         Route::delete('/{sapPurchaseOrder}/comments/{comment}', [PurchaseOrderController::class, 'destroyComment'])->name('comments.destroy');
         Route::post('/{sapPurchaseOrder}/follow', [PurchaseOrderController::class, 'toggleFollow'])->name('follow.toggle');
+    });
+
+    Route::middleware('can:procurement.settings')->prefix('procurement/settings')->name('procurement.settings.')->group(function () {
+        Route::get('/', [ProcurementSettingsController::class, 'index'])->name('index');
+        Route::post('/', [ProcurementSettingsController::class, 'update'])->name('update');
     });
 
     Route::get('/overbudget', [OverbudgetController::class, 'index'])->name('overbudget.index');

@@ -1,8 +1,25 @@
-import { Head, router } from '@inertiajs/react';
-import { Button, Card, Descriptions, Modal, Space, Tag, Typography } from 'antd';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Alert, Button, Card, Descriptions, Modal, Space, Tag, Tooltip, Typography } from 'antd';
 import AppLayout from '@/Layouts/AppLayout';
 import VendorComparisonTable from '@/Components/VendorComparisonTable';
 import { formatIdr } from '@/hooks/useCurrency';
+import { roleLabel } from '@/utils/labels';
+
+interface ApprovalStatus {
+    fullyApproved: boolean;
+    currentStepOrder?: number | null;
+    currentRequiredRole?: string | null;
+    totalSteps: number;
+    directorRequired: boolean;
+    winnerAmount: string | null;
+    directorThreshold: string;
+}
+
+interface PoCreate {
+    visible: boolean;
+    enabled: boolean;
+    disabledReason: string | null;
+}
 
 interface Props {
     bid: {
@@ -23,6 +40,8 @@ interface Props {
             vendor?: { vendor_name: string; price: string };
         };
     };
+    approvalStatus: ApprovalStatus;
+    poCreate: PoCreate;
     can: {
         review: boolean;
         award: boolean;
@@ -30,7 +49,17 @@ interface Props {
     };
 }
 
-export default function Review({ bid, can = { review: false, award: false, createPo: false } }: Props) {
+interface NavPageProps {
+    nav?: { roleLabels?: Record<string, string> };
+}
+
+export default function Review({
+    bid,
+    approvalStatus,
+    poCreate = { visible: false, enabled: false, disabledReason: null },
+    can = { review: false, award: false, createPo: false },
+}: Props) {
+    const { nav } = usePage<NavPageProps>().props;
     const lowestVendor = [...bid.vendors].sort((a, b) => a.rank - b.rank)[0] ?? bid.vendors[0];
 
     const confirmCreatePo = () => {
@@ -44,10 +73,32 @@ export default function Review({ bid, can = { review: false, award: false, creat
         });
     };
 
+    const waitingLabel =
+        approvalStatus.fullyApproved || !approvalStatus.currentRequiredRole
+            ? 'All approval steps completed.'
+            : `Waiting for ${roleLabel(approvalStatus.currentRequiredRole, nav?.roleLabels)} (step ${approvalStatus.currentStepOrder ?? '—'} of ${approvalStatus.totalSteps}).`;
+
     return (
         <AppLayout title={`Review ${bid.bid_no}`}>
             <Head title={bid.bid_no} />
             <Card title={`Tabulation Bid ${bid.bid_no}`}>
+                <Alert
+                    type={approvalStatus.fullyApproved ? 'success' : 'info'}
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                    message="PO approval status"
+                    description={
+                        <>
+                            <div>{waitingLabel}</div>
+                            {approvalStatus.directorRequired && approvalStatus.winnerAmount && (
+                                <div style={{ marginTop: 8 }}>
+                                    Winning amount {formatIdr(approvalStatus.winnerAmount)} is above the President
+                                    Director threshold of {formatIdr(approvalStatus.directorThreshold)}.
+                                </div>
+                            )}
+                        </>
+                    }
+                />
                 <VendorComparisonTable vendors={bid.vendors} />
                 {bid.award?.vendor && (
                     <Descriptions style={{ marginTop: 16 }} column={1} size="small">
@@ -74,10 +125,16 @@ export default function Review({ bid, can = { review: false, award: false, creat
                             Award Lowest
                         </Button>
                     )}
-                    {can.createPo && (
-                        <Button type="primary" onClick={confirmCreatePo}>
-                            Create PO
-                        </Button>
+                    {poCreate.visible && (
+                        <Tooltip title={!poCreate.enabled ? poCreate.disabledReason ?? undefined : undefined}>
+                            <Button
+                                type="primary"
+                                disabled={!poCreate.enabled}
+                                onClick={poCreate.enabled ? confirmCreatePo : undefined}
+                            >
+                                Create PO
+                            </Button>
+                        </Tooltip>
                     )}
                 </Space>
                 {can.review && (
