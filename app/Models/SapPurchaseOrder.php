@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SapPurchaseOrder extends Model
@@ -27,6 +28,8 @@ class SapPurchaseOrder extends Model
         'disc_amount',
         'delivery_status',
         'budget_type',
+        'origin',
+        'plant_request_id',
         'synced_at',
     ];
 
@@ -47,6 +50,11 @@ class SapPurchaseOrder extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(SapPurchaseOrderLine::class);
+    }
+
+    public function plantRequest(): BelongsTo
+    {
+        return $this->belongsTo(PlantRequest::class);
     }
 
     public function scopeDocDateBetween(Builder $query, $from, $to): Builder

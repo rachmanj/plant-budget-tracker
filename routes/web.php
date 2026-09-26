@@ -14,6 +14,7 @@ use App\Http\Controllers\DmbdController;
 use App\Http\Controllers\InterchangeController;
 use App\Http\Controllers\OverbudgetController;
 use App\Http\Controllers\PlantRequestController;
+use App\Http\Controllers\Procurement\PurchaseOrderController;
 use App\Http\Controllers\ProjectContextController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Sap\SyncDashboardController;
@@ -77,6 +78,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/tabulation-bids/{tabulationBid}/review', [TabulationBidController::class, 'review'])->name('tabulation-bids.review');
     Route::post('/tabulation-bids/{tabulationBid}/award', [TabulationBidController::class, 'award'])->name('tabulation-bids.award');
     Route::post('/tabulation-bids/{tabulationBid}/create-po', [TabulationBidController::class, 'createPo'])->name('tabulation-bids.create-po');
+
+    Route::prefix('procurement/purchase-orders')->name('procurement.purchase-orders.')->group(function () {
+        Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
+        Route::get('/{sapPurchaseOrder}', [PurchaseOrderController::class, 'show'])->name('show');
+    });
 
     Route::get('/overbudget', [OverbudgetController::class, 'index'])->name('overbudget.index');
     Route::get('/overbudget/create', [OverbudgetController::class, 'create'])->name('overbudget.create');
