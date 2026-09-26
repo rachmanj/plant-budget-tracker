@@ -288,37 +288,40 @@ Tetap mematuhi standar tampilan PMB yang sudah berlaku: bahasa Inggris, tema keu
 
 ---
 
-## 10. Pertanyaan terbuka (butuh keputusan Iwan)
+## 10. Keputusan yang sudah diambil (Iwan, 25 Sep 2026)
 
-1. **Cakupan:** apakah PMB mengambil alih PO untuk **hanya Divisi Plant**, atau **seluruh departemen** (17 departemen seperti di proc-app)? Ini menentukan besar pekerjaan (bagian ini bisa menambah 30–50%).
-2. **Tingkat persetujuan direktur:** proc-app memakai "Director". Di PMB padanannya President Director, Operation Director, atau keduanya, dan berapa ambang nilai yang mewajibkan tingkat direktur?
-3. **Siapa yang berhak menekan "Create PO"** (tulis ke SAP) di PMB — tetap Procurement Admin (seperti sekarang: izin `po.create`), atau Procurement Manager?
-4. **Nasib proc-app:** dihentikan total setelah migrasi, atau tetap hidup sebagai arsip baca-saja untuk data sebelum 2026?
-5. **Kredensial:** Dea butuh akses baca basis data `proc_app` (dan cara menarik berkas lampiran dari server 13) untuk mengukur dan memigrasikan riwayat.
+Keempat pertanyaan §10 sudah dijawab. Keputusan ini mengikat bentuk pekerjaan Fase 1–5:
 
----
+1. **Cakupan = Plant + Logistik/Gudang (LOGW).** Pilihan **1A**: PMB mengambil alih pekerjaan PO untuk
+   Divisi Plant dan departemen Logistik & Gudang — bersama-sama **88% dari seluruh PO proc-app**
+   (PLANT 7.130 + LOGW 2.529 dari 10.904). Departemen lain tidak ikut dulu; menyusul setelah terbukti
+   stabil, atau tetap di proc-app. Konsekuensi teknis: register PR/PO wajib punya dimensi
+   **departemen**, dan keterkaitan wajib ke anggaran Plant hanya berlaku untuk dokumen Plant.
+2. **Rantai persetujuan PO = pilihan 2A**: **Procurement Manager selalu**; **President Director hanya
+   bila nilai PO di atas ambang**. Ambang diusulkan **Rp 100.000.000** dan wajib **dapat disetel tanpa
+   ubah kode** (simpan sebagai setelan, bukan konstanta) — Iwan dapat menyesuaikan angkanya kapan saja.
+   Ditambahkan ke `app/Support/ApprovalChains.php` sebagai jenis `PurchaseOrder` (satu sumber aturan),
+   dijalankan `ApprovalEngine` yang sudah ada — **bukan** mesin baru di controller.
+3. **Pembuat PO di SAP = pilihan 3A**: tetap **Procurement Admin** (izin `po.create` yang sudah ada),
+   sesuai pemisahan tugas — yang menyetujui bukan yang melaksanakan. Buyer tetap membuat tabulation bid,
+   Procurement Manager menyetujui, Procurement Admin yang menekan Create PO.
+4. **Nasib proc-app = pilihan 4A**: setelah riwayat dimigrasikan, proc-app **hidup sebagai arsip
+   baca-saja** (unggah lampiran, komentar, dan persetujuan dimatikan) selama masa berdampingan
+   **± 1 bulan**; seluruh pekerjaan baru dilakukan di PMB. Setelah Iwan menyatakan stabil, proc-app
+   dimatikan total dan basis datanya disimpan sebagai arsip (dump).
 
-## 13. Hasil pengukuran awal (Fase 0 — sudah dijalankan 23 September 2026)
+Pertanyaan lama yang sudah tuntas: kredensial baca basis data `procapp` dan cara menarik lampiran
+(SSH ke server .13) sudah tersedia, dan seluruh lampiran PO + PR sudah ditarik serta diverifikasi —
+lihat `docs/integration-proc-app-baseline.md`.
 
-Basis data: `procapp` di 192.168.32.13 (MariaDB 10.4.32), akses baca-saja. Rincian penuh di
-`docs/integration-proc-app-baseline.md`. Ringkasnya:
+### Rincian Fase 1 (hasil keputusan di atas)
 
-- **10.904 PO** (2025-06-05 → 2026-09-23) dan **14.147 PR**; baris PO 35.453 dengan nilai baris
-  **Rp 838,26 miliar**.
-- **Nilai PO tidak tersimpan di kepala dokumen** (`total_po_price` nol untuk semua baris) — hanya ada
-  di baris item. Register PMB harus menjumlahkan dari baris atau mengambil dari SAP.
-- **Lampiran: 3.146 berkas / 639 MB di disk** untuk PO, **ditambah 22.296 berkas / 7,1 GB untuk PR**
-  (tabel `pr_attachments` masih dipakai, 21.984 baris) → total ± 7,7 GB yang perlu dimigrasikan.
-  Terverifikasi lewat SSH: commit produksi `2c0614d` identik dengan repo, `DB_DATABASE=procapp`.
-- **Fitur kolaborasi tidak terpakai**: `comments`, `comment_mentions`, `comment_attachments` = 0 baris,
-  `po_follows` = 1 baris. Tidak ada riwayat komunikasi yang perlu dimigrasikan.
-- **Cakupan 97% proyek Plant** (022C, 017C, 021C, 025C, APS, 000H). Per departemen:
-  PLANT 7.130 · LOGW 2.529 · HCS 588 · SHE 179 · IT 151 · sisanya < 150.
-- **Pemakai: 13 akun** (buyer 8, admin 1, adminproc 1, director 1, logistic 1, superadmin 1).
-- Pola identitas baris SAP (`sap_doc_entry`, `sap_line_num`, `sap_vis_order`, `line_identity`) sudah
-  dipakai proc-app dan harus ditiru PMB agar sinkron ulang tidak menggandakan baris.
+Dipecah menjadi tiga tahap yang masing-masing diuji lalu dipasang:
 
----
+- **1a — skema, model, dan penyedot data dari SAP:** tabel register PR/PO (dengan dimensi departemen
+  dan identitas baris SAP), model, layanan sinkron, izin baru, dan tes.
+- **1b — halaman daftar & rincian PO** (baca-saja) untuk peran pengadaan + tes props Inertia.
+- **1c — lampiran, komentar (dengan mention), dan langganan dokumen** + tes unggah/unduh.
 
 ## 11. Perkiraan usaha
 
