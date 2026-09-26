@@ -323,6 +323,42 @@ Dipecah menjadi tiga tahap yang masing-masing diuji lalu dipasang:
 - **1b — halaman daftar & rincian PO** (baca-saja) untuk peran pengadaan + tes props Inertia.
 - **1c — lampiran, komentar (dengan mention), dan langganan dokumen** + tes unggah/unduh.
 
+## 10b. Aturan anti-tumpang-tindih (disetujui Iwan, 25 Sep 2026)
+
+Prinsip induk: **satu tahap dokumen = satu pemilik.** Kebutuhan → PMB (plant request, terikat
+anggaran) · PR SAP → satu register di PMB · banding vendor → PMB · PO → satu register dengan penanda
+asal · barang diterima/GRPO → dibaca dari SAP menjadi pemakaian anggaran · persetujuan → PMB.
+
+1. **Dua makna "PR" disatukan.** `plant_requests` (permintaan internal) dan PR SAP (OPRQ) adalah dua
+   hal berbeda atas satu kebutuhan. Tautkan eksplisit (`plant_requests.sap_pr_no` ↔ register PR) dan
+   tampilkan sebagai **satu kasus pengadaan** bertahap, bukan dua menu terpisah. PMB **menolak**
+   membuat PR baru bila sudah ada PR hidup untuk kebutuhan yang sama.
+2. **Penanda asal PO.** Register PO wajib menyimpan `origin` = `pmb` (dibuat dari tabulation bid) atau
+   `sap` (lahir langsung di SAP). Di layar bid ditampilkan peringatan bila PR terkait sudah punya PO,
+   supaya tidak ada dua PO aktif untuk satu PR tanpa diketahui.
+3. **Satu tempat menyetujui.** Selama masa berdampingan, proc-app tidak lagi menyetujui apa pun
+   (arsip baca-saja). Untuk PO yang **sudah** terbit di SAP, persetujuan PMB dicatat sebagai **jejak
+   tata kelola** bersifat pencatatan — bukan syarat yang menahan dokumen yang sudah berjalan.
+4. **Satu definisi nilai PO.** Register memakai jumlah baris (atau `DocTotalFC` dari SAP) — satu
+   definisi saja, dipakai juga oleh laporan. **PO hasil sinkron TIDAK menambah pemakaian anggaran**;
+   pemakaian tetap berasal dari GRPO lewat `ReconcileGrpoToLedger`. Ini mencegah pemakaian dobel.
+5. **Isi UDF SAP saat PMB membuat dokumen.** Bukti: PO yang dibuat lewat Service Layer punya
+   `U_MIS_CCDepartement` kosong, sehingga tidak terbaca laporan/filter SAP yang ada (dan nanti oleh
+   sinkron PMB sendiri). Karena itu dokumen buatan PMB wajib mengisi `U_MIS_CCDepartement` (kode
+   departemen), `U_ARK_BudgetType`, `U_MIS_PRNo` di kepala, dan `U_MIS_UnitNo` di baris PO — supaya
+   setara dengan dokumen yang diketik di SAP. Dikerjakan bersamaan dengan Fase 2 (menyentuh penulisan).
+6. **PR dipilih, bukan diketik.** `tabulation_bids.sap_pr_id` diisi dari **register PR** (pilihan),
+   bukan teks bebas, supaya kegagalan pembuatan PO terjadi di layar — bukan di antrean job.
+7. **Daftar "jangan bangun ulang":** jangan mesin persetujuan kedua (pakai `ApprovalChains` +
+   `ApprovalEngine`); jangan migrasikan master supplier & harga item proc-app (sumbernya SAP); jangan
+   migrasikan komentar/mention/follow proc-app (0 baris, tidak dipakai) — cukup satu sistem komentar
+   polimorfik milik PMB; jangan membuat laporan pengadaan kedua (perluas laporan PMB, hentikan yang
+   kembar di proc-app); jangan membuat penomoran dokumen sendiri (nomor tetap milik SAP).
+
+**Pemetaan aturan → fase:** (1) dan (6) dikerjakan di Fase 1b/1c; (2) dan (4) di Fase 1b (skema
+register) dan diperiksa lagi di Fase 5 saat migrasi riwayat; (3) di Fase 2 bersama rantai persetujuan
+PO; (5) di Fase 2 (penulisan SAP); (7) berlaku sepanjang semua fase.
+
 ## 11. Perkiraan usaha
 
 | Fase | Isi | Perkiraan |
