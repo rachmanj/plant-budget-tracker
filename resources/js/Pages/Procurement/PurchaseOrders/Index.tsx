@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Card, DatePicker, Input, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { Card, Checkbox, DatePicker, Input, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { StarFilled } from '@ant-design/icons';
 import type { TablePaginationConfig } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import { useState } from 'react';
@@ -20,6 +21,7 @@ interface PurchaseOrderRow {
     delivery_status: string | null;
     pr_no: string | null;
     origin: string;
+    isFollowed?: boolean;
 }
 
 interface Paginator<T> {
@@ -48,6 +50,7 @@ interface Filters {
     to: string | null;
     delivery_status: string | null;
     origin: string | null;
+    following?: boolean;
     per_page: number;
 }
 
@@ -93,6 +96,7 @@ export default function Index({
                 to: filters.to ?? undefined,
                 delivery_status: filters.delivery_status ?? undefined,
                 origin: filters.origin ?? undefined,
+                following: filters.following ? 1 : undefined,
                 per_page: filters.per_page,
                 ...overrides,
             },
@@ -186,6 +190,14 @@ export default function Index({
                         ]}
                         onChange={(value) => navigate({ origin: value ?? undefined, page: 1 })}
                     />
+                    <Checkbox
+                        checked={Boolean(filters.following)}
+                        onChange={(e) =>
+                            navigate({ following: e.target.checked ? 1 : undefined, page: 1 })
+                        }
+                    >
+                        Only POs I follow
+                    </Checkbox>
                 </Space>
 
                 <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
@@ -210,12 +222,20 @@ export default function Index({
                         {
                             title: 'PO No',
                             dataIndex: 'doc_num',
-                            render: (docNum: number | null, row: PurchaseOrderRow) =>
-                                docNum ? (
-                                    <Link href={`/procurement/purchase-orders/${row.id}`}>{docNum}</Link>
-                                ) : (
-                                    '—'
-                                ),
+                            render: (docNum: number | null, row: PurchaseOrderRow) => (
+                                <Space size="small">
+                                    {row.isFollowed && (
+                                        <Tooltip title="Following">
+                                            <StarFilled style={{ color: '#13c2c2' }} />
+                                        </Tooltip>
+                                    )}
+                                    {docNum ? (
+                                        <Link href={`/procurement/purchase-orders/${row.id}`}>{docNum}</Link>
+                                    ) : (
+                                        '—'
+                                    )}
+                                </Space>
+                            ),
                         },
                         {
                             title: 'Doc Date',

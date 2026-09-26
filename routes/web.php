@@ -85,6 +85,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/{sapPurchaseOrder}/attachments', [PurchaseOrderController::class, 'storeAttachment'])->name('attachments.store');
         Route::get('/{sapPurchaseOrder}/attachments/{attachment}/download', [PurchaseOrderController::class, 'downloadAttachment'])->name('attachments.download');
         Route::delete('/{sapPurchaseOrder}/attachments/{attachment}', [PurchaseOrderController::class, 'destroyAttachment'])->name('attachments.destroy');
+        Route::post('/{sapPurchaseOrder}/comments', [PurchaseOrderController::class, 'storeComment'])->name('comments.store');
+        Route::delete('/{sapPurchaseOrder}/comments/{comment}', [PurchaseOrderController::class, 'destroyComment'])->name('comments.destroy');
+        Route::post('/{sapPurchaseOrder}/follow', [PurchaseOrderController::class, 'toggleFollow'])->name('follow.toggle');
     });
 
     Route::get('/overbudget', [OverbudgetController::class, 'index'])->name('overbudget.index');

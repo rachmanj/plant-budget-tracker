@@ -5,6 +5,8 @@ import dayjs from 'dayjs';
 import type { ReactNode } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import AttachmentsPanel, { type AttachmentRow } from '@/Components/AttachmentsPanel';
+import CommentsPanel, { type CommentRow, type MentionableUser } from '@/Components/CommentsPanel';
+import FollowButton from '@/Components/FollowButton';
 import { formatIdr } from '@/hooks/useCurrency';
 
 interface LineRow {
@@ -59,8 +61,13 @@ interface Props {
     purchaseOrder: PurchaseOrder;
     relatedPurchaseRequest: RelatedPurchaseRequest | null;
     attachments: AttachmentRow[];
+    comments: CommentRow[];
+    mentionableUsers: MentionableUser[];
+    isFollowed: boolean;
+    followerCount: number;
     can: {
         attach: boolean;
+        comment: boolean;
     };
 }
 
@@ -79,7 +86,16 @@ function hasLineData(lines: LineRow[], field: keyof LineRow): boolean {
     });
 }
 
-export default function Show({ purchaseOrder, relatedPurchaseRequest, attachments, can }: Props) {
+export default function Show({
+    purchaseOrder,
+    relatedPurchaseRequest,
+    attachments,
+    comments,
+    mentionableUsers,
+    isFollowed,
+    followerCount,
+    can,
+}: Props) {
     const lines = purchaseOrder.lines ?? [];
     const title = purchaseOrder.doc_num ? `PO ${purchaseOrder.doc_num}` : `PO #${purchaseOrder.id}`;
 
@@ -204,7 +220,17 @@ export default function Show({ purchaseOrder, relatedPurchaseRequest, attachment
     return (
         <AppLayout title={title}>
             <Head title={title} />
-            <Card title={title} style={{ marginBottom: 16 }}>
+            <Card
+                title={title}
+                style={{ marginBottom: 16 }}
+                extra={
+                    <FollowButton
+                        purchaseOrderId={purchaseOrder.id}
+                        isFollowed={isFollowed}
+                        followerCount={followerCount}
+                    />
+                }
+            >
                 <Descriptions bordered size="small" column={3}>
                     {headerItems.map((item) => (
                         <Descriptions.Item key={item.label} label={item.label}>
@@ -240,11 +266,20 @@ export default function Show({ purchaseOrder, relatedPurchaseRequest, attachment
                 <Table rowKey="id" dataSource={lines} pagination={false} columns={lineColumns} />
             </Card>
 
-            <Card title="Attachments">
+            <Card title="Attachments" style={{ marginBottom: 16 }}>
                 <AttachmentsPanel
                     purchaseOrderId={purchaseOrder.id}
                     attachments={attachments ?? []}
                     canAttach={can.attach}
+                />
+            </Card>
+
+            <Card title="Comments">
+                <CommentsPanel
+                    purchaseOrderId={purchaseOrder.id}
+                    comments={comments ?? []}
+                    canComment={can.comment}
+                    mentionableUsers={mentionableUsers ?? []}
                 />
             </Card>
         </AppLayout>
