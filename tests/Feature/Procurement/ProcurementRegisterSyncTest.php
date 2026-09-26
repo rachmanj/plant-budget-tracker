@@ -46,6 +46,51 @@ class ProcurementRegisterSyncTest extends TestCase
         $this->assertSame(2, SapPurchaseOrderLine::query()->count());
     }
 
+    public function test_po_sync_persists_total_amount_from_idr_local_columns_not_fc(): void
+    {
+        $rows = collect([
+            $this->poRow(
+                sapDocEntry: 5001,
+                lineNum: 0,
+                visOrder: 0,
+                deptCode: '40',
+                totalAmount: 1123320,
+                vatAmount: 123456,
+                discAmount: 0,
+            ),
+        ]);
+
+        app(PurchaseOrderRegisterSync::class)->sync($rows);
+
+        $order = SapPurchaseOrder::query()->where('sap_doc_entry', 5001)->first();
+        $this->assertNotNull($order);
+        $this->assertSame('1123320.00', $order->total_amount);
+        $this->assertSame('123456.00', $order->vat_amount);
+        $this->assertSame('0.00', $order->disc_amount);
+    }
+
+    public function test_po_sync_persists_fc_fallback_amounts_when_repository_returns_them(): void
+    {
+        $rows = collect([
+            $this->poRow(
+                sapDocEntry: 5002,
+                lineNum: 0,
+                visOrder: 0,
+                deptCode: '40',
+                totalAmount: 50000,
+                vatAmount: 5000,
+                discAmount: 250,
+            ),
+        ]);
+
+        app(PurchaseOrderRegisterSync::class)->sync($rows);
+
+        $order = SapPurchaseOrder::query()->where('sap_doc_entry', 5002)->first();
+        $this->assertSame('50000.00', $order->total_amount);
+        $this->assertSame('5000.00', $order->vat_amount);
+        $this->assertSame('250.00', $order->disc_amount);
+    }
+
     public function test_po_line_outside_department_scope_is_skipped(): void
     {
         $rows = collect([
@@ -121,6 +166,9 @@ class ProcurementRegisterSyncTest extends TestCase
         string $deptCode,
         float $qty = 1,
         float $unitPrice = 500,
+        float $totalAmount = 1000,
+        float $vatAmount = 100,
+        float $discAmount = 0,
     ): object {
         return (object) [
             'sap_doc_entry' => $sapDocEntry,
@@ -138,9 +186,9 @@ class ProcurementRegisterSyncTest extends TestCase
             'dept_code' => $deptCode,
             'dept_name' => 'Plant',
             'currency' => 'IDR',
-            'total_amount' => 1000,
-            'vat_amount' => 100,
-            'disc_amount' => 0,
+            'total_amount' => $totalAmount,
+            'vat_amount' => $vatAmount,
+            'disc_amount' => $discAmount,
             'delivery_status' => 'N',
             'budget_type' => 'OPEX',
             'item_code' => 'ITEM-1',

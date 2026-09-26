@@ -1,0 +1,84 @@
+{
+  "_comment": "Umpan panel 'What's new' di halaman login (tampil hanya saat masa trial). Tambah entri baru di paling atas array. Nilai type: feature | improvement | fix. Hapus berkas ini atau matikan TRIAL_MODE untuk menyembunyikan panel.",
+  "trial_note": "Trial build — documents created in this app are written to the SAP trial company (LAB_SBO_20260924), not to production.",
+  "updates": [
+    {
+      "date": "2026-09-26",
+      "type": "feature",
+      "title": "Procurement register now reads PR and PO from SAP",
+      "summary": "Purchase requests and purchase orders for Plant and Logistics & Warehouse are pulled from SAP every 15 minutes, with document headers and item lines kept in sync (re-running the sync never duplicates a line)."
+    },
+    {
+      "date": "2026-09-26",
+      "type": "fix",
+      "title": "Creating PR/PO in SAP fixed",
+      "summary": "Document submission to SAP never worked before: the PR payload was missing its required date field and PO lines were sent without item numbers. Both are fixed and verified end to end against the SAP trial company."
+    },
+    {
+      "date": "2026-09-25",
+      "type": "feature",
+      "title": "Part prices come from SAP",
+      "summary": "Every part number is priced from SAP: last purchase order first, then the item master, then this app's own request history — always with the source and the reference number shown next to the price."
+    },
+    {
+      "date": "2026-09-23",
+      "type": "feature",
+      "title": "Budget ceiling is set per project per month",
+      "summary": "The Finance Director now sets one ceiling per project per period (instead of one per equipment unit). Saving the same period again is recorded as a revision, with the old amount reversed in the ledger."
+    },
+    {
+      "date": "2026-09-23",
+      "type": "feature",
+      "title": "Project context selector in the header",
+      "summary": "Accounts without a fixed project can switch project from the header; the choice applies to every page, including Daily Monitoring. Accounts tied to one project stay locked to it."
+    },
+    {
+      "date": "2026-09-23",
+      "type": "improvement",
+      "title": "Interface fully in English",
+      "summary": "All screens, validation messages, reports and role names are in English. Money is still formatted Indonesian style (Rp 1.234.567,00) because the ledger is in IDR."
+    },
+    {
+      "date": "2026-09-23",
+      "type": "improvement",
+      "title": "Sidebar follows the page you are on",
+      "summary": "The sidebar now highlights the active page and opens its submenu (Reports, Admin) instead of always highlighting Dashboard."
+    },
+    {
+      "date": "2026-09-22",
+      "type": "feature",
+      "title": "Procurement lifecycle after the PO",
+      "summary": "Approved requests can create their PR in SAP, goods receipt is recorded with the GRPO number and date, and every request shows a procurement history card (MR / PR / PO / GRPO)."
+    },
+    {
+      "date": "2026-09-22",
+      "type": "feature",
+      "title": "Dashboard with real figures per role",
+      "summary": "Approvers see pending decisions, planners see their project's ceiling, committed and remaining amounts, drawn from the same numbers as the Budget page."
+    },
+    {
+      "date": "2026-09-22",
+      "type": "feature",
+      "title": "Reports with PDF and CSV download",
+      "summary": "Budget consumption, vendor performance and equipment cost reports can be downloaded as PDF or CSV. The download is permission-gated: without the right role the button is not shown and the URL is refused."
+    },
+    {
+      "date": "2026-09-22",
+      "type": "fix",
+      "title": "Budget engine: cancellations and goods receipt",
+      "summary": "A cancelled request now releases its committed budget, and a goods receipt no longer counts the amount twice (commitment plus actual)."
+    },
+    {
+      "date": "2026-09-22",
+      "type": "improvement",
+      "title": "Access limits per role",
+      "summary": "Drafts can only be created by planner and mechanic; governance pages (Approvals, Tabulation Bid, Overbudget, Cancellation, Interchange) are only reachable by the roles that act on them, and the menu hides the rest."
+    },
+    {
+      "date": "2026-09-22",
+      "type": "improvement",
+      "title": "Daily monitoring improvements",
+      "summary": "Status changes to Breakdown require a note, and the unit list can be searched, filtered by status or project, and paged (25 / 50 / 100 rows)."
+    }
+  ]
+}
