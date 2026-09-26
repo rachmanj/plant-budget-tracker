@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\CarryForwardJob;
+use App\Jobs\SyncSapProcurementRegister;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -18,6 +19,9 @@ Schedule::job(new CarryForwardJob)
     ->timezone('Asia/Makassar');
 
 Schedule::job(new \App\Jobs\PollSapPoStatus)
+    ->everyFifteenMinutes();
+
+Schedule::job(new SyncSapProcurementRegister)
     ->everyFifteenMinutes();
 
 Schedule::job(new \App\Jobs\NightlyReconciliation)

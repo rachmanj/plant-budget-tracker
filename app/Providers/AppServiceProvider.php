@@ -24,6 +24,8 @@ use App\Policies\PlantRequestPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\RequestApprovalPolicy;
 use App\Policies\TabulationBidPolicy;
+use App\Contracts\Sap\SapProcurementReadRepositoryContract;
+use App\Services\Sap\SapProcurementReadRepository;
 use App\Services\Sap\SapService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -34,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SapService::class);
+        $this->app->bind(SapProcurementReadRepositoryContract::class, SapProcurementReadRepository::class);
     }
 
     public function boot(): void

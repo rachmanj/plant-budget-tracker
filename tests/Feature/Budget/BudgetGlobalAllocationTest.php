@@ -24,7 +24,12 @@ class BudgetGlobalAllocationTest extends TestCase
 
     public function test_consolidation_migration_merges_allocations_per_period_and_repoints_ledgers(): void
     {
-        $this->artisan('migrate:rollback', ['--step' => 2]);
+        $this->artisan('migrate:rollback', [
+            '--path' => 'database/migrations/2026_09_23_111524_null_equipment_fields_on_all_budget_allocations.php',
+        ]);
+        $this->artisan('migrate:rollback', [
+            '--path' => 'database/migrations/2026_09_23_110909_consolidate_budget_allocations_to_global_per_period.php',
+        ]);
 
         $user = User::factory()->create(['is_active' => true]);
         $now = now();
