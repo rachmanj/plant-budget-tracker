@@ -111,6 +111,7 @@ Kesimpulan: kapasitas bukan penghambat. Catatan pelaksanaan: berkas disimpan di 
 - Arsip 7.445.995.520 byte (**6,93 GB**), SHA-256 `36fc06c9ebef184c1bc2…` (berkas `.sha256` tersimpan bersama arsip)
 - Isi 22.314 berkas · **22.306 berkas pendaftarannya cocok dengan basis data dan ukurannya identik** (0 tidak cocok)
 - **5 berkas** masuk ke server **saat penyalinan sedang berjalan** sehingga tidak ikut terekam (wajar; dapat diambil ulang kapan saja)
-- **Temuan mutu data di proc-app sendiri** (bukan akibat pemindahan): **25 baris** `pr_attachments` **rujukannya menggantung** — baris ada di basis data tetapi berkasnya **tidak ada di disk**; dan **8 berkas yatim** (ada di disk, tidak tercatat di basis data). Sebelum migrasi ke PMB, baris menggantung ini perlu keputusan: dibiarkan sebagai arsip (tanpa berkas) atau dihapus.
+- **Temuan mutu data di proc-app sendiri** (bukan akibat pemindahan): **25 baris** `pr_attachments` **rujukannya menggantung** — baris ada di basis data tetapi berkasnya **tidak ada di disk**; dan **8 berkas yatim** (ada di disk, tidak tercatat di basis data).
+- **Keputusan Iwan (26 Sep 2026): dibiarkan dengan penanda.** Baris menggantung tetap dimigrasikan sebagai baris arsip (riwayat tidak boleh bolong) namun saat ditampilkan diberi penanda berkas tidak tersedia, dan berkas yatim tidak diimpor. Larangan yang menyertainya: **jangan** menghapus baris menggantung atau berkas yatim dari basis data proc-app sumber, dan jangan mengarang berkas pengganti.
 
 Letak arsip sementara di mesin Dea: `~/proc-app-legacy/` (po_attachments.zip 581 MB + pr_attachments.tar 7,0 GB, total 8,2 GB) — bahan mentah untuk Fase 5.
