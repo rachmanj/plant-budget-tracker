@@ -11,6 +11,7 @@ use App\Models\DmbdEntry;
 use App\Models\InterchangeMap;
 use App\Models\OverbudgetRequest;
 use App\Models\PlantRequest;
+use App\Models\SapPurchaseOrder;
 use App\Models\RequestApproval;
 use App\Models\TabulationBid;
 use App\Models\User;
@@ -27,6 +28,7 @@ use App\Policies\TabulationBidPolicy;
 use App\Contracts\Sap\SapProcurementReadRepositoryContract;
 use App\Services\Sap\SapProcurementReadRepository;
 use App\Services\Sap\SapService;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\Models\Role;
@@ -41,6 +43,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Relation::morphMap([
+            'purchase_order' => SapPurchaseOrder::class,
+        ]);
+
         Gate::policy(Role::class, \App\Policies\RolePolicy::class);
         Gate::policy(BudgetPeriod::class, \App\Policies\BudgetPeriodPolicy::class);
         Gate::policy(BudgetAllocation::class, \App\Policies\BudgetAllocationPolicy::class);

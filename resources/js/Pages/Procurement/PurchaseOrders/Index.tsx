@@ -62,6 +62,7 @@ interface Props {
     summary: Summary;
     projects: ProjectOption[];
     departments: DepartmentOption[];
+    projectScope: string | null;
 }
 
 function originTag(origin: string) {
@@ -70,8 +71,16 @@ function originTag(origin: string) {
     return <Tag color={color}>{label}</Tag>;
 }
 
-export default function Index({ purchaseOrders, filters, summary, projects, departments }: Props) {
+export default function Index({
+    purchaseOrders,
+    filters,
+    summary,
+    projects,
+    departments,
+    projectScope,
+}: Props) {
     const [searchValue, setSearchValue] = useState(filters.q ?? '');
+    const projectLocked = projectScope != null && projectScope !== '';
 
     const navigate = (overrides: Record<string, unknown>) => {
         router.get(
@@ -114,10 +123,15 @@ export default function Index({ purchaseOrders, filters, summary, projects, depa
                         onSearch={handleSearch}
                     />
                     <Select
-                        allowClear
+                        allowClear={!projectLocked}
+                        disabled={projectLocked}
                         placeholder="Project"
                         style={{ width: 220 }}
-                        value={filters.project_code ?? undefined}
+                        value={
+                            projectLocked
+                                ? projectScope
+                                : (filters.project_code ?? undefined)
+                        }
                         options={projects.map((p) => ({
                             value: p.project_code,
                             label: `${p.project_code} — ${p.project_name}`,

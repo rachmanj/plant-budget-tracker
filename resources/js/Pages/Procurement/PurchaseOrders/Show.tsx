@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { ReactNode } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import AttachmentsPanel, { type AttachmentRow } from '@/Components/AttachmentsPanel';
 import { formatIdr } from '@/hooks/useCurrency';
 
 interface LineRow {
@@ -57,6 +58,10 @@ interface RelatedPurchaseRequest {
 interface Props {
     purchaseOrder: PurchaseOrder;
     relatedPurchaseRequest: RelatedPurchaseRequest | null;
+    attachments: AttachmentRow[];
+    can: {
+        attach: boolean;
+    };
 }
 
 function formatDateTime(value: string | null | undefined): string {
@@ -74,7 +79,7 @@ function hasLineData(lines: LineRow[], field: keyof LineRow): boolean {
     });
 }
 
-export default function Show({ purchaseOrder, relatedPurchaseRequest }: Props) {
+export default function Show({ purchaseOrder, relatedPurchaseRequest, attachments, can }: Props) {
     const lines = purchaseOrder.lines ?? [];
     const title = purchaseOrder.doc_num ? `PO ${purchaseOrder.doc_num}` : `PO #${purchaseOrder.id}`;
 
@@ -231,8 +236,16 @@ export default function Show({ purchaseOrder, relatedPurchaseRequest }: Props) {
                 </Card>
             )}
 
-            <Card title="Line items">
+            <Card title="Line items" style={{ marginBottom: 16 }}>
                 <Table rowKey="id" dataSource={lines} pagination={false} columns={lineColumns} />
+            </Card>
+
+            <Card title="Attachments">
+                <AttachmentsPanel
+                    purchaseOrderId={purchaseOrder.id}
+                    attachments={attachments ?? []}
+                    canAttach={can.attach}
+                />
             </Card>
         </AppLayout>
     );

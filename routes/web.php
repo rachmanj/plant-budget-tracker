@@ -82,6 +82,9 @@ Route::middleware('auth')->group(function () {
     Route::prefix('procurement/purchase-orders')->name('procurement.purchase-orders.')->group(function () {
         Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
         Route::get('/{sapPurchaseOrder}', [PurchaseOrderController::class, 'show'])->name('show');
+        Route::post('/{sapPurchaseOrder}/attachments', [PurchaseOrderController::class, 'storeAttachment'])->name('attachments.store');
+        Route::get('/{sapPurchaseOrder}/attachments/{attachment}/download', [PurchaseOrderController::class, 'downloadAttachment'])->name('attachments.download');
+        Route::delete('/{sapPurchaseOrder}/attachments/{attachment}', [PurchaseOrderController::class, 'destroyAttachment'])->name('attachments.destroy');
     });
 
     Route::get('/overbudget', [OverbudgetController::class, 'index'])->name('overbudget.index');
