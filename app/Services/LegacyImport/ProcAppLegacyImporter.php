@@ -14,6 +14,7 @@ use App\Models\SapPurchaseRequest;
 use App\Models\SapPurchaseRequestLine;
 use App\Support\LegacyImport\ImportSummary;
 use App\Support\LegacyImport\LegacyCsvReader;
+use App\Support\LegacyImport\LegacyRegisterFieldLimits;
 use Illuminate\Support\Carbon;
 class ProcAppLegacyImporter
 {
@@ -24,6 +25,8 @@ class ProcAppLegacyImporter
     private const PO_SYNTHETIC_BASE = 9000000000000;
 
     private const PR_SYNTHETIC_BASE = 8000000000000;
+
+    private const SYNTHETIC_DOC_ENTRY_MAX_OFFSET = 999_999_999_999;
 
     public function __construct(
         private readonly LegacyCsvReader $csvReader,
@@ -80,7 +83,7 @@ class ProcAppLegacyImporter
                     continue;
                 }
 
-                $resolvedDocEntry = $this->resolveSapDocEntry($sapDocEntry, $procAppId, self::PO_SYNTHETIC_BASE);
+                $resolvedDocEntry = $this->resolveSapDocEntry($sapDocEntry, $docNum, self::PO_SYNTHETIC_BASE);
 
                 if (SapPurchaseOrder::query()->where('sap_doc_entry', $resolvedDocEntry)->exists()) {
                     $summary->skipped++;
@@ -114,6 +117,18 @@ class ProcAppLegacyImporter
                     'legacy_doc_num' => $legacyDocNum,
                     'synced_at' => null,
                 ];
+
+                $attributes = LegacyRegisterFieldLimits::apply(
+                    $attributes,
+                    LegacyRegisterFieldLimits::PURCHASE_ORDER_STRINGS,
+                    $line,
+                    $summary,
+                    ['legacy_doc_num'],
+                );
+
+                if ($attributes === null) {
+                    continue;
+                }
 
                 if (! $dryRun) {
                     SapPurchaseOrder::query()->create($attributes);
@@ -222,7 +237,7 @@ class ProcAppLegacyImporter
                     continue;
                 }
 
-                $resolvedDocEntry = $this->resolveSapDocEntry($sapDocEntry, $procAppId, self::PR_SYNTHETIC_BASE);
+                $resolvedDocEntry = $this->resolveSapDocEntry($sapDocEntry, $docNum, self::PR_SYNTHETIC_BASE);
 
                 if (SapPurchaseRequest::query()->where('sap_doc_entry', $resolvedDocEntry)->exists()) {
                     $summary->skipped++;
@@ -250,12 +265,24 @@ class ProcAppLegacyImporter
                     'unit_no' => $this->stringValue($row, 'unit_no', 'for_unit'),
                     'hours_meter' => $this->nullableDecimal($row, 'hours_meter'),
                     'line_count' => $this->nullableInt($row, 'line_count') ?? 0,
-                    'total_amount' => $this->nullableDecimal($row, 'total_amount'),
+                    'total_amount' => $this->nullableDecimal($row, 'total_amount') ?? '0.00',
                     'project_code' => $this->stringValue($row, 'project_code'),
                     'legacy_source' => self::LEGACY_SOURCE,
                     'legacy_doc_num' => $legacyDocNum,
                     'synced_at' => null,
                 ];
+
+                $attributes = LegacyRegisterFieldLimits::apply(
+                    $attributes,
+                    LegacyRegisterFieldLimits::PURCHASE_REQUEST_STRINGS,
+                    $line,
+                    $summary,
+                    ['legacy_doc_num'],
+                );
+
+                if ($attributes === null) {
+                    continue;
+                }
 
                 if (! $dryRun) {
                     SapPurchaseRequest::query()->create($attributes);
@@ -720,8 +747,14 @@ class ProcAppLegacyImporter
             return $order;
         }
 
-        if ($procAppPoId !== null) {
-            $synthetic = self::PO_SYNTHETIC_BASE + (int) $procAppPoId;
+        if ($docNum !== null && $docNum !== '') {
+            $synthetic = $this->resolveSapDocEntry(null, $docNum, self::PO_SYNTHETIC_BASE);
+
+            return SapPurchaseOrder::query()->where('sap_doc_entry', $synthetic)->first();
+        }
+
+        if ($procAppPoId !== null && ctype_digit($procAppPoId)) {
+            $synthetic = $this->resolveSapDocEntry(null, $procAppPoId, self::PO_SYNTHETIC_BASE);
 
             return SapPurchaseOrder::query()->where('sap_doc_entry', $synthetic)->first();
         }
@@ -743,8 +776,14 @@ class ProcAppLegacyImporter
             return $request;
         }
 
-        if ($procAppPrId !== null) {
-            $synthetic = self::PR_SYNTHETIC_BASE + (int) $procAppPrId;
+        if ($docNum !== null && $docNum !== '') {
+            $synthetic = $this->resolveSapDocEntry(null, $docNum, self::PR_SYNTHETIC_BASE);
+
+            return SapPurchaseRequest::query()->where('sap_doc_entry', $synthetic)->first();
+        }
+
+        if ($procAppPrId !== null && ctype_digit($procAppPrId)) {
+            $synthetic = $this->resolveSapDocEntry(null, $procAppPrId, self::PR_SYNTHETIC_BASE);
 
             return SapPurchaseRequest::query()->where('sap_doc_entry', $synthetic)->first();
         }
@@ -752,13 +791,31 @@ class ProcAppLegacyImporter
         return null;
     }
 
-    private function resolveSapDocEntry(?int $sapDocEntry, int $procAppId, int $syntheticBase): int
+    private function resolveSapDocEntry(?int $sapDocEntry, ?string $docNum, int $syntheticBase): int
     {
         if ($sapDocEntry !== null && $sapDocEntry > 0) {
             return $sapDocEntry;
         }
 
-        return $syntheticBase + max($procAppId, 1);
+        if ($docNum !== null && $docNum !== '' && ctype_digit($docNum)) {
+            $offset = (int) $docNum;
+            if ($offset > self::SYNTHETIC_DOC_ENTRY_MAX_OFFSET) {
+                $offset = $offset % self::SYNTHETIC_DOC_ENTRY_MAX_OFFSET;
+                if ($offset === 0) {
+                    $offset = 1;
+                }
+            }
+
+            return $syntheticBase + $offset;
+        }
+
+        if ($docNum !== null && $docNum !== '') {
+            $hash = crc32($docNum);
+
+            return $syntheticBase + (($hash & 0x7FFFFFFF) % self::SYNTHETIC_DOC_ENTRY_MAX_OFFSET) + 1;
+        }
+
+        return $syntheticBase + 1;
     }
 
     private function refreshOrderTotalFromLines(SapPurchaseOrder $order): void

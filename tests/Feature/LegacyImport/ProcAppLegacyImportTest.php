@@ -5,11 +5,14 @@ namespace Tests\Feature\LegacyImport;
 use App\Models\DocumentAttachment;
 use App\Models\ItemPrice;
 use App\Models\SapPurchaseOrder;
+use App\Models\SapPurchaseRequest;
 use App\Services\LegacyImport\ProcAppAttachmentImporter;
 use App\Services\LegacyImport\ProcAppLegacyImporter;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesScopedUsers;
 use Tests\TestCase;
@@ -56,6 +59,134 @@ class ProcAppLegacyImportTest extends TestCase
             'legacy_source' => 'proc_app',
             'legacy_doc_num' => '990001',
             'vendor_name' => 'Legacy Vendor',
+            'sap_doc_entry' => 9000000990001,
+        ]);
+    }
+
+    public function test_legacy_purchase_request_imports_proc_app_pr_type_words(): void
+    {
+        $this->writeCsv('purchase_requests.csv', [
+            'doc_num,pr_type,project_code,department_code,department_name',
+            '880001,Item,MBL,40,Plant',
+            '880002,progress,MBL,40,Plant',
+            '880003,Service,MBL,40,Plant',
+        ]);
+
+        app(ProcAppLegacyImporter::class)->import($this->importDir, false);
+
+        $this->assertDatabaseHas('sap_purchase_requests', [
+            'legacy_doc_num' => '880001',
+            'pr_type' => 'Item',
+        ]);
+        $this->assertDatabaseHas('sap_purchase_requests', [
+            'legacy_doc_num' => '880002',
+            'pr_type' => 'progress',
+        ]);
+        $this->assertDatabaseHas('sap_purchase_requests', [
+            'legacy_doc_num' => '880003',
+            'pr_type' => 'Service',
+        ]);
+    }
+
+    public function test_synthetic_sap_doc_entry_is_unique_per_doc_num_without_csv_entry(): void
+    {
+        $this->writeCsv('purchase_requests.csv', [
+            'doc_num,pr_type,project_code',
+            '881001,Item,MBL',
+            '881002,Service,MBL',
+        ]);
+
+        app(ProcAppLegacyImporter::class)->import($this->importDir, false);
+
+        $first = SapPurchaseRequest::query()->where('legacy_doc_num', '881001')->value('sap_doc_entry');
+        $second = SapPurchaseRequest::query()->where('legacy_doc_num', '881002')->value('sap_doc_entry');
+
+        $this->assertNotSame($first, $second);
+        $this->assertSame(8000000881001, $first);
+        $this->assertSame(8000000881002, $second);
+    }
+
+    public function test_legacy_purchase_request_import_is_idempotent_without_sap_doc_entry(): void
+    {
+        $this->writeCsv('purchase_requests.csv', [
+            'doc_num,pr_type,project_code',
+            '882001,Item,MBL',
+        ]);
+
+        $importer = app(ProcAppLegacyImporter::class);
+        $importer->import($this->importDir, false);
+        $importer->import($this->importDir, false);
+
+        $this->assertDatabaseCount('sap_purchase_requests', 1);
+    }
+
+    public function test_existing_register_purchase_request_is_not_overwritten(): void
+    {
+        SapPurchaseRequest::create([
+            'sap_doc_entry' => 60001,
+            'doc_num' => 770101,
+            'doc_date' => '2026-01-01',
+            'department_code' => '40',
+            'department_name' => 'Plant',
+            'project_code' => 'MBL',
+            'requester' => 'SAP User',
+            'synced_at' => now(),
+        ]);
+
+        $this->writeCsv('purchase_requests.csv', [
+            'sap_doc_entry,doc_num,requester,project_code',
+            '60001,770101,Proc-app User,MBL',
+            ',770102,Other User,MBL',
+        ]);
+
+        app(ProcAppLegacyImporter::class)->import($this->importDir, false);
+
+        $this->assertDatabaseHas('sap_purchase_requests', [
+            'sap_doc_entry' => 60001,
+            'requester' => 'SAP User',
+            'legacy_source' => null,
+        ]);
+        $this->assertDatabaseCount('sap_purchase_requests', 2);
+    }
+
+    public function test_overlength_register_field_records_failure_without_stopping_import(): void
+    {
+        $this->writeCsv('purchase_orders.csv', [
+            'doc_num,vendor_name,currency,project_code,dept_code,dept_name',
+            '990010,Vendor A,INVALIDCUR,MBL,40,Plant',
+            '990011,Vendor B,IDR,MBL,40,Plant',
+        ]);
+
+        $summary = app(ProcAppLegacyImporter::class)->import($this->importDir, false);
+
+        $this->assertSame(1, $summary['purchase_orders']->failed);
+        $this->assertSame(2, $summary['purchase_orders']->created);
+        $this->assertDatabaseHas('sap_purchase_orders', [
+            'legacy_doc_num' => '990010',
+            'currency' => 'INVALIDC',
+        ]);
+        $this->assertDatabaseHas('sap_purchase_orders', [
+            'legacy_doc_num' => '990011',
+            'currency' => 'IDR',
+        ]);
+    }
+
+    public function test_widen_proc_app_legacy_import_register_columns_migration_reverses(): void
+    {
+        $this->assertSame(32, $this->stringColumnLength('sap_purchase_requests', 'pr_type'));
+        $this->assertSame(32, $this->stringColumnLength('sap_purchase_orders', 'delivery_status'));
+        $this->assertSame(8, $this->stringColumnLength('sap_purchase_orders', 'currency'));
+
+        Artisan::call('migrate:rollback', [
+            '--path' => 'database/migrations/2026_09_27_161900_widen_proc_app_legacy_import_register_columns.php',
+        ]);
+
+        $this->assertSame(1, $this->stringColumnLength('sap_purchase_requests', 'pr_type'));
+        $this->assertSame(1, $this->stringColumnLength('sap_purchase_orders', 'delivery_status'));
+        $this->assertSame(3, $this->stringColumnLength('sap_purchase_orders', 'currency'));
+
+        Artisan::call('migrate', [
+            '--path' => 'database/migrations/2026_09_27_161900_widen_proc_app_legacy_import_register_columns.php',
         ]);
     }
 
@@ -376,5 +507,22 @@ class ProcAppLegacyImportTest extends TestCase
         }
 
         rmdir($dir);
+    }
+
+    private function stringColumnLength(string $table, string $column): int
+    {
+        $connection = Schema::getConnection()->getDriverName();
+        if ($connection !== 'mysql') {
+            $this->fail('Column length assertion requires MySQL.');
+        }
+
+        $database = Schema::getConnection()->getDatabaseName();
+        $row = DB::selectOne(
+            'SELECT CHARACTER_MAXIMUM_LENGTH AS len FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+            [$database, $table, $column],
+        );
+
+        return (int) ($row->len ?? 0);
     }
 }
