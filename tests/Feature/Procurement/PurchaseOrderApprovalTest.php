@@ -94,7 +94,9 @@ class PurchaseOrderApprovalTest extends TestCase
 
         $this->actingAsProject($admin)
             ->post(route('tabulation-bids.create-po', $bid))
-            ->assertForbidden();
+            ->assertRedirect()
+            ->assertSessionHas('error', fn (string $message) => str_contains($message, 'approval is still in progress')
+                && str_contains($message, 'president_director'));
 
         Queue::assertNothingPushed();
     }
@@ -153,9 +155,120 @@ class PurchaseOrderApprovalTest extends TestCase
 
         $this->actingAsProject($admin)
             ->post(route('tabulation-bids.create-po', $bid))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'A winning vendor must be awarded before creating a purchase order.');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_procurement_admin_create_po_without_award_returns_error_not_403(): void
+    {
+        Queue::fake();
+
+        $buyer = $this->makeUserWithRole('buyer');
+        $admin = $this->makeUserWithRole('procurement_admin');
+        $procMgr = $this->makeUserWithRole('procurement_manager');
+
+        $bid = $this->createSubmittedBid($buyer, '50000000.00', '60000000.00', 'PR-NO-AWARD-PO');
+        $this->approveProcurementManager($bid, $procMgr);
+
+        $this->actingAsProject($admin)
+            ->post(route('tabulation-bids.create-po', $bid))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'A winning vendor must be awarded before creating a purchase order.');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_non_procurement_admin_create_po_returns_403(): void
+    {
+        Queue::fake();
+
+        $buyer = $this->makeUserWithRole('buyer');
+        $procMgr = $this->makeUserWithRole('procurement_manager');
+
+        $bid = $this->createSubmittedBid($buyer, '50000000.00', '60000000.00', 'PR-403-ROLE');
+        $this->approveProcurementManager($bid, $procMgr);
+
+        $vendor = $bid->vendors()->orderBy('price')->first();
+        $this->actingAsProject($procMgr)
+            ->post(route('tabulation-bids.award', $bid), [
+                'tabulation_bid_vendor_id' => $vendor->id,
+            ]);
+
+        $this->actingAsProject($procMgr)
+            ->post(route('tabulation-bids.create-po', $bid))
             ->assertForbidden();
 
         Queue::assertNothingPushed();
+    }
+
+    public function test_bid_creator_cannot_create_po_even_with_procurement_admin_role(): void
+    {
+        Queue::fake();
+
+        $buyerAdmin = $this->makeUserWithRole('buyer');
+        setPermissionsTeamId('MBL');
+        $buyerAdmin->assignRole('procurement_admin');
+        $procMgr = $this->makeUserWithRole('procurement_manager');
+
+        $bid = $this->createSubmittedBid($buyerAdmin, '50000000.00', '60000000.00', 'PR-SOD-PO');
+        $this->approveProcurementManager($bid, $procMgr);
+
+        $vendor = $bid->vendors()->orderBy('price')->first();
+        $this->actingAsProject($procMgr)
+            ->post(route('tabulation-bids.award', $bid), [
+                'tabulation_bid_vendor_id' => $vendor->id,
+            ]);
+
+        $this->actingAsProject($buyerAdmin)
+            ->post(route('tabulation-bids.create-po', $bid))
+            ->assertForbidden();
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_bid_review_enables_create_po_and_dispatch_after_full_approval(): void
+    {
+        Queue::fake();
+
+        $buyer = $this->makeUserWithRole('buyer');
+        $admin = $this->makeUserWithRole('procurement_admin');
+        $procMgr = $this->makeUserWithRole('procurement_manager');
+        $presDir = $this->makeUserWithRole('president_director');
+
+        $bid = $this->createSubmittedBid($buyer, '200000000.00', '210000000.00', 'PR-ENABLE-PO');
+        $this->approveProcurementManager($bid, $procMgr);
+
+        $vendor = $bid->vendors()->orderBy('price')->first();
+        $this->actingAsProject($procMgr)
+            ->post(route('tabulation-bids.award', $bid), [
+                'tabulation_bid_vendor_id' => $vendor->id,
+            ]);
+
+        $presApproval = RequestApproval::query()
+            ->where('approvable_id', $bid->id)
+            ->where('step_order', 2)
+            ->firstOrFail();
+
+        $this->actingAsProject($presDir)
+            ->post("/approvals/{$presApproval->id}/decide", ['decision' => 'approved'])
+            ->assertRedirect();
+
+        $this->actingAsProject($admin)
+            ->withoutVite()
+            ->get(route('tabulation-bids.show', $bid))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('poCreate.enabled', true)
+                ->where('can.createPo', true)
+            );
+
+        $this->actingAsProject($admin)
+            ->post(route('tabulation-bids.create-po', $bid))
+            ->assertRedirect();
+
+        Queue::assertPushed(CreateSapPurchaseOrder::class);
     }
 
     public function test_changing_threshold_via_procurement_settings_flips_director_requirement(): void

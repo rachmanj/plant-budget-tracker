@@ -112,13 +112,19 @@ class TabulationBidController extends Controller
             ],
             'poCreate' => [
                 'visible' => $showCreatePoButton,
-                'enabled' => Gate::allows('createPo', $tabulationBid) && $fullyApproved && ! $tabulationBid->sap_po_id,
+                'enabled' => Gate::allows('createPo', $tabulationBid)
+                    && $tabulationBid->award
+                    && $fullyApproved
+                    && ! $tabulationBid->sap_po_id,
                 'disabledReason' => $createPoDisabledReason,
             ],
             'can' => [
                 'review' => Gate::allows('review', $tabulationBid),
                 'award' => Gate::allows('award', $tabulationBid),
-                'createPo' => Gate::allows('createPo', $tabulationBid) && $fullyApproved && ! $tabulationBid->sap_po_id,
+                'createPo' => Gate::allows('createPo', $tabulationBid)
+                    && $tabulationBid->award
+                    && $fullyApproved
+                    && ! $tabulationBid->sap_po_id,
             ],
         ]);
     }
@@ -186,12 +192,21 @@ class TabulationBidController extends Controller
     {
         $this->authorize('createPo', $tabulationBid);
 
+        $tabulationBid->loadMissing('award');
+
         if (! $tabulationBid->award) {
             return back()->with('error', 'A winning vendor must be awarded before creating a purchase order.');
         }
 
         if (! $this->approvalEngine->isFullyApproved($tabulationBid)) {
-            return back()->with('error', 'Purchase order creation is blocked while approval is still in progress.');
+            $currentStep = $this->approvalEngine->currentStep($tabulationBid);
+            $pendingRole = $currentStep?->required_role;
+            $message = 'Purchase order creation is blocked while approval is still in progress.';
+            if ($pendingRole !== null && $pendingRole !== '') {
+                $message .= ' Waiting for '.$pendingRole.' approval.';
+            }
+
+            return back()->with('error', $message);
         }
 
         if ($tabulationBid->sap_po_id) {

@@ -63,10 +63,7 @@ class TabulationBidPolicy
 
     public function createPo(User $user, TabulationBid $bid): Response|bool
     {
-        if ($user->hasRole('procurement_admin')
-            && $user->id !== $bid->created_by
-            && $bid->award()->exists()
-            && $bid->status === 'forwarded_admin') {
+        if ($user->hasRole('procurement_admin') && $user->id !== $bid->created_by) {
             return true;
         }
 
