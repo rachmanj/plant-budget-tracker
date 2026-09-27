@@ -27,7 +27,7 @@ class PricingEstimatorTest extends TestCase
     public function test_two_different_part_numbers_get_different_sap_prices(): void
     {
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')
+            $mock->shouldReceive('getLastPoItemPrice')
                 ->with('PART-A')
                 ->andReturn([
                     'price' => '100000.00',
@@ -35,7 +35,7 @@ class PricingEstimatorTest extends TestCase
                     'source' => 'po',
                     'reference' => 'PO 111 · 2026-08-01',
                 ]);
-            $mock->shouldReceive('getItemPurchasePrice')
+            $mock->shouldReceive('getLastPoItemPrice')
                 ->with('PART-B')
                 ->andReturn([
                     'price' => '250000.00',
@@ -56,7 +56,7 @@ class PricingEstimatorTest extends TestCase
     public function test_latest_po_price_in_idr_is_used_with_po_reference(): void
     {
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')
+            $mock->shouldReceive('getLastPoItemPrice')
                 ->with('PART-PO')
                 ->andReturn([
                     'price' => '74253500.00',
@@ -88,7 +88,7 @@ class PricingEstimatorTest extends TestCase
         ]);
 
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')->andReturn(null);
+            $mock->shouldReceive('getLastPoItemPrice')->andReturn(null);
         });
 
         $result = app(PricingEstimator::class)->estimate('PART-HIST');
@@ -122,7 +122,7 @@ class PricingEstimatorTest extends TestCase
         }
 
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')->andReturn(null);
+            $mock->shouldReceive('getLastPoItemPrice')->andReturn(null);
         });
 
         $result = app(PricingEstimator::class)->estimate('PART-VOID');
@@ -134,7 +134,7 @@ class PricingEstimatorTest extends TestCase
     public function test_sap_connection_failure_does_not_throw_and_falls_back_to_none(): void
     {
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')
+            $mock->shouldReceive('getLastPoItemPrice')
                 ->andThrow(new \RuntimeException('connection unavailable'));
         });
 

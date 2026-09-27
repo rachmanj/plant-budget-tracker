@@ -68,7 +68,7 @@ class PlantRequestCreationTest extends TestCase
         $planner = $this->makeUserWithRole('planner');
 
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')
+            $mock->shouldReceive('getLastPoItemPrice')
                 ->once()
                 ->with('PN-EST')
                 ->andReturn([
@@ -251,7 +251,7 @@ class PlantRequestCreationTest extends TestCase
         ]);
 
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')->andReturn(null);
+            $mock->shouldReceive('getLastPoItemPrice')->andReturn(null);
         });
 
         $estimator = app(PricingEstimator::class);
@@ -264,7 +264,7 @@ class PlantRequestCreationTest extends TestCase
     public function test_pricing_falls_back_to_sap_price(): void
     {
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')
+            $mock->shouldReceive('getLastPoItemPrice')
                 ->once()
                 ->with('PN-SAP')
                 ->andReturn([
@@ -289,7 +289,7 @@ class PlantRequestCreationTest extends TestCase
         $planner = $this->makeUserWithRole('planner');
 
         $this->mock(SapReadRepository::class, function ($mock) {
-            $mock->shouldReceive('getItemPurchasePrice')
+            $mock->shouldReceive('getLastPoItemPrice')
                 ->andReturn([
                     'price' => '100000.00',
                     'currency' => 'IDR',

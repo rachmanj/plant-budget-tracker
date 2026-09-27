@@ -55,7 +55,7 @@ interface ProjectBudget {
     remaining: string;
 }
 
-type PriceSource = 'tabulation_bid' | 'sap_price' | 'manual' | 'none';
+type PriceSource = 'tabulation_bid' | 'sap_price' | 'item_master' | 'manual' | 'none';
 
 interface LineItem {
     part_number: string;
@@ -100,6 +100,7 @@ const UOM_OPTIONS = ['EA', 'PCS', 'SET', 'LITER', 'KG', 'ROLL', 'BOX'].map((u) =
 
 const PRICE_SOURCE_LABELS: Record<PriceSource, string> = {
     sap_price: 'SAP Price',
+    item_master: 'Item Master',
     tabulation_bid: 'Tabulation',
     manual: 'Manual',
     none: 'None',

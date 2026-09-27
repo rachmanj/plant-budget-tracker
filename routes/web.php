@@ -14,8 +14,11 @@ use App\Http\Controllers\DmbdController;
 use App\Http\Controllers\InterchangeController;
 use App\Http\Controllers\OverbudgetController;
 use App\Http\Controllers\PlantRequestController;
+use App\Http\Controllers\Procurement\ItemPriceController;
+use App\Http\Controllers\Procurement\ItemPriceImportController;
 use App\Http\Controllers\Procurement\ProcurementSettingsController;
 use App\Http\Controllers\Procurement\PurchaseOrderController;
+use App\Http\Controllers\Procurement\SapSupplierController;
 use App\Http\Controllers\ProjectContextController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Sap\SyncDashboardController;
@@ -95,6 +98,21 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ProcurementSettingsController::class, 'index'])->name('index');
         Route::post('/', [ProcurementSettingsController::class, 'update'])->name('update');
     });
+
+    Route::middleware('can:supplier.view')->prefix('procurement/suppliers')->name('procurement.suppliers.')->group(function () {
+        Route::get('/', [SapSupplierController::class, 'index'])->name('index');
+        Route::post('/sync', [SapSupplierController::class, 'sync'])
+            ->middleware('can:procurement.sync')
+            ->name('sync');
+    });
+
+    Route::middleware('can:item_price.view')->prefix('procurement/item-prices')->name('procurement.item-prices.')->group(function () {
+        Route::get('/', [ItemPriceController::class, 'index'])->name('index');
+        Route::get('/template', [ItemPriceController::class, 'downloadTemplate'])->name('template');
+    });
+
+    Route::post('/procurement/item-prices/import', [ItemPriceImportController::class, 'store'])
+        ->name('procurement.item-prices.import');
 
     Route::get('/overbudget', [OverbudgetController::class, 'index'])->name('overbudget.index');
     Route::get('/overbudget/create', [OverbudgetController::class, 'create'])->name('overbudget.create');

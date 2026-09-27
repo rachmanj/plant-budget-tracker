@@ -6,8 +6,10 @@ use App\Http\Requests\ReceivePlantRequestRequest;
 use App\Jobs\CreateSapPurchaseRequest;
 use App\Models\BudgetAllocation;
 use App\Models\BudgetPeriod;
+use App\Models\ItemPriceHistory;
 use App\Models\PlantRequest;
 use App\Models\ProjectCache;
+use App\Models\User;
 use App\Models\SapSyncLog;
 use App\Models\TabulationBid;
 use App\Services\Approval\ApprovalEngine;
@@ -262,9 +264,42 @@ class PlantRequestController extends Controller
             ->latest()
             ->first();
 
+        $partNumbers = $plantRequest->lines->pluck('part_number')->filter()->unique()->values();
+        $historyRows = ItemPriceHistory::query()
+            ->whereIn('item_code', $partNumbers)
+            ->orderByDesc('created_at')
+            ->get();
+
+        $changedByIds = $historyRows->pluck('changed_by')->filter()->unique();
+        $changedByNames = User::query()
+            ->whereIn('id', $changedByIds)
+            ->pluck('name', 'id');
+
+        $linePriceHistories = [];
+        foreach ($partNumbers as $partNumber) {
+            $entries = $historyRows
+                ->where('item_code', $partNumber)
+                ->take(10)
+                ->values()
+                ->map(fn (ItemPriceHistory $row) => [
+                    'changed_at' => $row->created_at?->toIso8601String(),
+                    'old_price' => $row->old_price !== null ? (string) $row->old_price : null,
+                    'new_price' => (string) $row->new_price,
+                    'source' => $row->source,
+                    'changed_by_name' => $changedByNames[$row->changed_by] ?? null,
+                    'effective_date' => $row->effective_date?->format('Y-m-d'),
+                ])
+                ->all();
+
+            if ($entries !== []) {
+                $linePriceHistories[$partNumber] = $entries;
+            }
+        }
+
         return Inertia::render('PlantRequest/Show', [
             'request' => $plantRequest,
             'tolerance' => $tolerance,
+            'linePriceHistories' => $linePriceHistories,
             'procurement' => [
                 'sap_po_id' => $plantRequest->sap_po_id ?: $bid?->sap_po_id,
                 'sap_pr_created_at' => $prSyncLog?->completed_at,

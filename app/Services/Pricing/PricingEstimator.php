@@ -2,6 +2,7 @@
 
 namespace App\Services\Pricing;
 
+use App\Models\ItemPrice;
 use App\Models\PlantRequestLine;
 use App\Services\Sap\SapReadRepository;
 use Illuminate\Support\Carbon;
@@ -24,11 +25,21 @@ class PricingEstimator
         );
     }
 
+    public function forgetCache(string $partNumber): void
+    {
+        Cache::forget("part_price:{$partNumber}");
+    }
+
     private function resolve(string $partNumber): array
     {
-        $sapPrice = $this->getSapPrice($partNumber);
+        $sapPrice = $this->getSapPoPrice($partNumber);
         if ($sapPrice !== null) {
             return $sapPrice;
+        }
+
+        $masterPrice = $this->getItemMasterPrice($partNumber);
+        if ($masterPrice !== null) {
+            return $masterPrice;
         }
 
         $historicalPrice = $this->getHistoricalPrice($partNumber);
@@ -43,10 +54,10 @@ class PricingEstimator
         ];
     }
 
-    private function getSapPrice(string $partNumber): ?array
+    private function getSapPoPrice(string $partNumber): ?array
     {
         try {
-            $result = $this->sapReadRepository->getItemPurchasePrice($partNumber);
+            $result = $this->sapReadRepository->getLastPoItemPrice($partNumber);
         } catch (\Throwable) {
             return null;
         }
@@ -59,6 +70,29 @@ class PricingEstimator
             'unit_price' => number_format((float) $result['price'], 2, '.', ''),
             'source' => 'sap_price',
             'reference' => $result['reference'],
+        ];
+    }
+
+    private function getItemMasterPrice(string $partNumber): ?array
+    {
+        $row = ItemPrice::query()
+            ->where('item_code', $partNumber)
+            ->orderByRaw("CASE WHEN vendor_code = '' THEN 0 ELSE 1 END")
+            ->orderByDesc('updated_at')
+            ->first();
+
+        if ($row === null || (float) $row->price <= 0) {
+            return null;
+        }
+
+        $updated = $row->updated_at
+            ? Carbon::parse($row->updated_at)->format('d M Y')
+            : '';
+
+        return [
+            'unit_price' => number_format((float) $row->price, 2, '.', ''),
+            'source' => 'item_master',
+            'reference' => $updated !== '' ? "Item master · {$updated}" : 'Item master',
         ];
     }
 

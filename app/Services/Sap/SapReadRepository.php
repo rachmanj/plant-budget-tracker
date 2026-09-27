@@ -85,12 +85,10 @@ class SapReadRepository
         }
     }
 
-    public function getItemPurchasePrice(string $itemCode): ?array
+    public function getLastPoItemPrice(string $itemCode): ?array
     {
         try {
-            $connection = DB::connection('sap_sql');
-
-            $poRow = $connection->selectOne(
+            $poRow = DB::connection('sap_sql')->selectOne(
                 'SELECT TOP 1 [POR1].[Price], [POR1].[Currency], [OPOR].[DocNum], [OPOR].[DocDate]
                  FROM [POR1]
                  INNER JOIN [OPOR] ON [OPOR].[DocEntry] = [POR1].[DocEntry]
@@ -114,6 +112,52 @@ class SapReadRepository
                     'reference' => $reference,
                 ];
             }
+        } catch (\Throwable $e) {
+            Log::warning('SAP last PO item price lookup failed', [
+                'item_code' => $itemCode,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
+     * @return Collection<int, object{card_code: string, card_name: string, payment_terms: ?string, currency: ?string}>
+     */
+    public function fetchVendors(): Collection
+    {
+        try {
+            $sql = <<<'SQL'
+                SELECT
+                    o.[CardCode] AS card_code,
+                    o.[CardName] AS card_name,
+                    pg.[PymntGroup] AS payment_terms,
+                    o.[Currency] AS currency
+                FROM [OCRD] o
+                LEFT JOIN [OCTG] pg ON o.[GroupNum] = pg.[GroupNum]
+                WHERE o.[CardType] = ?
+                  AND o.[validFor] = ?
+                  AND (o.[frozenFor] = ? OR o.[frozenFor] IS NULL)
+                SQL;
+
+            return collect(DB::connection('sap_sql')->select($sql, ['S', 'Y', 'N']));
+        } catch (\Throwable $e) {
+            Log::warning('SAP vendor bulk read failed', ['error' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    public function getItemPurchasePrice(string $itemCode): ?array
+    {
+        $poPrice = $this->getLastPoItemPrice($itemCode);
+        if ($poPrice !== null) {
+            return $poPrice;
+        }
+
+        try {
+            $connection = DB::connection('sap_sql');
 
             $itemRow = $connection->selectOne(
                 "SELECT TOP 1 [LastPurPrc] FROM [OITM] WHERE [ItemCode] = ? AND [validFor] = 'Y' AND [LastPurPrc] > 0",

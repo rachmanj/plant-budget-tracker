@@ -2,6 +2,7 @@
 
 use App\Jobs\CarryForwardJob;
 use App\Jobs\SyncSapProcurementRegister;
+use App\Jobs\SyncSapSuppliers;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -23,6 +24,10 @@ Schedule::job(new \App\Jobs\PollSapPoStatus)
 
 Schedule::job(new SyncSapProcurementRegister)
     ->everyFifteenMinutes();
+
+Schedule::job(new SyncSapSuppliers)
+    ->dailyAt('05:30')
+    ->timezone('Asia/Makassar');
 
 Schedule::job(new \App\Jobs\NightlyReconciliation)
     ->dailyAt('02:00')

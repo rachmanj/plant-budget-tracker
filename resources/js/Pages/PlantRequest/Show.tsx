@@ -1,5 +1,19 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Alert, Button, Card, DatePicker, Descriptions, Form, Input, Modal, Select, Table, Tag, Typography } from 'antd';
+import {
+    Alert,
+    Button,
+    Card,
+    DatePicker,
+    Descriptions,
+    Form,
+    Input,
+    Modal,
+    Popover,
+    Select,
+    Table,
+    Tag,
+    Typography,
+} from 'antd';
 import { formatIdr } from '@/hooks/useCurrency';
 import dayjs, { Dayjs } from 'dayjs';
 import { useState } from 'react';
@@ -7,6 +21,15 @@ import AppLayout from '@/Layouts/AppLayout';
 import LifecycleStepper from '@/Components/LifecycleStepper';
 import BudgetProgressBar from '@/Components/BudgetProgressBar';
 import { statusLabel } from '@/utils/labels';
+
+interface PriceHistoryEntry {
+    changed_at: string | null;
+    old_price: string | null;
+    new_price: string;
+    source: string | null;
+    changed_by_name: string | null;
+    effective_date: string | null;
+}
 
 interface Props {
     request: {
@@ -24,6 +47,7 @@ interface Props {
         lines: Array<{ part_number: string; material_name: string; qty: number; line_total: string }>;
         approvals: Array<{ step_order: number; required_role: string; decision: string }>;
     };
+    linePriceHistories?: Record<string, PriceHistoryEntry[]>;
     tolerance: {
         projected_pct: string;
         within_tolerance: boolean;
@@ -49,11 +73,51 @@ function formatDate(value?: string | null): string {
     return value ? dayjs(value).format('DD MMM YYYY') : '—';
 }
 
+function priceHistoryContent(entries: PriceHistoryEntry[]) {
+    return (
+        <Table
+            size="small"
+            rowKey={(row, index) => `${row.changed_at ?? 'x'}-${index}`}
+            pagination={false}
+            dataSource={entries}
+            columns={[
+                {
+                    title: 'Date',
+                    dataIndex: 'changed_at',
+                    width: 110,
+                    render: (value: string | null) => (value ? dayjs(value).format('DD MMM YYYY') : '—'),
+                },
+                {
+                    title: 'Old',
+                    dataIndex: 'old_price',
+                    render: (value: string | null) => (value != null ? formatIdr(value) : '—'),
+                },
+                {
+                    title: 'New',
+                    dataIndex: 'new_price',
+                    render: (value: string) => formatIdr(value),
+                },
+                {
+                    title: 'Source',
+                    dataIndex: 'source',
+                    render: (value: string | null) => value ?? '—',
+                },
+                {
+                    title: 'By',
+                    dataIndex: 'changed_by_name',
+                    render: (value: string | null) => value ?? '—',
+                },
+            ]}
+        />
+    );
+}
+
 export default function Show({
     request,
     tolerance,
     procurement = {},
     can = { submit: false, cancel: false },
+    linePriceHistories = {},
 }: Props) {
     const [cancelOpen, setCancelOpen] = useState(false);
     const [cancelForm] = Form.useForm<{ po_stage: string; reason: string }>();
@@ -135,6 +199,27 @@ export default function Show({
                         { title: 'Material', dataIndex: 'material_name' },
                         { title: 'Qty', dataIndex: 'qty' },
                         { title: 'Total', dataIndex: 'line_total' },
+                        {
+                            title: 'Price history',
+                            key: 'price_history',
+                            width: 130,
+                            render: (_, row) => {
+                                const entries = linePriceHistories[row.part_number];
+                                if (!entries?.length) {
+                                    return <Typography.Text type="secondary">—</Typography.Text>;
+                                }
+
+                                return (
+                                    <Popover
+                                        title={`Price history — ${row.part_number}`}
+                                        trigger="click"
+                                        content={priceHistoryContent(entries)}
+                                    >
+                                        <Button type="link" size="small">View</Button>
+                                    </Popover>
+                                );
+                            },
+                        },
                     ]}
                     pagination={false}
                 />
