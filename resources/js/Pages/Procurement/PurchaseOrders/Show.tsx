@@ -57,10 +57,22 @@ interface RelatedPurchaseRequest {
     doc_num: number;
 }
 
+interface LegacyApprovalRow {
+    id: number;
+    level: number | null;
+    required_role: string | null;
+    approver_name: string | null;
+    decision: string;
+    remarks: string | null;
+    acted_at: string | null;
+    legacy_source: string;
+}
+
 interface Props {
     purchaseOrder: PurchaseOrder;
     relatedPurchaseRequest: RelatedPurchaseRequest | null;
     attachments: AttachmentRow[];
+    legacyApprovals: LegacyApprovalRow[];
     comments: CommentRow[];
     mentionableUsers: MentionableUser[];
     isFollowed: boolean;
@@ -90,6 +102,7 @@ export default function Show({
     purchaseOrder,
     relatedPurchaseRequest,
     attachments,
+    legacyApprovals,
     comments,
     mentionableUsers,
     isFollowed,
@@ -266,9 +279,44 @@ export default function Show({
                 <Table rowKey="id" dataSource={lines} pagination={false} columns={lineColumns} />
             </Card>
 
+            {legacyApprovals.length > 0 && (
+                <Card
+                    title="Legacy approval history (proc-app)"
+                    style={{ marginBottom: 16 }}
+                >
+                    <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+                        Read-only governance trail imported from the former proc-app system. This does
+                        not drive PMB approval workflows.
+                    </Typography.Paragraph>
+                    <Table
+                        rowKey="id"
+                        size="small"
+                        pagination={false}
+                        dataSource={legacyApprovals}
+                        columns={[
+                            { title: 'Level', dataIndex: 'level', render: (v) => v ?? '—' },
+                            { title: 'Role', dataIndex: 'required_role', render: (v) => v ?? '—' },
+                            { title: 'Approver', dataIndex: 'approver_name', render: (v) => v ?? '—' },
+                            { title: 'Decision', dataIndex: 'decision' },
+                            {
+                                title: 'Acted at',
+                                dataIndex: 'acted_at',
+                                render: (v: string | null) => formatDateTime(v),
+                            },
+                            {
+                                title: 'Remarks',
+                                dataIndex: 'remarks',
+                                render: (v: string | null) => v ?? '—',
+                            },
+                        ]}
+                    />
+                </Card>
+            )}
+
             <Card title="Attachments" style={{ marginBottom: 16 }}>
                 <AttachmentsPanel
-                    purchaseOrderId={purchaseOrder.id}
+                    documentKind="purchase_order"
+                    documentId={purchaseOrder.id}
                     attachments={attachments ?? []}
                     canAttach={can.attach}
                 />

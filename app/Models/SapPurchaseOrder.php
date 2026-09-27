@@ -30,6 +30,8 @@ class SapPurchaseOrder extends Model
         'budget_type',
         'origin',
         'plant_request_id',
+        'legacy_source',
+        'legacy_doc_num',
         'synced_at',
     ];
 

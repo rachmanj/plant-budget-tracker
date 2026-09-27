@@ -28,6 +28,8 @@ class SapPurchaseRequest extends Model
         'line_count',
         'total_amount',
         'project_code',
+        'legacy_source',
+        'legacy_doc_num',
         'synced_at',
     ];
 

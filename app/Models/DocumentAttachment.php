@@ -17,12 +17,16 @@ class DocumentAttachment extends Model
         'size',
         'checksum',
         'uploaded_by',
+        'legacy_source',
+        'legacy_id',
+        'file_unavailable',
     ];
 
     protected function casts(): array
     {
         return [
             'size' => 'integer',
+            'file_unavailable' => 'boolean',
         ];
     }
 

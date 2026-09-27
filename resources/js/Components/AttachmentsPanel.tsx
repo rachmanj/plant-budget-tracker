@@ -1,6 +1,6 @@
 import { DeleteOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons';
 import { router } from '@inertiajs/react';
-import { Button, Empty, List, Popconfirm, Space, Typography, Upload } from 'antd';
+import { Button, Empty, List, Popconfirm, Space, Tag, Typography, Upload } from 'antd';
 import type { UploadProps } from 'antd';
 import dayjs from 'dayjs';
 
@@ -11,13 +11,15 @@ export interface AttachmentRow {
     mime: string | null;
     uploaded_by_name: string | null;
     created_at: string | null;
-    download_url: string;
+    download_url: string | null;
+    file_unavailable?: boolean;
 }
 
 interface AttachmentsPanelProps {
-    purchaseOrderId: number;
+    documentKind: 'purchase_order' | 'purchase_request';
+    documentId: number;
     attachments: AttachmentRow[];
-    canAttach: boolean;
+    canAttach?: boolean;
 }
 
 function formatFileSize(bytes: number): string {
@@ -34,12 +36,22 @@ function formatUploadedAt(value: string | null): string {
     return value ? dayjs(value).format('DD MMM YYYY HH:mm') : '—';
 }
 
+function basePath(documentKind: AttachmentsPanelProps['documentKind'], documentId: number): string {
+    if (documentKind === 'purchase_order') {
+        return `/procurement/purchase-orders/${documentId}`;
+    }
+
+    return `/procurement/purchase-requests/${documentId}`;
+}
+
 export default function AttachmentsPanel({
-    purchaseOrderId,
+    documentKind,
+    documentId,
     attachments,
-    canAttach,
+    canAttach = false,
 }: AttachmentsPanelProps) {
-    const uploadUrl = `/procurement/purchase-orders/${purchaseOrderId}/attachments`;
+    const resourceBase = basePath(documentKind, documentId);
+    const uploadUrl = `${resourceBase}/attachments`;
 
     const uploadProps: UploadProps = {
         name: 'file',
@@ -61,7 +73,7 @@ export default function AttachmentsPanel({
 
     return (
         <>
-            {canAttach && (
+            {canAttach && documentKind === 'purchase_order' && (
                 <Upload.Dragger {...uploadProps} style={{ marginBottom: attachments.length ? 16 : 0 }}>
                     <p className="ant-upload-drag-icon">
                         <InboxOutlined />
@@ -86,15 +98,22 @@ export default function AttachmentsPanel({
                     renderItem={(item) => (
                         <List.Item
                             actions={[
-                                <Button
-                                    key="download"
-                                    type="link"
-                                    icon={<DownloadOutlined />}
-                                    href={item.download_url}
-                                >
-                                    Download
-                                </Button>,
-                                canAttach ? (
+                                item.file_unavailable ? (
+                                    <Tag key="unavailable" color="warning">
+                                        File unavailable
+                                    </Tag>
+                                ) : (
+                                    <Button
+                                        key="download"
+                                        type="link"
+                                        icon={<DownloadOutlined />}
+                                        href={item.download_url ?? undefined}
+                                        disabled={!item.download_url}
+                                    >
+                                        Download
+                                    </Button>
+                                ),
+                                canAttach && documentKind === 'purchase_order' ? (
                                     <Popconfirm
                                         key="delete"
                                         title="Remove this attachment?"
@@ -102,7 +121,7 @@ export default function AttachmentsPanel({
                                         okButtonProps={{ danger: true }}
                                         onConfirm={() =>
                                             router.delete(
-                                                `/procurement/purchase-orders/${purchaseOrderId}/attachments/${item.id}`,
+                                                `${resourceBase}/attachments/${item.id}`,
                                                 { preserveScroll: true },
                                             )
                                         }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Procurement;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentAttachment;
 use App\Models\DocumentComment;
+use App\Models\LegacyPurchaseOrderApproval;
 use App\Models\DocumentCommentMention;
 use App\Models\DocumentFollow;
 use App\Models\ProjectCache;
@@ -135,6 +136,7 @@ class PurchaseOrderController extends Controller
             'purchaseOrder' => $sapPurchaseOrder,
             'relatedPurchaseRequest' => $relatedPurchaseRequest,
             'attachments' => $this->attachmentPayloads($sapPurchaseOrder),
+            'legacyApprovals' => $this->legacyApprovalPayloads($sapPurchaseOrder),
             'comments' => $this->commentPayloads($sapPurchaseOrder, $user),
             'mentionableUsers' => $this->mentionableUsers(),
             'isFollowed' => $isFollowed,
@@ -191,6 +193,7 @@ class PurchaseOrderController extends Controller
 
         $attachment = $this->resolvePoAttachment($sapPurchaseOrder, $attachment);
 
+        abort_if($attachment->file_unavailable, 404);
         abort_unless(Storage::disk('local')->exists($attachment->stored_path), 404);
 
         return Storage::disk('local')->download($attachment->stored_path, $attachment->original_name);
@@ -299,10 +302,46 @@ class PurchaseOrderController extends Controller
                 'mime' => $attachment->mime,
                 'uploaded_by_name' => $attachment->uploader?->name,
                 'created_at' => $attachment->created_at?->toIso8601String(),
-                'download_url' => route('procurement.purchase-orders.attachments.download', [
-                    'sapPurchaseOrder' => $sapPurchaseOrder->id,
-                    'attachment' => $attachment->id,
-                ]),
+                'file_unavailable' => (bool) $attachment->file_unavailable,
+                'download_url' => $attachment->file_unavailable
+                    ? null
+                    : route('procurement.purchase-orders.attachments.download', [
+                        'sapPurchaseOrder' => $sapPurchaseOrder->id,
+                        'attachment' => $attachment->id,
+                    ]),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function legacyApprovalPayloads(SapPurchaseOrder $sapPurchaseOrder): array
+    {
+        $docNums = array_values(array_unique(array_filter([
+            $sapPurchaseOrder->doc_num !== null ? (string) $sapPurchaseOrder->doc_num : null,
+            $sapPurchaseOrder->legacy_doc_num,
+        ])));
+
+        if ($docNums === []) {
+            return [];
+        }
+
+        return LegacyPurchaseOrderApproval::query()
+            ->whereIn('doc_num', $docNums)
+            ->orderBy('level')
+            ->orderBy('acted_at')
+            ->get()
+            ->map(fn (LegacyPurchaseOrderApproval $row) => [
+                'id' => $row->id,
+                'level' => $row->level,
+                'required_role' => $row->required_role,
+                'approver_name' => $row->approver_name,
+                'decision' => $row->decision,
+                'remarks' => $row->remarks,
+                'acted_at' => $row->acted_at?->toIso8601String(),
+                'legacy_source' => $row->legacy_source,
             ])
             ->values()
             ->all();

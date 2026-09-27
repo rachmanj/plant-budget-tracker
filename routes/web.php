@@ -92,6 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('procurement/purchase-requests')->name('procurement.purchase-requests.')->group(function () {
         Route::get('/', [PurchaseRequestController::class, 'index'])->name('index');
         Route::get('/{sapPurchaseRequest}', [PurchaseRequestController::class, 'show'])->name('show');
+        Route::get('/{sapPurchaseRequest}/attachments/{attachment}/download', [PurchaseRequestController::class, 'downloadAttachment'])->name('attachments.download');
     });
 
     Route::prefix('procurement/purchase-orders')->name('procurement.purchase-orders.')->group(function () {

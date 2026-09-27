@@ -3,6 +3,7 @@ import { Card, Descriptions, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import AppLayout from '@/Layouts/AppLayout';
+import AttachmentsPanel, { type AttachmentRow } from '@/Components/AttachmentsPanel';
 import { formatIdr } from '@/hooks/useCurrency';
 
 interface LineRow {
@@ -62,6 +63,7 @@ interface Props {
     purchaseRequest: PurchaseRequest;
     relatedPurchaseOrders: RelatedPurchaseOrder[];
     relatedPlantRequests: RelatedPlantRequest[];
+    attachments: AttachmentRow[];
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -96,6 +98,7 @@ export default function Show({
     purchaseRequest,
     relatedPurchaseOrders,
     relatedPlantRequests,
+    attachments,
 }: Props) {
     return (
         <AppLayout title={`PR ${purchaseRequest.doc_num ?? purchaseRequest.id}`}>
@@ -150,6 +153,14 @@ export default function Show({
                     pagination={false}
                     scroll={{ x: true }}
                     size="small"
+                />
+            </Card>
+
+            <Card title="Attachments" style={{ marginBottom: 16 }}>
+                <AttachmentsPanel
+                    documentKind="purchase_request"
+                    documentId={purchaseRequest.id}
+                    attachments={attachments ?? []}
                 />
             </Card>
 

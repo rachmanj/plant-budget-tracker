@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Procurement;
 
 use App\Http\Controllers\Controller;
+use App\Models\DocumentAttachment;
 use App\Models\PlantRequest;
 use App\Models\ProjectCache;
 use App\Models\SapPurchaseOrder;
@@ -12,6 +13,7 @@ use App\Support\ProjectContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -105,7 +107,24 @@ class PurchaseRequestController extends Controller
             'purchaseRequest' => $sapPurchaseRequest,
             'relatedPurchaseOrders' => $relatedPurchaseOrders,
             'relatedPlantRequests' => $relatedPlantRequests,
+            'attachments' => $this->attachmentPayloads($sapPurchaseRequest),
         ]);
+    }
+
+    public function downloadAttachment(
+        Request $request,
+        SapPurchaseRequest $sapPurchaseRequest,
+        DocumentAttachment $attachment,
+    ): StreamedResponse {
+        abort_unless($request->user()?->can('procurement.view'), 403);
+        $this->assertUserCanAccessPurchaseRequest($request->user(), $sapPurchaseRequest);
+
+        $attachment = $this->resolvePrAttachment($sapPurchaseRequest, $attachment);
+
+        abort_if($attachment->file_unavailable, 404);
+        abort_unless(Storage::disk('local')->exists($attachment->stored_path), 404);
+
+        return Storage::disk('local')->download($attachment->stored_path, $attachment->original_name);
     }
 
     public function daily(Request $request): Response
@@ -213,6 +232,48 @@ class PurchaseRequestController extends Controller
             }
             fclose($handle);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function attachmentPayloads(SapPurchaseRequest $sapPurchaseRequest): array
+    {
+        return DocumentAttachment::query()
+            ->where('attachable_type', 'purchase_request')
+            ->where('attachable_id', $sapPurchaseRequest->id)
+            ->with('uploader:id,name')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (DocumentAttachment $attachment) => [
+                'id' => $attachment->id,
+                'original_name' => $attachment->original_name,
+                'size' => $attachment->size,
+                'mime' => $attachment->mime,
+                'uploaded_by_name' => $attachment->uploader?->name,
+                'created_at' => $attachment->created_at?->toIso8601String(),
+                'file_unavailable' => (bool) $attachment->file_unavailable,
+                'download_url' => $attachment->file_unavailable
+                    ? null
+                    : route('procurement.purchase-requests.attachments.download', [
+                        'sapPurchaseRequest' => $sapPurchaseRequest->id,
+                        'attachment' => $attachment->id,
+                    ]),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function resolvePrAttachment(
+        SapPurchaseRequest $sapPurchaseRequest,
+        DocumentAttachment $attachment,
+    ): DocumentAttachment {
+        if ($attachment->attachable_type !== 'purchase_request'
+            || (int) $attachment->attachable_id !== (int) $sapPurchaseRequest->id) {
+            abort(404);
+        }
+
+        return $attachment;
     }
 
     private function assertUserCanAccessPurchaseRequest(?User $user, SapPurchaseRequest $sapPurchaseRequest): void
