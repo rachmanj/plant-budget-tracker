@@ -90,12 +90,20 @@ class SapProcurementReadRepository implements SapProcurementReadRepositoryContra
                 D.[Name] AS department_name,
                 F.[U_NAME] AS requester,
                 A.[U_MIS_MRNO] AS mr_no,
+                COALESCE(A.[U_MIS_RequiredDate], A.[ReqDate]) AS required_date,
+                A.[Comments] AS remarks,
+                A.[DocStatus] AS pr_status,
+                A.[U_MIS_CLOSESTAT] AS closed_status,
+                A.[U_MIS_PRRevNo] AS pr_rev_no,
+                A.[U_MIS_UnitNo] AS unit_no,
+                A.[U_MIS_HoursMeter] AS hours_meter,
                 N.[Name] AS project_code,
                 B.[ItemCode] AS item_code,
                 B.[Dscription] AS description,
                 B.[Quantity] AS qty,
                 B.[unitMsr] AS uom,
                 B.[Price] AS unit_price,
+                (B.[Quantity] * B.[Price]) AS line_amount,
                 B.[LineVendor] AS line_vendor_code
             FROM [OPRQ] A
             INNER JOIN [PRQ1] B ON A.[DocEntry] = B.[DocEntry]

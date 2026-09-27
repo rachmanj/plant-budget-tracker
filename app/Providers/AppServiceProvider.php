@@ -70,5 +70,15 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('exportVendorPerformance', [ReportPolicy::class, 'exportVendorPerformance']);
         Gate::define('viewEquipmentCost', [ReportPolicy::class, 'viewEquipmentCost']);
         Gate::define('exportEquipmentCost', [ReportPolicy::class, 'exportEquipmentCost']);
+        Gate::define('viewPurchaseRequestStatus', [ReportPolicy::class, 'viewPurchaseRequestStatus']);
+        Gate::define('exportPurchaseRequestStatus', [ReportPolicy::class, 'exportPurchaseRequestStatus']);
+        Gate::define('viewPurchaseOrderTrend', [ReportPolicy::class, 'viewPurchaseOrderTrend']);
+        Gate::define('exportPurchaseOrderTrend', [ReportPolicy::class, 'exportPurchaseOrderTrend']);
+        Gate::define('viewTopSupplier', [ReportPolicy::class, 'viewTopSupplier']);
+        Gate::define('exportTopSupplier', [ReportPolicy::class, 'exportTopSupplier']);
+        Gate::define('viewApprovalTurnaround', [ReportPolicy::class, 'viewApprovalTurnaround']);
+        Gate::define('exportApprovalTurnaround', [ReportPolicy::class, 'exportApprovalTurnaround']);
+        Gate::define('viewPurchaseRequestByDepartment', [ReportPolicy::class, 'viewPurchaseRequestByDepartment']);
+        Gate::define('exportPurchaseRequestByDepartment', [ReportPolicy::class, 'exportPurchaseRequestByDepartment']);
     }
 }

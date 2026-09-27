@@ -48,6 +48,13 @@ class PurchaseRequestRegisterSync
                 'department_name' => $headerRow->department_name ?? null,
                 'requester' => $headerRow->requester ?? null,
                 'mr_no' => $headerRow->mr_no ?? null,
+                'required_date' => $this->nullableDate($headerRow->required_date ?? null),
+                'remarks' => $headerRow->remarks ?? null,
+                'pr_status' => $headerRow->pr_status ?? null,
+                'closed_status' => $headerRow->closed_status ?? null,
+                'pr_rev_no' => $headerRow->pr_rev_no ?? null,
+                'unit_no' => $headerRow->unit_no ?? null,
+                'hours_meter' => $this->nullableDecimal($headerRow->hours_meter ?? null),
                 'project_code' => $headerRow->project_code ?? null,
                 'synced_at' => $syncedAt,
             ];
@@ -85,6 +92,7 @@ class PurchaseRequestRegisterSync
                     'qty' => $this->nullableDecimal($lineRow->qty ?? null),
                     'uom' => $lineRow->uom ?? null,
                     'unit_price' => $this->nullableDecimal($lineRow->unit_price ?? null),
+                    'line_amount' => $this->lineAmount($lineRow),
                     'line_vendor_code' => $lineRow->line_vendor_code ?? null,
                 ];
 
@@ -105,9 +113,30 @@ class PurchaseRequestRegisterSync
                     }
                 }
             }
+
+            $request->refresh();
+            $request->fill([
+                'line_count' => $request->lines()->count(),
+                'total_amount' => number_format((float) $request->lines()->sum('line_amount'), 2, '.', ''),
+            ]);
+            if ($request->isDirty(['line_count', 'total_amount'])) {
+                $request->save();
+            }
         }
 
         return $summary;
+    }
+
+    private function lineAmount(object $lineRow): ?string
+    {
+        if (isset($lineRow->line_amount) && $lineRow->line_amount !== null && $lineRow->line_amount !== '') {
+            return $this->nullableDecimal($lineRow->line_amount);
+        }
+
+        $qty = (float) ($lineRow->qty ?? 0);
+        $price = (float) ($lineRow->unit_price ?? 0);
+
+        return number_format($qty * $price, 2, '.', '');
     }
 
     private function nullableDecimal(mixed $value): ?string

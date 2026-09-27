@@ -52,6 +52,21 @@ function resolveMenuState(pathname: string): { selectedKeys: string[]; openKeys:
     if (path.startsWith('/reports/equipment-cost')) {
         return { selectedKeys: ['reports-equipment-cost'], openKeys: ['reports'] };
     }
+    if (path.startsWith('/reports/purchase-request-status')) {
+        return { selectedKeys: ['reports-purchase-request-status'], openKeys: ['reports'] };
+    }
+    if (path.startsWith('/reports/purchase-order-trend')) {
+        return { selectedKeys: ['reports-purchase-order-trend'], openKeys: ['reports'] };
+    }
+    if (path.startsWith('/reports/top-supplier')) {
+        return { selectedKeys: ['reports-top-supplier'], openKeys: ['reports'] };
+    }
+    if (path.startsWith('/reports/approval-turnaround')) {
+        return { selectedKeys: ['reports-approval-turnaround'], openKeys: ['reports'] };
+    }
+    if (path.startsWith('/reports/purchase-request-by-department')) {
+        return { selectedKeys: ['reports-purchase-request-by-department'], openKeys: ['reports'] };
+    }
 
     if (path.startsWith('/admin/users')) {
         return { selectedKeys: ['admin-users'], openKeys: ['admin'] };
@@ -89,6 +104,12 @@ function resolveMenuState(pathname: string): { selectedKeys: string[]; openKeys:
     }
     if (path.startsWith('/sap')) {
         return { selectedKeys: ['sap-sync'], openKeys: [] };
+    }
+    if (path.startsWith('/procurement/purchase-requests')) {
+        return { selectedKeys: ['purchase-requests'], openKeys: [] };
+    }
+    if (path.startsWith('/procurement/daily-pr')) {
+        return { selectedKeys: ['daily-pr'], openKeys: [] };
     }
     if (path.startsWith('/procurement/purchase-orders')) {
         return { selectedKeys: ['purchase-orders'], openKeys: [] };
@@ -248,6 +269,14 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
 
     if (can.includes('procurement.view')) {
         menuItems.push({
+            key: 'purchase-requests',
+            label: <Link href="/procurement/purchase-requests">Purchase Requests</Link>,
+        });
+        menuItems.push({
+            key: 'daily-pr',
+            label: <Link href="/procurement/daily-pr">Daily PR</Link>,
+        });
+        menuItems.push({
             key: 'purchase-orders',
             label: <Link href="/procurement/purchase-orders">Purchase Orders</Link>,
         });
@@ -302,6 +331,40 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                     key: 'reports-equipment-cost',
                     label: <Link href="/reports/equipment-cost">Equipment Cost</Link>,
                 },
+                ...(can.includes('procurement.view')
+                    ? [
+                          {
+                              key: 'reports-purchase-request-status',
+                              label: (
+                                  <Link href="/reports/purchase-request-status">PR Status</Link>
+                              ),
+                          },
+                          {
+                              key: 'reports-purchase-order-trend',
+                              label: (
+                                  <Link href="/reports/purchase-order-trend">PO Trend</Link>
+                              ),
+                          },
+                          {
+                              key: 'reports-top-supplier',
+                              label: <Link href="/reports/top-supplier">Top Suppliers</Link>,
+                          },
+                          {
+                              key: 'reports-approval-turnaround',
+                              label: (
+                                  <Link href="/reports/approval-turnaround">Approval Turnaround</Link>
+                              ),
+                          },
+                          {
+                              key: 'reports-purchase-request-by-department',
+                              label: (
+                                  <Link href="/reports/purchase-request-by-department">
+                                      PR by Department
+                                  </Link>
+                              ),
+                          },
+                      ]
+                    : []),
             ],
         });
     }

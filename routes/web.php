@@ -18,6 +18,7 @@ use App\Http\Controllers\Procurement\ItemPriceController;
 use App\Http\Controllers\Procurement\ItemPriceImportController;
 use App\Http\Controllers\Procurement\ProcurementSettingsController;
 use App\Http\Controllers\Procurement\PurchaseOrderController;
+use App\Http\Controllers\Procurement\PurchaseRequestController;
 use App\Http\Controllers\Procurement\SapSupplierController;
 use App\Http\Controllers\ProjectContextController;
 use App\Http\Controllers\ReportController;
@@ -83,6 +84,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/tabulation-bids/{tabulationBid}/award', [TabulationBidController::class, 'award'])->name('tabulation-bids.award');
     Route::post('/tabulation-bids/{tabulationBid}/create-po', [TabulationBidController::class, 'createPo'])->name('tabulation-bids.create-po');
 
+    Route::get('/procurement/daily-pr/export', [PurchaseRequestController::class, 'exportDailyCsv'])
+        ->name('procurement.daily-pr.export');
+    Route::get('/procurement/daily-pr', [PurchaseRequestController::class, 'daily'])
+        ->name('procurement.daily-pr.index');
+
+    Route::prefix('procurement/purchase-requests')->name('procurement.purchase-requests.')->group(function () {
+        Route::get('/', [PurchaseRequestController::class, 'index'])->name('index');
+        Route::get('/{sapPurchaseRequest}', [PurchaseRequestController::class, 'show'])->name('show');
+    });
+
     Route::prefix('procurement/purchase-orders')->name('procurement.purchase-orders.')->group(function () {
         Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
         Route::get('/{sapPurchaseOrder}', [PurchaseOrderController::class, 'show'])->name('show');
@@ -136,6 +147,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/budget-consumption', [ReportController::class, 'budgetConsumption'])->name('budget-consumption');
         Route::get('/vendor-performance', [ReportController::class, 'vendorPerformance'])->name('vendor-performance');
         Route::get('/equipment-cost', [ReportController::class, 'equipmentCost'])->name('equipment-cost');
+        Route::get('/purchase-request-status', [ReportController::class, 'purchaseRequestStatus'])->name('purchase-request-status');
+        Route::get('/purchase-order-trend', [ReportController::class, 'purchaseOrderTrend'])->name('purchase-order-trend');
+        Route::get('/top-supplier', [ReportController::class, 'topSupplier'])->name('top-supplier');
+        Route::get('/approval-turnaround', [ReportController::class, 'approvalTurnaround'])->name('approval-turnaround');
+        Route::get('/purchase-request-by-department', [ReportController::class, 'purchaseRequestByDepartment'])->name('purchase-request-by-department');
         Route::get('/{reportType}/export/pdf', [ReportController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/{reportType}/export/csv', [ReportController::class, 'exportCsv'])->name('export.csv');
     });

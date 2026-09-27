@@ -105,11 +105,17 @@ class ReportExportDownloadTest extends TestCase
     {
         $month = now()->format('Y-m');
         $scoped = "?project_code=MBL&month={$month}";
+        $procurement = '?from='.now()->subDays(30)->format('Y-m-d').'&to='.now()->format('Y-m-d').'&project_code=MBL';
 
         return [
             'budget-consumption' => ['budget-consumption', $scoped],
             'vendor-performance' => ['vendor-performance', ''],
             'equipment-cost' => ['equipment-cost', $scoped],
+            'purchase-request-status' => ['purchase-request-status', $procurement],
+            'purchase-order-trend' => ['purchase-order-trend', $procurement],
+            'top-supplier' => ['top-supplier', $procurement],
+            'approval-turnaround' => ['approval-turnaround', $procurement],
+            'purchase-request-by-department' => ['purchase-request-by-department', $procurement],
         ];
     }
 }

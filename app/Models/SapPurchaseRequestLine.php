@@ -17,6 +17,7 @@ class SapPurchaseRequestLine extends Model
         'qty',
         'uom',
         'unit_price',
+        'line_amount',
         'line_vendor_code',
     ];
 
@@ -25,6 +26,7 @@ class SapPurchaseRequestLine extends Model
         return [
             'qty' => 'decimal:2',
             'unit_price' => 'decimal:2',
+            'line_amount' => 'decimal:2',
         ];
     }
 

@@ -110,6 +110,6 @@ class ReportExportAuthorizationTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Reports/Index', false)
-                ->has('reports', 3));
+                ->has('reports', 8));
     }
 }

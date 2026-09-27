@@ -18,6 +18,15 @@ class SapPurchaseRequest extends Model
         'department_name',
         'requester',
         'mr_no',
+        'required_date',
+        'remarks',
+        'pr_status',
+        'closed_status',
+        'pr_rev_no',
+        'unit_no',
+        'hours_meter',
+        'line_count',
+        'total_amount',
         'project_code',
         'synced_at',
     ];
@@ -27,6 +36,10 @@ class SapPurchaseRequest extends Model
         return [
             'doc_date' => 'date',
             'create_date' => 'datetime',
+            'required_date' => 'date',
+            'hours_meter' => 'decimal:2',
+            'line_count' => 'integer',
+            'total_amount' => 'decimal:2',
             'synced_at' => 'datetime',
         ];
     }
