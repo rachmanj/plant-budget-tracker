@@ -21,11 +21,16 @@ class AuthenticatedSessionController extends Controller
     public function store(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['required', 'string', 'max:255'],
             'password' => ['required'],
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        $identifier = trim($credentials['email']);
+        $attemptCredentials = str_contains($identifier, '@')
+            ? ['email' => $identifier, 'password' => $credentials['password']]
+            : ['username' => strtolower($identifier), 'password' => $credentials['password']];
+
+        if (! Auth::attempt($attemptCredentials, $request->boolean('remember'))) {
             return back()->withErrors([
                 'email' => __('auth.failed'),
             ])->onlyInput('email');

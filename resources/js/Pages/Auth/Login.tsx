@@ -179,11 +179,16 @@ export default function Login() {
                     {errors.email && <Alert type="error" message={errors.email} style={{ marginBottom: 16 }} />}
 
                     <Form layout="vertical" onFinish={submit}>
-                        <Form.Item label="Email" required validateStatus={errors.email ? 'error' : ''}>
+                        <Form.Item
+                            label="Email or username"
+                            required
+                            validateStatus={errors.email ? 'error' : ''}
+                            extra="Sign in with your email address or username."
+                        >
                             <Input
-                                type="email"
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
+                                placeholder="Email or username"
                                 autoComplete="username"
                             />
                         </Form.Item>
