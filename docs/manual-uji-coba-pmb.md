@@ -1,6 +1,6 @@
 # Manual Penggunaan untuk Tester — Semua Modul
 
-**Versi 1.1 — 26 November 2026**
+**Versi 1.2 — 26 November 2026**
 Pendamping dokumen *Brief Uji Coba Menyeluruh PMB*. Kata sandi seluruh akun uji: `password`.
 
 ## Cara memakai manual ini
@@ -239,7 +239,7 @@ Label tombol dan menu ditulis apa adanya sesuai layar (dalam bahasa Inggris). Ke
 
 **Langkah mencoba.**
 
-1. Buka **Purchase Orders**. Catat jumlah dokumen di bagian bawah daftar.
+1. Buka **Purchase Orders**. Catat jumlah dokumen di bagian bawah daftar (saat uji dimulai: 11.480 dokumen, dokumen terbaru 23 November 2026).
 2. Gunakan **"Search PO, PR, vendor, item code"** untuk mencari nomor PO yang kamu kenal.
 3. Saring dengan **Project**, **Department**, **Delivery status**, dan **Origin**.
 4. Buka satu PO. Periksa bagian **Line items**, **Attachments**, **Comments**, **Related documents**, dan **Legacy approval history (proc-app)**.
@@ -260,7 +260,7 @@ Label tombol dan menu ditulis apa adanya sesuai layar (dalam bahasa Inggris). Ke
 
 **Langkah mencoba.**
 
-1. Buka **Purchase Requests**. Catat jumlah dokumen dan nilainya.
+1. Buka **Purchase Requests**. Catat jumlah dokumen dan nilainya (saat uji dimulai: 14.911 dokumen, Rp 14,7 miliar, dokumen terbaru 23 November 2026).
 2. Cari dengan **"Search PR, MR, requester, item code"**.
 3. Saring dengan **Project**, **Department**, **PR status**.
 4. Buka rincian satu PR: periksa baris item, dokumen terkait, dan lampirannya.

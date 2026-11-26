@@ -1,6 +1,6 @@
 # Brief Uji Coba Menyeluruh PMB
 
-**Versi 1.1 — 26 November 2026**
+**Versi 1.2 — 26 November 2026**
 Untuk seluruh peserta uji coba · dokumen pendamping: *Manual Penggunaan untuk Tester (semua modul)*
 
 ## 1. Tujuan uji coba
@@ -26,14 +26,14 @@ Sikap yang kami harapkan: **jujur dan kritis.** Temuan yang dilaporkan hari ini 
 | Basis data SAP | **DB LAB dari IT**: `LAB_SBO_20261124` — data per 23–24 November 2026 |
 | Nama DB LAB | `LAB_SBO_20261124` (bila IT memotong ulang ke posisi 26 November, namanya akan diberitahukan sebelum uji dimulai) |
 | Sifat data | dokumen yang dibuat saat uji coba hanya masuk ke DB LAB |
-| Data yang sudah ada | PO 10.996 dokumen, PR 14.163 dokumen, lampiran 25.399, vendor 2.395, harga item 1.093 (posisi penarikan terakhir PMB, 21 Oktober 2026) |
-| Data di DB LAB baru | 24.088 Purchase Order dan 29.793 Purchase Request sampai 23 November 2026 — menjadi bahan uji setelah penarikan pertama dijalankan |
+| Data yang sudah ada | PO 11.480 dokumen (Rp 876,2 miliar) dan PR 14.911 dokumen (Rp 14,7 miliar), dokumen terbaru 23 November 2026; lampiran 25.399, vendor 2.395, harga item 1.093 |
+| Data di DB LAB | 24.088 Purchase Order dan 29.793 Purchase Request sampai 23 November 2026; PMB menarik yang termasuk lingkup Plant dan Logistik |
 
 **Persiapan yang kami lakukan sebelum hari pertama** (supaya kamu tidak perlu menyiapkan apa pun selain akun):
 
 1. Mengarahkan PMB ke DB LAB dari IT (`LAB_SBO_20261124`) dan menguji koneksinya.
-2. Menjalankan penarikan data pertama, agar register sudah memuat dokumen sampai November 2026 — saat ini PMB masih memuat data sampai 21 Oktober 2026.
-3. Membersihkan antrean pekerjaan yang gagal akibat penggantian DB LAB, sehingga status di halaman SAP Sync bersih pada hari pertama.
+2. Menjalankan penarikan data pertama — **sudah selesai**: register kini memuat dokumen sampai 23 November 2026 (PO 11.480 dokumen, PR 14.911 dokumen).
+3. Membersihkan antrean pekerjaan yang gagal akibat penggantian DB LAB — **sudah selesai**: antrean kosong dan status sinkronisasi terakhir berhasil.
 4. Memastikan seluruh 16 akun uji bisa masuk dengan kata sandi `password`.
 
 **Penting:** uji coba **tidak menyentuh data perusahaan**. Semua dokumen yang kamu buat, setujui, atau batalkan saat pengujian tercatat di DB LAB. Karena itu **jangan ragu mencoba**, termasuk mencoba hal yang menurutmu salah — justru itu yang kami butuhkan.
