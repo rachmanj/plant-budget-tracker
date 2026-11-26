@@ -1,0 +1,3 @@
+No,Tanggal,Nama tester,Modul,Langkah yang dilakukan,Yang diharapkan,Yang terjadi,Tingkat,Tangkapan layar,Catatan tambahan
+1,contoh,contoh,Purchase Orders,Menekan Follow pada PO lalu mengaktifkan "Only POs I follow",PO itu muncul di daftar,Daftar kosong sampai halaman dimuat ulang,Minor,-,contoh baris - silakan hapus
+2,contoh,contoh,Tabulation Bids,Menekan Create PO sebelum persetujuan selesai,Muncul penjelasan apa yang masih ditunggu,Muncul pesan galat tanpa penjelasan,Major,-,contoh baris - silakan hapus
