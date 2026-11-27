@@ -111,14 +111,22 @@ class CreateSapPurchaseOrder implements ShouldQueue
                     ];
                 })->all();
 
+                $projectCode = $plantRequest->project_code;
                 $today = now()->startOfDay();
                 $payload = [
                     'CardCode' => $vendor->vendor_code,
                     'DocDate' => $today->toDateString(),
                     'DocDueDate' => $today->copy()->addDays(30)->toDateString(),
+                    'RequriedDate' => $today->copy()->addDays(30)->toDateString(),
                     'Comments' => "PMB tabulation bid #{$bid->id} - PR {$bid->sap_pr_id}",
+                    'U_MIS_CCDepartement' => config('procurement.default_po_department_code'),
+                    'U_MIS_UnitNo' => $plantRequest->unit_code_cache ?: 'NON_UNIT',
                     'DocumentLines' => $documentLines,
                 ];
+
+                if ($projectCode) {
+                    $payload['U_MIS_Project'] = $projectCode;
+                }
 
                 $result = $sapService->createPurchaseOrder($payload);
                 $poId = (string) ($result['DocEntry'] ?? 'PENDING_SAP');

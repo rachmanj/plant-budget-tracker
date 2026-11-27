@@ -79,6 +79,107 @@ class CreateSapPurchaseRequestJobTest extends TestCase
         $this->assertSame($payload['DocumentLines'], $log->request_payload['DocumentLines']);
     }
 
+    public function test_payload_includes_default_department_code_and_unit_no(): void
+    {
+        Http::fake();
+
+        $finance = $this->makeFinanceDirector();
+        $allocation = $this->makeAllocation($finance);
+        $plantRequest = PlantRequest::factory()->create([
+            'budget_allocation_id' => $allocation->id,
+            'status' => 'approved',
+            'unit_code_cache' => 'EX-900',
+        ]);
+        PlantRequestLine::factory()->create(['plant_request_id' => $plantRequest->id]);
+
+        $sapService = $this->makeSapServiceWithMock(new MockHandler([
+            new Response(200, ['Set-Cookie' => 'B1SESSION=test; Path=/'], '{}'),
+            new Response(201, [], json_encode(['DocNum' => 9002])),
+        ]));
+
+        $job = new CreateSapPurchaseRequest($plantRequest->id);
+        $job->handle($sapService, app(SapCircuitBreaker::class));
+
+        $payload = $this->lastPurchaseRequestJsonBody();
+
+        $this->assertSame(config('procurement.default_pr_department_code'), $payload['U_MIS_CCDepartement']);
+        $this->assertSame('4', $payload['U_MIS_CCDepartement']);
+        $this->assertSame('EX-900', $payload['U_MIS_UnitNo']);
+    }
+
+    public function test_payload_uses_configured_pr_department_code_when_overridden(): void
+    {
+        Http::fake();
+        config()->set('procurement.default_pr_department_code', '5');
+
+        $finance = $this->makeFinanceDirector();
+        $allocation = $this->makeAllocation($finance);
+        $plantRequest = PlantRequest::factory()->create([
+            'budget_allocation_id' => $allocation->id,
+            'status' => 'approved',
+        ]);
+        PlantRequestLine::factory()->create(['plant_request_id' => $plantRequest->id]);
+
+        $sapService = $this->makeSapServiceWithMock(new MockHandler([
+            new Response(200, ['Set-Cookie' => 'B1SESSION=test; Path=/'], '{}'),
+            new Response(201, [], json_encode(['DocNum' => 9003])),
+        ]));
+
+        $job = new CreateSapPurchaseRequest($plantRequest->id);
+        $job->handle($sapService, app(SapCircuitBreaker::class));
+
+        $payload = $this->lastPurchaseRequestJsonBody();
+        $this->assertSame('5', $payload['U_MIS_CCDepartement']);
+    }
+
+    public function test_payload_includes_project_only_when_plant_request_has_project_code(): void
+    {
+        Http::fake();
+
+        $finance = $this->makeFinanceDirector();
+        $allocation = $this->makeAllocation($finance, 'MBL');
+        $plantRequest = PlantRequest::factory()->create([
+            'budget_allocation_id' => $allocation->id,
+            'status' => 'approved',
+        ]);
+        PlantRequestLine::factory()->create(['plant_request_id' => $plantRequest->id]);
+
+        $sapService = $this->makeSapServiceWithMock(new MockHandler([
+            new Response(200, ['Set-Cookie' => 'B1SESSION=test; Path=/'], '{}'),
+            new Response(201, [], json_encode(['DocNum' => 9004])),
+        ]));
+
+        $job = new CreateSapPurchaseRequest($plantRequest->id);
+        $job->handle($sapService, app(SapCircuitBreaker::class));
+
+        $payload = $this->lastPurchaseRequestJsonBody();
+        $this->assertSame('MBL', $payload['U_MIS_Project']);
+    }
+
+    public function test_payload_omits_project_when_project_code_missing(): void
+    {
+        Http::fake();
+
+        $finance = $this->makeFinanceDirector();
+        $allocation = $this->makeAllocation($finance, '');
+        $plantRequest = PlantRequest::factory()->create([
+            'budget_allocation_id' => $allocation->id,
+            'status' => 'approved',
+        ]);
+        PlantRequestLine::factory()->create(['plant_request_id' => $plantRequest->id]);
+
+        $sapService = $this->makeSapServiceWithMock(new MockHandler([
+            new Response(200, ['Set-Cookie' => 'B1SESSION=test; Path=/'], '{}'),
+            new Response(201, [], json_encode(['DocNum' => 9005])),
+        ]));
+
+        $job = new CreateSapPurchaseRequest($plantRequest->id);
+        $job->handle($sapService, app(SapCircuitBreaker::class));
+
+        $payload = $this->lastPurchaseRequestJsonBody();
+        $this->assertArrayNotHasKey('U_MIS_Project', $payload);
+    }
+
     public function test_job_skips_sap_when_sync_log_already_success(): void
     {
         $finance = $this->makeFinanceDirector();

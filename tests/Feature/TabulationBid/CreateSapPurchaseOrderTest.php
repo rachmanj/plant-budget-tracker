@@ -129,6 +129,62 @@ class CreateSapPurchaseOrderTest extends TestCase
         $this->assertArrayNotHasKey('ItemDescription', $captured['DocumentLines'][0]);
     }
 
+    public function test_payload_includes_default_department_required_date_and_unit_no(): void
+    {
+        $buyer = $this->makeUserWithRole('buyer');
+        $bid = $this->createAwardedBid($buyer, 'PR-PO-FIELDS');
+        $plantRequest = $this->createLinkedPlantRequestForBid($bid, 'PR-PO-FIELDS');
+        $plantRequest->update(['unit_code_cache' => 'PO-UNIT-12']);
+
+        $expectedRequired = now()->startOfDay()->addDays(30)->toDateString();
+
+        $captured = null;
+        $sapService = Mockery::mock(SapService::class);
+        $sapService->shouldReceive('createPurchaseOrder')
+            ->once()
+            ->with(Mockery::on(function (array $payload) use (&$captured) {
+                $captured = $payload;
+
+                return true;
+            }))
+            ->andReturn(['DocEntry' => 22222]);
+
+        $job = new CreateSapPurchaseOrder($bid->id);
+        $job->handle($sapService, app(SapCircuitBreaker::class), app(\App\Services\Approval\ApprovalEngine::class));
+
+        $this->assertNotNull($captured);
+        $this->assertSame('40', $captured['U_MIS_CCDepartement']);
+        $this->assertSame(config('procurement.default_po_department_code'), $captured['U_MIS_CCDepartement']);
+        $this->assertSame($expectedRequired, $captured['RequriedDate']);
+        $this->assertSame('PO-UNIT-12', $captured['U_MIS_UnitNo']);
+        $this->assertSame('MBL', $captured['U_MIS_Project']);
+    }
+
+    public function test_payload_uses_configured_po_department_code_when_overridden(): void
+    {
+        config()->set('procurement.default_po_department_code', '200');
+
+        $buyer = $this->makeUserWithRole('buyer');
+        $bid = $this->createAwardedBid($buyer, 'PR-PO-DEPT');
+        $this->createLinkedPlantRequestForBid($bid, 'PR-PO-DEPT');
+
+        $captured = null;
+        $sapService = Mockery::mock(SapService::class);
+        $sapService->shouldReceive('createPurchaseOrder')
+            ->once()
+            ->with(Mockery::on(function (array $payload) use (&$captured) {
+                $captured = $payload;
+
+                return true;
+            }))
+            ->andReturn(['DocEntry' => 33333]);
+
+        $job = new CreateSapPurchaseOrder($bid->id);
+        $job->handle($sapService, app(SapCircuitBreaker::class), app(\App\Services\Approval\ApprovalEngine::class));
+
+        $this->assertSame('200', $captured['U_MIS_CCDepartement']);
+    }
+
     public function test_job_fails_when_awarded_plant_request_missing_and_does_not_call_sap(): void
     {
         $buyer = $this->makeUserWithRole('buyer');
