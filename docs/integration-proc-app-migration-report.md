@@ -1,7 +1,7 @@
 # Laporan migrasi proc-app → PMB (Fase 5)
 
 Tanggal: 27 September 2026
-Lingkungan: produksi PMB (`http://192.168.32.149:86`) dengan basis data SAP trial `LAB_SBO_20260924`
+Lingkungan: produksi PMB (`http://192.168.32.149:86`) dengan basis data SAP trial `LAB_SBO_20260924` — *catatan: laporan ini dibuat pada 28 September 2026; sejak 26 November 2026 lingkungan uji memakai `LAB_SBO_20261124`*
 Sumber data: aplikasi lama proc-app di server `192.168.32.13` (baca-saja) + berkas lampiran yang ditarik 24–25 September 2026
 
 ## 1. Ringkasan hasil

@@ -1,9 +1,9 @@
 # Panduan Mencoba PMB untuk Tim Procurement
 
-**Versi 1.1 — 26 November 2026**
+**Versi 1.2 — 26 November 2026**
 Disiapkan untuk Tim Procurement (Procurement Admin, Buyer, Procurement Manager, Logistik) sebelum bekerja penuh di PMB menggantikan proc-app.
 
-> **Sifat dokumen ini: panduan mencoba.** Selama masa uji, PMB memakai **perusahaan uji di SAP (`LAB_SBO_20260924`)** — bukan data perusahaan. Dokumen yang kamu buat saat uji coba akan masuk ke perusahaan uji itu, jadi aman. Data pengadaan yang sudah ada (riwayat proc-app dan SAP sungguhan) juga sudah tersalin ke PMB dan bisa kamu lihat.
+> **Sifat dokumen ini: panduan mencoba.** Selama masa uji, PMB memakai **perusahaan uji di SAP (`LAB_SBO_20261124`)** — bukan data perusahaan. Dokumen yang kamu buat saat uji coba akan masuk ke perusahaan uji itu, jadi aman. Data pengadaan yang sudah ada (riwayat proc-app dan SAP sungguhan) juga sudah tersalin ke PMB dan bisa kamu lihat.
 
 ## Isi
 

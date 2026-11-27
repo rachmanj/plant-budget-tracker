@@ -1,7 +1,19 @@
 {
   "_comment": "Umpan panel 'What's new' di halaman login (tampil hanya saat masa trial). Tambah entri baru di paling atas array. Nilai type: feature | improvement | fix. Hapus berkas ini atau matikan TRIAL_MODE untuk menyembunyikan panel.",
-  "trial_note": "Trial build — documents created in this app are written to the SAP trial company (LAB_SBO_20260924), not to production.",
+  "trial_note": "Trial build — documents created in this app are written to the SAP test company (LAB_SBO_20261124), not to the production company.",
   "updates": [
+    {
+      "date": "2026-11-26",
+      "type": "fix",
+      "title": "Register sync survives an SAP database swap",
+      "summary": "The procurement register now matches documents by document number, so switching to a new SAP company (or restoring a database) no longer risks duplicate documents. Verified on 11.480 purchase orders and 14.911 purchase requests."
+    },
+    {
+      "date": "2026-09-28",
+      "type": "feature",
+      "title": "Sign in with a username",
+      "summary": "The sign-in box now accepts either an email address or a username, so the procurement team can use short names such as adminproc, buyer or director."
+    },
     {
       "date": "2026-09-26",
       "type": "feature",
