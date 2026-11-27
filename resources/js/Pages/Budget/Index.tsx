@@ -1,9 +1,10 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Card, InputNumber, Select, Space, Table, Tabs, Tag, Typography, message } from 'antd';
+import { Button, Card, InputNumber, Space, Table, Tabs, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import AppLayout from '@/Layouts/AppLayout';
+import ProjectFilterSelect from '@/Components/ProjectFilterSelect';
 import BudgetProgressBar from '@/Components/BudgetProgressBar';
 import { formatIdr } from '@/hooks/useCurrency';
 
@@ -260,15 +261,10 @@ export default function BudgetIndex({
             <Head title="Budget" />
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 <Space wrap>
-                    <Typography.Text>Project:</Typography.Text>
-                    <Select
-                        style={{ minWidth: 220 }}
+                    <ProjectFilterSelect
                         value={projectCode}
-                        onChange={handleProjectChange}
-                        options={projects.map((p) => ({
-                            value: p.project_code,
-                            label: `${p.project_code} — ${p.project_name}`,
-                        }))}
+                        projects={projects}
+                        onChange={(code) => code && handleProjectChange(code)}
                     />
                     {canManage && activePeriod && (
                         <Button type="primary" href={settingUrl(projectCode, activePeriod.period_month)}>

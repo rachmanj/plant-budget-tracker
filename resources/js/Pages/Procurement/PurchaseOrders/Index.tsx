@@ -5,6 +5,7 @@ import type { TablePaginationConfig } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import ProjectFilterSelect from '@/Components/ProjectFilterSelect';
 import { formatIdr, formatIdrCompact } from '@/hooks/useCurrency';
 
 const { RangePicker } = DatePicker;
@@ -83,7 +84,6 @@ export default function Index({
     projectScope,
 }: Props) {
     const [searchValue, setSearchValue] = useState(filters.q ?? '');
-    const projectLocked = projectScope != null && projectScope !== '';
 
     const navigate = (overrides: Record<string, unknown>) => {
         router.get(
@@ -126,21 +126,11 @@ export default function Index({
                         onChange={(e) => setSearchValue(e.target.value)}
                         onSearch={handleSearch}
                     />
-                    <Select
-                        allowClear={!projectLocked}
-                        disabled={projectLocked}
-                        placeholder="Project"
-                        style={{ width: 220 }}
-                        value={
-                            projectLocked
-                                ? projectScope
-                                : (filters.project_code ?? undefined)
-                        }
-                        options={projects.map((p) => ({
-                            value: p.project_code,
-                            label: `${p.project_code} — ${p.project_name}`,
-                        }))}
-                        onChange={(value) => navigate({ project_code: value ?? undefined, page: 1 })}
+                    <ProjectFilterSelect
+                        lockedValue={projectScope}
+                        value={filters.project_code}
+                        projects={projects}
+                        onChange={(code) => navigate({ project_code: code, page: 1 })}
                     />
                     <Select
                         allowClear

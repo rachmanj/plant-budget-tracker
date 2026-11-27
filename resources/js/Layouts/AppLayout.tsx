@@ -501,7 +501,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                     <div className="app-layout-header-right">
                         {nav?.canSwitchProject ? (
                             <Space align="center" size={8} className="app-layout-project-row">
-                                <Tooltip title="Applies to all pages">
+                                <Tooltip title="Project context — applies to all pages">
                                     <Typography.Text
                                         type="secondary"
                                         className="app-layout-project-label"

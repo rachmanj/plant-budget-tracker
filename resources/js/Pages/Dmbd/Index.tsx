@@ -16,6 +16,7 @@ import {
 import type { TablePaginationConfig } from 'antd/es/table';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import ProjectFilterSelect from '@/Components/ProjectFilterSelect';
 import { statusLabel } from '@/utils/labels';
 
 interface EquipmentRow {
@@ -262,17 +263,12 @@ export default function Index({
                             ]}
                         />
                         {projects.length > 1 && (
-                            <Select
-                                style={{ width: 220 }}
+                            <ProjectFilterSelect
+                                allowAll
+                                allValue="all"
                                 value={projectCode ?? 'all'}
-                                onChange={handleProjectChange}
-                                options={[
-                                    { value: 'all', label: 'All Projects' },
-                                    ...projects.map((p) => ({
-                                        value: p.project_code,
-                                        label: `${p.project_code} — ${p.project_name}`,
-                                    })),
-                                ]}
+                                projects={projects}
+                                onChange={(code) => handleProjectChange(code ?? 'all')}
                             />
                         )}
                     </Space>
