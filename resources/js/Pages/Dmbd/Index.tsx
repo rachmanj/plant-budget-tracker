@@ -268,6 +268,7 @@ export default function Index({
                                 allValue="all"
                                 value={projectCode ?? 'all'}
                                 projects={projects}
+                                tooltip="DMBD can be viewed across projects. The topbar sets the app-wide project context for other pages."
                                 onChange={(code) => handleProjectChange(code ?? 'all')}
                             />
                         )}

@@ -5,7 +5,6 @@ import type { TablePaginationConfig } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import ProjectFilterSelect from '@/Components/ProjectFilterSelect';
 import { formatIdr, formatIdrCompact } from '@/hooks/useCurrency';
 
 const { RangePicker } = DatePicker;
@@ -79,9 +78,7 @@ export default function Index({
     purchaseOrders,
     filters,
     summary,
-    projects,
     departments,
-    projectScope,
 }: Props) {
     const [searchValue, setSearchValue] = useState(filters.q ?? '');
 
@@ -125,12 +122,6 @@ export default function Index({
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                         onSearch={handleSearch}
-                    />
-                    <ProjectFilterSelect
-                        lockedValue={projectScope}
-                        value={filters.project_code}
-                        projects={projects}
-                        onChange={(code) => navigate({ project_code: code, page: 1 })}
                     />
                     <Select
                         allowClear

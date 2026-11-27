@@ -1,5 +1,4 @@
-import { usePage } from '@inertiajs/react';
-import { Select, Space, Tag, Tooltip } from 'antd';
+import { Select, Tooltip } from 'antd';
 
 export interface ProjectFilterSelectProps {
     value?: string | null;
@@ -9,10 +8,10 @@ export interface ProjectFilterSelectProps {
     allowAll?: boolean;
     allValue?: string;
     lockedValue?: string | null;
+    tooltip?: string;
 }
 
-const FILTER_TOOLTIP =
-    'Narrows this page only. The project in the topbar sets the app-wide context.';
+const DEFAULT_TOOLTIP = 'Narrows this view only.';
 
 export default function ProjectFilterSelect({
     value,
@@ -22,11 +21,8 @@ export default function ProjectFilterSelect({
     allowAll = false,
     allValue = 'all',
     lockedValue,
+    tooltip = DEFAULT_TOOLTIP,
 }: ProjectFilterSelectProps) {
-    const page = usePage();
-    const nav = (page.props as { nav?: { currentProject?: string } }).nav;
-    const contextProject = nav?.currentProject;
-
     if (lockedValue != null && lockedValue !== '') {
         return null;
     }
@@ -41,33 +37,18 @@ export default function ProjectFilterSelect({
 
     const selectValue = value ?? undefined;
 
-    const showContextTag =
-        !!selectValue &&
-        !!contextProject &&
-        contextProject !== 'all' &&
-        selectValue !== contextProject;
-
     return (
-        <Space wrap size="small">
-            <Tooltip title={FILTER_TOOLTIP}>
-                <Select
-                    allowClear
-                    showSearch
-                    optionFilterProp="label"
-                    placeholder="Filter project"
-                    style={{ width }}
-                    value={selectValue}
-                    options={options}
-                    onChange={(next) => onChange(next ?? undefined)}
-                />
-            </Tooltip>
-            {showContextTag && (
-                <Tooltip
-                    title={`The topbar project context is ${contextProject}; this page is filtered to ${selectValue}.`}
-                >
-                    <Tag color="warning">context: {contextProject}</Tag>
-                </Tooltip>
-            )}
-        </Space>
+        <Tooltip title={tooltip}>
+            <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder="Filter project"
+                style={{ width }}
+                value={selectValue}
+                options={options}
+                onChange={(next) => onChange(next ?? undefined)}
+            />
+        </Tooltip>
     );
 }

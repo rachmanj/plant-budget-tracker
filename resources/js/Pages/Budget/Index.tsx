@@ -4,7 +4,6 @@ import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import AppLayout from '@/Layouts/AppLayout';
-import ProjectFilterSelect from '@/Components/ProjectFilterSelect';
 import BudgetProgressBar from '@/Components/BudgetProgressBar';
 import { formatIdr } from '@/hooks/useCurrency';
 
@@ -59,7 +58,6 @@ function settingUrl(projectCode: string, periodMonth: string): string {
 
 export default function BudgetIndex({
     projectCode,
-    projects,
     periods,
     canManage,
     isFinanceDirector,
@@ -75,10 +73,6 @@ export default function BudgetIndex({
     });
 
     const activePeriod = periods.find((p) => p.period_month === activeMonth);
-
-    const handleProjectChange = (code: string) => {
-        router.get('/budget', { project_code: code }, { preserveState: true });
-    };
 
     const startEdit = (row: AllocationRow) => {
         setEditingId(row.id);
@@ -261,11 +255,6 @@ export default function BudgetIndex({
             <Head title="Budget" />
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 <Space wrap>
-                    <ProjectFilterSelect
-                        value={projectCode}
-                        projects={projects}
-                        onChange={(code) => code && handleProjectChange(code)}
-                    />
                     {canManage && activePeriod && (
                         <Button type="primary" href={settingUrl(projectCode, activePeriod.period_month)}>
                             {activePeriod.allocations.length > 0 ? 'Edit Allocation' : 'Create Allocation'}

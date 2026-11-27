@@ -1,7 +1,6 @@
 import { DownloadOutlined } from '@ant-design/icons';
 import { router } from '@inertiajs/react';
 import { Button, DatePicker, Select, Space } from 'antd';
-import ProjectFilterSelect from '@/Components/ProjectFilterSelect';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 
@@ -52,9 +51,7 @@ export default function ProcurementReportToolbar({
     reportPath,
     reportType,
     filters,
-    projects,
     departments,
-    projectScope,
     canExport,
 }: Props) {
     const navigate = (overrides: Partial<ProcurementReportFilters>) => {
@@ -87,13 +84,6 @@ export default function ProcurementReportToolbar({
                         to: values[1].format('YYYY-MM-DD'),
                     });
                 }}
-            />
-            <ProjectFilterSelect
-                lockedValue={projectScope}
-                width={180}
-                value={filters.project_code}
-                projects={projects}
-                onChange={(code) => navigate({ project_code: code ?? null })}
             />
             <Select
                 allowClear
