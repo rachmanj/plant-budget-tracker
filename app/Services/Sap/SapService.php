@@ -13,16 +13,25 @@ class SapService
 
     private CookieJar $cookieJar;
 
-    public function __construct()
+    public function __construct(?Client $client = null)
     {
         $this->cookieJar = new CookieJar();
-        $this->client = new Client([
-            'base_uri' => rtrim(config('services.sap.server_url'), '/').'/b1s/v1/',
-            'cookies' => $this->cookieJar,
-            'headers' => ['Content-Type' => 'application/json'],
-            'verify' => config('services.sap.verify_ssl'),
-            'timeout' => 15,
-        ]);
+
+        if ($client !== null) {
+            $this->client = $client;
+            $cookies = $client->getConfig('cookies');
+            if ($cookies instanceof CookieJar) {
+                $this->cookieJar = $cookies;
+            }
+        } else {
+            $this->client = new Client([
+                'base_uri' => rtrim(config('services.sap.server_url'), '/').'/b1s/v1/',
+                'cookies' => $this->cookieJar,
+                'headers' => ['Content-Type' => 'application/json'],
+                'verify' => config('services.sap.verify_ssl'),
+                'timeout' => 15,
+            ]);
+        }
     }
 
     public function login(): bool
@@ -86,7 +95,7 @@ class SapService
 
     public function createPurchaseOrder(array $payload): array
     {
-        return $this->request('POST', 'Orders', ['json' => $payload]);
+        return $this->request('POST', 'PurchaseOrders', ['json' => $payload]);
     }
 
     public function getVendorMaster(string $cardCode): array
