@@ -43,3 +43,13 @@
 .ant-tag {
     border-radius: 999px;
 }
+
+@media (max-width: 860px) {
+    .app-layout-header .ant-btn {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
