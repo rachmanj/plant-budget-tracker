@@ -1,6 +1,6 @@
 # Brief Uji Coba Menyeluruh PMB
 
-**Versi 1.3 — 26 November 2026**
+**Versi 1.4 — 26 November 2026**
 Untuk seluruh peserta uji coba · dokumen pendamping: *Manual Penggunaan untuk Tester (semua modul)*
 
 ## 1. Tujuan uji coba
@@ -148,6 +148,8 @@ Hal-hal berikut sudah tercatat sebelum uji coba; tetap boleh kamu laporkan bila 
 4. **Interchange dan Cannibal** masih tahap terbatas: hanya sebagian peran melihatnya.
 5. **Akses dari luar jaringan kantor** memakai alamat resmi `https://pmb.arka-acc.online`; bila suatu saat tidak bisa dibuka, gunakan alamat dalam jaringan kantor `http://192.168.32.149:86`.
 6. **proc-app masih hidup** selama masa berdampingan; pekerjaan yang sudah lazim masih bisa dilakukan di sana.
+7. **PR yang dibuat dari PMB tampil dengan kolom Department kosong** di register. SAP hanya mengizinkan departemen diisi dari dalam SAP sendiri, sehingga dokumen buatan PMB tercatat tanpa departemen (nilai -2). Dokumennya tetap lengkap — nomor, tanggal, vendor/barang, nilai, dan barisnya — dan tetap bisa dicari lewat nomor dokumen. Ini bukan kesalahan aplikasi, melainkan batasan SAP yang sudah kami tangani.
+
 
 ## 10. Koordinator dan jalur bantuan
 
