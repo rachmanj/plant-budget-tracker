@@ -21,6 +21,34 @@ class TrialUpdates
             return self::empty();
         }
 
+        $payload = self::readFromFile();
+
+        $updates = $payload['updates'];
+
+        $maxItems = (int) config('trial.max_items', 12);
+        if ($maxItems > 0) {
+            $updates = array_slice($updates, 0, $maxItems);
+        }
+
+        return [
+            'note' => $payload['note'],
+            'updates' => array_values($updates),
+        ];
+    }
+
+    /**
+     * @return array{note: string, updates: array<int, array<string, mixed>>}
+     */
+    public static function history(): array
+    {
+        return self::readFromFile();
+    }
+
+    /**
+     * @return array{note: string, updates: array<int, array<string, mixed>>}
+     */
+    private static function readFromFile(): array
+    {
         $path = config('trial.updates_file');
 
         if (! is_string($path) || ! is_readable($path)) {
@@ -62,11 +90,6 @@ class TrialUpdates
 
             return strcmp($dateB, $dateA);
         });
-
-        $maxItems = (int) config('trial.max_items', 12);
-        if ($maxItems > 0) {
-            $updates = array_slice($updates, 0, $maxItems);
-        }
 
         return [
             'note' => $note,

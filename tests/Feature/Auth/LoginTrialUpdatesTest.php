@@ -10,28 +10,16 @@ class LoginTrialUpdatesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_includes_trial_updates_when_trial_mode_enabled(): void
+    public function test_login_does_not_include_trial_updates_prop_when_trial_mode_enabled(): void
     {
         $path = $this->writeTrialUpdatesFile([
             'trial_note' => 'Trial note for testers.',
             'updates' => [
                 [
-                    'date' => '2026-09-24',
-                    'type' => 'feature',
-                    'title' => 'Third',
-                    'summary' => 'Summary three.',
-                ],
-                [
                     'date' => '2026-09-26',
                     'type' => 'fix',
                     'title' => 'First',
                     'summary' => 'Summary one.',
-                ],
-                [
-                    'date' => '2026-09-25',
-                    'type' => 'improvement',
-                    'title' => 'Second',
-                    'summary' => 'Summary two.',
                 ],
             ],
         ]);
@@ -44,17 +32,11 @@ class LoginTrialUpdatesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Auth/Login', false)
-                ->has('trialUpdates', fn ($trial) => $trial
-                    ->where('note', 'Trial note for testers.')
-                    ->has('updates', 3)
-                    ->where('updates.0.title', 'First')
-                    ->where('updates.1.title', 'Second')
-                    ->where('updates.2.title', 'Third')
-                )
+                ->missing('trialUpdates')
             );
     }
 
-    public function test_login_has_empty_trial_updates_when_trial_mode_disabled(): void
+    public function test_login_does_not_include_trial_updates_when_trial_mode_disabled(): void
     {
         Config::set('trial.enabled', false);
 
@@ -62,17 +44,14 @@ class LoginTrialUpdatesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Auth/Login', false)
-                ->has('trialUpdates', fn ($trial) => $trial
-                    ->where('note', '')
-                    ->has('updates', 0)
-                )
+                ->missing('trialUpdates')
             );
     }
 
-    public function test_login_has_empty_trial_updates_when_trial_period_ended(): void
+    public function test_login_does_not_include_trial_updates_when_trial_period_ended(): void
     {
         $path = $this->writeTrialUpdatesFile([
-            'trial_note' => 'Should not appear.',
+            'trial_note' => 'Should not appear on login.',
             'updates' => [
                 [
                     'date' => '2026-09-26',
@@ -91,10 +70,7 @@ class LoginTrialUpdatesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Auth/Login', false)
-                ->has('trialUpdates', fn ($trial) => $trial
-                    ->where('note', '')
-                    ->has('updates', 0)
-                )
+                ->missing('trialUpdates')
             );
     }
 
@@ -109,10 +85,7 @@ class LoginTrialUpdatesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Auth/Login', false)
-                ->has('trialUpdates', fn ($trial) => $trial
-                    ->where('note', '')
-                    ->has('updates', 0)
-                )
+                ->missing('trialUpdates')
             );
 
         $invalidPath = $this->writeTrialUpdatesFileRaw('{ not valid json');
@@ -123,10 +96,7 @@ class LoginTrialUpdatesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Auth/Login', false)
-                ->has('trialUpdates', fn ($trial) => $trial
-                    ->where('note', '')
-                    ->has('updates', 0)
-                )
+                ->missing('trialUpdates')
             );
     }
 

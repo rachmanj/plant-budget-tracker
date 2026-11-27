@@ -25,6 +25,7 @@ import {
     DollarOutlined,
     BulbOutlined,
     BulbFilled,
+    HistoryOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import type { ReactNode } from 'react';
@@ -128,6 +129,9 @@ function resolveMenuState(pathname: string): { selectedKeys: string[]; openKeys:
     }
     if (path.startsWith('/components')) {
         return { selectedKeys: ['components'], openKeys: [] };
+    }
+    if (path.startsWith('/updates')) {
+        return { selectedKeys: ['updates'], openKeys: [] };
     }
 
     return { selectedKeys: [], openKeys: [] };
@@ -368,6 +372,12 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             ],
         });
     }
+
+    menuItems.push({
+        key: 'updates',
+        icon: <HistoryOutlined />,
+        label: <Link href="/updates">Update History</Link>,
+    });
 
     if (features?.cannibal_beta && can.includes('component.view')) {
         menuItems.push({

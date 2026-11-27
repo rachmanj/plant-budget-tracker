@@ -25,6 +25,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Sap\SyncDashboardController;
 use App\Http\Controllers\Sap\TestConnectionController;
 use App\Http\Controllers\TabulationBidController;
+use App\Http\Controllers\UpdateHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -42,6 +43,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/project-context', [ProjectContextController::class, 'update'])->name('project-context.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/updates', [UpdateHistoryController::class, 'index'])->name('updates.index');
 
     Route::middleware('can:budget.view')->prefix('budget')->name('budget.')->group(function () {
         Route::get('/', [BudgetController::class, 'index'])->name('index');
