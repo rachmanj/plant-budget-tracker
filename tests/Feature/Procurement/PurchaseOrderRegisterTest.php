@@ -152,6 +152,51 @@ class PurchaseOrderRegisterTest extends TestCase
             );
     }
 
+    public function test_summary_includes_extended_register_metrics(): void
+    {
+        $this->travelTo('2026-11-15 12:00:00');
+
+        $admin = $this->makeUserWithRole('procurement_admin');
+        $this->createPurchaseOrder([
+            'doc_date' => '2026-11-10',
+            'vendor_code' => 'V-A',
+            'total_amount' => '100.00',
+        ]);
+        $this->createPurchaseOrder([
+            'doc_date' => '2026-10-05',
+            'vendor_code' => 'V-B',
+            'total_amount' => '200.00',
+        ]);
+        $this->createPurchaseOrder([
+            'doc_date' => '2026-11-12',
+            'vendor_code' => 'V-A',
+            'total_amount' => '50.00',
+        ]);
+
+        $this->actingAsProject($admin)
+            ->get('/procurement/purchase-orders')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('summary.this_month', 2)
+                ->where('summary.suppliers', 2)
+                ->where('summary.latest_doc_date', '2026-11-12')
+            );
+    }
+
+    public function test_summary_latest_doc_date_is_null_when_no_rows_match(): void
+    {
+        $admin = $this->makeUserWithRole('procurement_admin');
+        $this->createPurchaseOrder(['doc_num' => 700099]);
+
+        $this->actingAsProject($admin)
+            ->get('/procurement/purchase-orders?q=no-match-xyz')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('summary.document_count', 0)
+                ->where('summary.latest_doc_date', null)
+            );
+    }
+
     public function test_show_page_includes_order_lines(): void
     {
         $admin = $this->makeUserWithRole('procurement_admin');

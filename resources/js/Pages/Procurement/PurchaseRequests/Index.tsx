@@ -1,10 +1,23 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Card, DatePicker, Input, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { DatePicker, Input, Select, Space, Table, Tag, Tooltip } from 'antd';
 import type { TablePaginationConfig } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { formatIdr, formatIdrCompact } from '@/hooks/useCurrency';
+import {
+    AmountCell,
+    RegisterFiltersCard,
+    RegisterKpiCard,
+    RegisterKpiCol,
+    RegisterKpiRow,
+    RegisterPageHeader,
+    RegisterTableCard,
+    StatusPill,
+    emptyCell,
+    formatDocCount,
+    prStatusTone,
+} from '@/Pages/Procurement/registerIndexUi';
 
 const { RangePicker } = DatePicker;
 
@@ -60,6 +73,9 @@ interface Filters {
 interface Summary {
     document_count: number;
     total_amount: string;
+    this_month: number;
+    departments: number;
+    latest_doc_date: string | null;
 }
 
 interface Props {
@@ -98,6 +114,14 @@ export default function Index({
         );
     };
 
+    const resetFilters = () => {
+        router.get(
+            '/procurement/purchase-requests',
+            { per_page: filters.per_page },
+            { preserveState: true, preserveScroll: true }
+        );
+    };
+
     const handleSearch = (value: string) => navigate({ q: value || undefined, page: 1 });
 
     const handleTableChange = (pagination: TablePaginationConfig) => {
@@ -107,61 +131,106 @@ export default function Index({
     const dateRangeValue: [Dayjs, Dayjs] | null =
         filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null;
 
+    const headerSubtitle = useMemo(() => {
+        const parts = [
+            `${formatDocCount(summary.document_count)} document${summary.document_count === 1 ? '' : 's'}`,
+            formatIdrCompact(summary.total_amount),
+        ];
+        if (summary.latest_doc_date) {
+            parts.push(`latest ${dayjs(summary.latest_doc_date).format('D MMM YYYY')}`);
+        }
+        return parts.join(' · ');
+    }, [summary]);
+
+    const controlStyle = { minHeight: 44 };
+
     return (
         <AppLayout title="Purchase Requests">
             <Head title="Purchase Requests" />
-            <Card title="Purchase Requests">
-                <Space wrap style={{ marginBottom: 16 }} size="middle">
-                    <Input.Search
-                        allowClear
-                        placeholder="Search PR, MR, requester, item code"
-                        style={{ width: 300 }}
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
-                        onSearch={handleSearch}
-                    />
-                    <Select
-                        allowClear
-                        placeholder="Department"
-                        style={{ width: 220 }}
-                        value={filters.dept_code ?? undefined}
-                        options={departments.map((d) => ({
-                            value: d.dept_code,
-                            label: d.dept_name,
-                        }))}
-                        onChange={(value) => navigate({ dept_code: value ?? undefined, page: 1 })}
-                    />
-                    <RangePicker
-                        value={dateRangeValue}
-                        onChange={(dates) => {
-                            if (!dates || !dates[0] || !dates[1]) {
-                                navigate({ from: undefined, to: undefined, page: 1 });
-                                return;
-                            }
-                            navigate({
-                                from: dates[0].format('YYYY-MM-DD'),
-                                to: dates[1].format('YYYY-MM-DD'),
-                                page: 1,
-                            });
-                        }}
-                    />
-                    <Select
-                        allowClear
-                        placeholder="PR status"
-                        style={{ width: 160 }}
-                        value={filters.pr_status ?? undefined}
-                        options={prStatusOptions}
-                        onChange={(value) => navigate({ pr_status: value ?? undefined, page: 1 })}
-                    />
-                </Space>
 
-                <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-                    {summary.document_count} document{summary.document_count === 1 ? '' : 's'} ·{' '}
-                    <Tooltip title={formatIdr(summary.total_amount)}>
-                        <span>{formatIdrCompact(summary.total_amount)} total</span>
-                    </Tooltip>
-                </Typography.Text>
+            <RegisterPageHeader title="Purchase Requests" subtitle={headerSubtitle} />
 
+            <RegisterKpiRow>
+                <RegisterKpiCol>
+                    <RegisterKpiCard
+                        label="Documents"
+                        value={summary.document_count}
+                        meta="Matching current filters"
+                    />
+                </RegisterKpiCol>
+                <RegisterKpiCol>
+                    <RegisterKpiCard
+                        label="Total value"
+                        valueNode={
+                            <Tooltip title={formatIdr(summary.total_amount)}>
+                                <span>{formatIdrCompact(summary.total_amount)}</span>
+                            </Tooltip>
+                        }
+                        meta="Sum of document totals"
+                    />
+                </RegisterKpiCol>
+                <RegisterKpiCol>
+                    <RegisterKpiCard
+                        label="Departments"
+                        value={summary.departments}
+                        meta="Distinct department codes"
+                    />
+                </RegisterKpiCol>
+                <RegisterKpiCol>
+                    <RegisterKpiCard
+                        label="This month"
+                        value={summary.this_month}
+                        meta={`Documents dated ${dayjs().startOf('month').format('D MMM YYYY')} onward`}
+                    />
+                </RegisterKpiCol>
+            </RegisterKpiRow>
+
+            <RegisterFiltersCard onReset={resetFilters}>
+                <Input.Search
+                    allowClear
+                    placeholder="Search PR, MR, requester, item code"
+                    style={{ width: 300, ...controlStyle }}
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    onSearch={handleSearch}
+                />
+                <Select
+                    allowClear
+                    placeholder="Department"
+                    style={{ width: 220, ...controlStyle }}
+                    value={filters.dept_code ?? undefined}
+                    options={departments.map((d) => ({
+                        value: d.dept_code,
+                        label: d.dept_name,
+                    }))}
+                    onChange={(value) => navigate({ dept_code: value ?? undefined, page: 1 })}
+                />
+                <RangePicker
+                    style={controlStyle}
+                    value={dateRangeValue}
+                    onChange={(dates) => {
+                        if (!dates || !dates[0] || !dates[1]) {
+                            navigate({ from: undefined, to: undefined, page: 1 });
+                            return;
+                        }
+                        navigate({
+                            from: dates[0].format('YYYY-MM-DD'),
+                            to: dates[1].format('YYYY-MM-DD'),
+                            page: 1,
+                        });
+                    }}
+                />
+                <Select
+                    allowClear
+                    placeholder="PR status"
+                    style={{ width: 160, ...controlStyle }}
+                    value={filters.pr_status ?? undefined}
+                    options={prStatusOptions}
+                    onChange={(value) => navigate({ pr_status: value ?? undefined, page: 1 })}
+                />
+            </RegisterFiltersCard>
+
+            <RegisterTableCard showing={purchaseRequests.data.length} total={purchaseRequests.total}>
                 <Table
                     rowKey="id"
                     dataSource={purchaseRequests.data}
@@ -173,7 +242,7 @@ export default function Index({
                         pageSizeOptions: [25, 50, 100],
                     }}
                     onChange={handleTableChange}
-                    scroll={{ x: true }}
+                    scroll={{ x: 'max-content' }}
                     columns={[
                         {
                             title: 'Doc Num',
@@ -182,49 +251,75 @@ export default function Index({
                                 docNum ? (
                                     <Link href={`/procurement/purchase-requests/${row.id}`}>{docNum}</Link>
                                 ) : (
-                                    '—'
+                                    emptyCell()
                                 ),
                         },
                         {
                             title: 'Doc Date',
                             dataIndex: 'doc_date',
                             render: (value: string | null) =>
-                                value ? dayjs(value).format('DD MMM YYYY') : '—',
+                                value ? dayjs(value).format('DD MMM YYYY') : emptyCell(),
                         },
                         {
                             title: 'PR Type',
                             dataIndex: 'pr_type',
-                            render: (value: string | null) => (value ? <Tag>{value}</Tag> : '—'),
+                            render: (value: string | null) =>
+                                value ? <Tag color="default">{value}</Tag> : emptyCell(),
                         },
                         {
                             title: 'Department',
                             dataIndex: 'department_name',
-                            render: (v: string | null) => v ?? '—',
+                            render: (v: string | null) => v ?? emptyCell(),
                         },
-                        { title: 'Project', dataIndex: 'project_code', render: (v: string | null) => v ?? '—' },
-                        { title: 'Requester', dataIndex: 'requester', render: (v: string | null) => v ?? '—' },
-                        { title: 'MR No', dataIndex: 'mr_no', render: (v: string | null) => v ?? '—' },
+                        {
+                            title: 'Project',
+                            dataIndex: 'project_code',
+                            render: (v: string | null) => v ?? emptyCell(),
+                        },
+                        {
+                            title: 'Requester',
+                            dataIndex: 'requester',
+                            render: (v: string | null) => v ?? emptyCell(),
+                        },
+                        {
+                            title: 'MR No',
+                            dataIndex: 'mr_no',
+                            render: (v: string | null) => v ?? emptyCell(),
+                        },
                         {
                             title: 'Required Date',
                             dataIndex: 'required_date',
                             render: (value: string | null) =>
-                                value ? dayjs(value).format('DD MMM YYYY') : '—',
+                                value ? dayjs(value).format('DD MMM YYYY') : emptyCell(),
                         },
-                        { title: 'Lines', dataIndex: 'line_count' },
+                        {
+                            title: 'Lines',
+                            dataIndex: 'line_count',
+                            align: 'right' as const,
+                            render: (value: number) => (
+                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+                            ),
+                        },
                         {
                             title: 'Total',
                             dataIndex: 'total_amount',
-                            render: (value: string | null) => (value ? formatIdr(value) : '—'),
+                            align: 'right' as const,
+                            render: (value: string | null) => <AmountCell value={value} />,
                         },
                         {
                             title: 'Status',
                             dataIndex: 'pr_status',
-                            render: (value: string | null) => (value ? <Tag>{value}</Tag> : '—'),
+                            render: (value: string | null) =>
+                                value ? (
+                                    <StatusPill tone={prStatusTone(value)}>{value}</StatusPill>
+                                ) : (
+                                    emptyCell()
+                                ),
                         },
                         {
                             title: 'Closed',
                             dataIndex: 'closed_status',
-                            render: (value: string | null) => value ?? '—',
+                            render: (value: string | null) => value ?? emptyCell(),
                         },
                         {
                             title: 'Actions',
@@ -235,7 +330,7 @@ export default function Index({
                         },
                     ]}
                 />
-            </Card>
+            </RegisterTableCard>
         </AppLayout>
     );
 }

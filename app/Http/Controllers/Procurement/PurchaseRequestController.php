@@ -38,8 +38,17 @@ class PurchaseRequestController extends Controller
 
         $filtered = $this->filteredQuery($request, $forcedProjectCode);
 
+        $monthStart = now()->startOfMonth()->toDateString();
+
         $summaryRow = (clone $filtered)
-            ->selectRaw('COUNT(*) as document_count, COALESCE(SUM(total_amount), 0) as total_amount')
+            ->selectRaw(
+                'COUNT(*) as document_count,
+                COALESCE(SUM(total_amount), 0) as total_amount,
+                SUM(CASE WHEN doc_date >= ? THEN 1 ELSE 0 END) as this_month,
+                COUNT(DISTINCT department_code) as departments,
+                MAX(doc_date) as latest_doc_date',
+                [$monthStart]
+            )
             ->first();
 
         $perPage = (int) $request->input('per_page', 25);
@@ -67,6 +76,11 @@ class PurchaseRequestController extends Controller
             'summary' => [
                 'document_count' => (int) ($summaryRow->document_count ?? 0),
                 'total_amount' => (string) ($summaryRow->total_amount ?? '0.00'),
+                'this_month' => (int) ($summaryRow->this_month ?? 0),
+                'departments' => (int) ($summaryRow->departments ?? 0),
+                'latest_doc_date' => $summaryRow->latest_doc_date !== null
+                    ? Carbon::parse($summaryRow->latest_doc_date)->format('Y-m-d')
+                    : null,
             ],
             'projects' => $this->projectOptions($user),
             'projectScope' => $projectScope,

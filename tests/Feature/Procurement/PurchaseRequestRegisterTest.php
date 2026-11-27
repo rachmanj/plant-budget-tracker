@@ -133,6 +133,51 @@ class PurchaseRequestRegisterTest extends TestCase
         $this->assertSame('3500000.00', $page['props']['summary']['total_amount']);
     }
 
+    public function test_summary_includes_extended_register_metrics(): void
+    {
+        $this->travelTo('2026-11-15 12:00:00');
+
+        $admin = $this->makeUserWithRole('procurement_admin');
+        $this->createPurchaseRequest([
+            'doc_date' => '2026-11-10',
+            'department_code' => '4',
+            'total_amount' => '100.00',
+        ]);
+        $this->createPurchaseRequest([
+            'doc_date' => '2026-10-05',
+            'department_code' => '5',
+            'total_amount' => '200.00',
+        ]);
+        $this->createPurchaseRequest([
+            'doc_date' => '2026-11-12',
+            'department_code' => '4',
+            'total_amount' => '50.00',
+        ]);
+
+        $page = $this->inertiaPageFrom(
+            $this->actingAsProject($admin)->get('/procurement/purchase-requests')->assertOk()
+        );
+
+        $this->assertSame(2, $page['props']['summary']['this_month']);
+        $this->assertSame(2, $page['props']['summary']['departments']);
+        $this->assertSame('2026-11-12', $page['props']['summary']['latest_doc_date']);
+    }
+
+    public function test_summary_latest_doc_date_is_null_when_no_rows_match(): void
+    {
+        $admin = $this->makeUserWithRole('procurement_admin');
+        $this->createPurchaseRequest(['doc_num' => 700088]);
+
+        $page = $this->inertiaPageFrom(
+            $this->actingAsProject($admin)
+                ->get('/procurement/purchase-requests?q=no-match-xyz')
+                ->assertOk()
+        );
+
+        $this->assertSame(0, $page['props']['summary']['document_count']);
+        $this->assertNull($page['props']['summary']['latest_doc_date']);
+    }
+
     public function test_show_page_includes_request_lines(): void
     {
         $admin = $this->makeUserWithRole('procurement_admin');
