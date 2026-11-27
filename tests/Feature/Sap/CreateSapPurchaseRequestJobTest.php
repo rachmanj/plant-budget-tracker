@@ -104,6 +104,8 @@ class CreateSapPurchaseRequestJobTest extends TestCase
 
         $this->assertSame(config('procurement.default_pr_department_code'), $payload['U_MIS_CCDepartement']);
         $this->assertSame('4', $payload['U_MIS_CCDepartement']);
+        $this->assertArrayHasKey('Department', $payload);
+        $this->assertSame(4, $payload['Department']);
         $this->assertSame('EX-900', $payload['U_MIS_UnitNo']);
     }
 
@@ -130,6 +132,7 @@ class CreateSapPurchaseRequestJobTest extends TestCase
 
         $payload = $this->lastPurchaseRequestJsonBody();
         $this->assertSame('5', $payload['U_MIS_CCDepartement']);
+        $this->assertSame(5, $payload['Department']);
     }
 
     public function test_payload_includes_project_only_when_plant_request_has_project_code(): void

@@ -81,6 +81,7 @@ class CreateSapPurchaseRequest implements ShouldQueue
             'DocDueDate' => $today->copy()->addDays(30)->toDateString(),
             'RequriedDate' => $today->copy()->addDays(30)->toDateString(),
             'Comments' => $reference,
+            'Department' => (int) config('procurement.default_pr_department_code'),
             'U_MIS_CCDepartement' => config('procurement.default_pr_department_code'),
             'U_MIS_UnitNo' => $plantRequest->unit_code_cache ?: 'NON_UNIT',
             'DocumentLines' => $lines,
