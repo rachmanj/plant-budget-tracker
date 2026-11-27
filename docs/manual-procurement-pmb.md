@@ -1,6 +1,6 @@
 # Panduan Mencoba PMB untuk Tim Procurement
 
-**Versi 1.0 — 28 September 2026**
+**Versi 1.1 — 26 November 2026**
 Disiapkan untuk Tim Procurement (Procurement Admin, Buyer, Procurement Manager, Logistik) sebelum bekerja penuh di PMB menggantikan proc-app.
 
 > **Sifat dokumen ini: panduan mencoba.** Selama masa uji, PMB memakai **perusahaan uji di SAP (`LAB_SBO_20260924`)** — bukan data perusahaan. Dokumen yang kamu buat saat uji coba akan masuk ke perusahaan uji itu, jadi aman. Data pengadaan yang sudah ada (riwayat proc-app dan SAP sungguhan) juga sudah tersalin ke PMB dan bisa kamu lihat.
@@ -38,7 +38,7 @@ PMB adalah satu tempat untuk seluruh perjalanan pengadaan: permintaan dari plant
 
 ## 2. Cara masuk ke PMB
 
-PMB dibuka dari peramban (browser) di alamat `http://192.168.32.149:86`. Dari luar jaringan kantor, aplikasi bisa dibuka melalui `mineops.sbs` bila akses luar sedang dinyalakan.
+PMB dibuka dari peramban (browser) di alamat **`https://pmb.arka-acc.online`** — bisa dari jaringan kantor maupun dari luar. Bila alamat itu tidak bisa dibuka, gunakan alamat dalam jaringan kantor `http://192.168.32.149:86`.
 
 **Masuk memakai email atau username.** Keduanya diterima pada kolom yang sama: kalau isinya memuat tanda `@` dianggap email, kalau tidak dianggap username. Huruf besar/kecil tidak berpengaruh.
 
@@ -260,6 +260,6 @@ Kerjakan berurutan; semuanya aman karena memakai perusahaan uji di SAP.
 
 - **Interchange dan Cannibal** masih dalam tahap terbatas dan hanya tampil untuk sebagian peran.
 - **proc-app masih hidup** selama masa berdampingan, dan akan dijadikan hanya-baca lalu ditutup setelah tim menyatakan PMB stabil. Sampai saat itu, pekerjaan yang sudah lazim tetap bisa dilakukan di proc-app.
-- **Akses dari luar jaringan kantor** (lewat `mineops.sbs`) bisa dinyalakan atau dimatikan; bila sedang mati, gunakan jaringan kantor.
+- **Akses dari luar jaringan kantor** memakai alamat resmi `https://pmb.arka-acc.online`; alamat dalam jaringan kantor tetap tersedia sebagai cadangan.
 
-Pertanyaan, temuan, atau usulan perbaikan atas aplikasi ini mohon disampaikan kepada tim kami — setiap catatan dari pemakaian nyata langsung kami tindak lanjuti sebelum aplikasi ini menjadi tempat kerja harian tim Procurement.
+Pertanyaan, temuan, atau usulan perbaikan atas aplikasi ini mohon disampaikan ke help desk aplikasi **dea.hermes@adikaramulia.co.id** — setiap catatan dari pemakaian nyata langsung kami tindak lanjuti sebelum aplikasi ini menjadi tempat kerja harian tim Procurement.

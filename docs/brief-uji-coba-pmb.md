@@ -1,6 +1,6 @@
 # Brief Uji Coba Menyeluruh PMB
 
-**Versi 1.2 — 26 November 2026**
+**Versi 1.3 — 26 November 2026**
 Untuk seluruh peserta uji coba · dokumen pendamping: *Manual Penggunaan untuk Tester (semua modul)*
 
 ## 1. Tujuan uji coba
@@ -21,7 +21,8 @@ Sikap yang kami harapkan: **jujur dan kritis.** Temuan yang dilaporkan hari ini 
 
 | Hal | Keterangan |
 |---|---|
-| Alamat PMB | `http://192.168.32.149:86` |
+| Alamat PMB | **`https://pmb.arka-acc.online`** — bisa dibuka dari jaringan kantor maupun dari luar |
+| Alamat cadangan (jaringan kantor) | `http://192.168.32.149:86` |
 | Peramban | Chrome atau Edge terbaru di komputer kantor |
 | Basis data SAP | **DB LAB dari IT**: `LAB_SBO_20261124` — data per 23–24 November 2026 |
 | Nama DB LAB | `LAB_SBO_20261124` (bila IT memotong ulang ke posisi 26 November, namanya akan diberitahukan sebelum uji dimulai) |
@@ -145,15 +146,16 @@ Hal-hal berikut sudah tercatat sebelum uji coba; tetap boleh kamu laporkan bila 
 2. **Harga item** baru berisi 1.093 harga; daftar yang lebih lengkap menyusul dari tim.
 3. **Angka aktual** pada pagu baru terisi setelah dokumen dari sistem lain terbaca (penarikan berkala setiap 15 menit) — bukan kesalahan hitung.
 4. **Interchange dan Cannibal** masih tahap terbatas: hanya sebagian peran melihatnya.
-5. **Akses dari luar jaringan kantor** (`mineops.sbs`) bisa dinyalakan atau dimatikan; bila sedang mati, gunakan jaringan kantor.
+5. **Akses dari luar jaringan kantor** memakai alamat resmi `https://pmb.arka-acc.online`; bila suatu saat tidak bisa dibuka, gunakan alamat dalam jaringan kantor `http://192.168.32.149:86`.
 6. **proc-app masih hidup** selama masa berdampingan; pekerjaan yang sudah lazim masih bisa dilakukan di sana.
 
 ## 10. Koordinator dan jalur bantuan
 
 | Keperluan | Hubungi |
 |---|---|
-| Akun tidak bisa dipakai, lupa kata sandi, akses modul | koordinator uji coba |
+| **Help desk aplikasi** (pertanyaan, temuan, permintaan perbaikan) | **dea.hermes@adikaramulia.co.id** |
+| Akun tidak bisa dipakai, lupa kata sandi, akses modul | koordinator uji coba, atau help desk `dea.hermes@adikaramulia.co.id` |
 | Temuan Blocker (pekerjaan berhenti) | koordinator uji coba, segera — sertakan nomor dokumen dan tangkapan layar |
 | Pertanyaan arti angka atau alur bisnis | koordinator uji coba, diteruskan ke tim aplikasi |
 
-Lembar temuan dikumpulkan setiap akhir hari pengujian, bukan di akhir minggu, supaya perbaikan bisa berjalan sambil pengujian hari berikutnya berlangsung.
+Lembar temuan dikumpulkan setiap akhir hari pengujian, bukan di akhir minggu, supaya perbaikan bisa berjalan sambil pengujian hari berikutnya berlangsung. Temuan juga boleh dikirim langsung ke help desk **dea.hermes@adikaramulia.co.id** dengan menyebutkan modul, langkah, dan tangkapan layar.

@@ -1,6 +1,6 @@
 # Manual Penggunaan untuk Tester — Semua Modul
 
-**Versi 1.2 — 26 November 2026**
+**Versi 1.3 — 26 November 2026**
 Pendamping dokumen *Brief Uji Coba Menyeluruh PMB*. Kata sandi seluruh akun uji: `password`.
 
 ## Cara memakai manual ini
@@ -19,7 +19,7 @@ Label tombol dan menu ditulis apa adanya sesuai layar (dalam bahasa Inggris). Ke
 
 ### A1. Masuk ke PMB
 
-1. Buka peramban (Chrome atau Edge), lalu buka `http://192.168.32.149:86`.
+1. Buka peramban (Chrome atau Edge), lalu buka **`https://pmb.arka-acc.online`** (bisa dari jaringan kantor maupun dari luar).
 2. Pada kolom pertama, isi **username** (misalnya `adminproc`) **atau email** (misalnya `procurement.admin@pmb.demo`). Keduanya diterima; huruf besar dan kecil sama saja.
 3. Isi kata sandi: `password`.
 4. Tekan tombol masuk. Sebelum halaman masuk tampil, ada panel **"What's new"** yang boleh dibaca untuk melihat apa yang baru di aplikasi.
@@ -463,3 +463,4 @@ Selain temuan, catat juga **hal yang membingungkan** — label yang tidak dimeng
 | Tabulation Bid | pembandingan penawaran beberapa vendor |
 | GRPO | penerimaan barang di SAP |
 | DB LAB | basis data uji SAP (`LAB_SBO_20261124`) yang dipakai saat uji coba, bukan data perusahaan |
+| Help desk | `dea.hermes@adikaramulia.co.id` — pertanyaan, temuan, atau permintaan bantuan |
