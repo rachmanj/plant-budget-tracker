@@ -1,0 +1,45 @@
+.ant-card {
+    box-shadow: none !important;
+    border-color: var(--ant-color-border-secondary);
+    border-radius: var(--ant-border-radius);
+}
+
+.ant-table-wrapper .ant-table {
+    border-radius: var(--ant-border-radius);
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ant-color-text-tertiary);
+    background: transparent;
+    border-bottom-color: var(--ant-color-border-secondary);
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th::before {
+    display: none;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr > td {
+    border-bottom-color: var(--ant-color-border-secondary);
+}
+
+.ant-table-wrapper .ant-table-container {
+    border-inline-start: none;
+    border-top: none;
+}
+
+.ant-table-wrapper .ant-table-cell-scrollbar {
+    box-shadow: none;
+}
+
+.ant-layout .ant-layout-sider,
+.ant-layout .ant-layout-header:not(.app-layout-header) {
+    background: var(--ant-color-bg-container);
+}
+
+.ant-tag {
+    border-radius: 999px;
+}

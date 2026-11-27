@@ -2,7 +2,7 @@ import '../css/app.css';
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { ConfigProvider, App as AntApp, theme } from 'antd';
+import { ConfigProvider, App as AntApp } from 'antd';
 import enUS from 'antd/locale/en_US';
 import dayjs from 'dayjs';
 import 'dayjs/locale/en';
@@ -11,8 +11,7 @@ import type { ReactNode } from 'react';
 dayjs.locale('en');
 import { ThemeProvider } from './providers/ThemeProvider';
 import { useTheme } from './Hooks/useTheme';
-
-const { darkAlgorithm, defaultAlgorithm } = theme;
+import { pmbTheme } from './theme/pmbTheme';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Plant Budget Tracker';
 
@@ -22,17 +21,7 @@ function ThemedApp({ children }: { children: ReactNode }) {
     return (
         <ConfigProvider
             locale={enUS}
-            theme={{
-                algorithm: isDark ? darkAlgorithm : defaultAlgorithm,
-                token: {
-                    colorPrimary: isDark ? '#2dd4bf' : '#0d9488',
-                    colorSuccess: '#10b981',
-                    colorWarning: '#f59e0b',
-                    colorError: '#ef4444',
-                    colorInfo: '#0ea5e9',
-                    borderRadius: 8,
-                },
-            }}
+            theme={pmbTheme(isDark)}
         >
             <AntApp>{children}</AntApp>
         </ConfigProvider>
@@ -53,6 +42,6 @@ createInertiaApp({
         );
     },
     progress: {
-        color: '#0d9488',
+        color: '#4f92ff',
     },
 });
