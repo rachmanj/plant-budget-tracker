@@ -3,6 +3,24 @@
   "trial_note": "Trial build — documents created in this app are written to the SAP test company (LAB_SBO_20261124), not to the production company.",
   "updates": [
     {
+      "date": "2026-11-27",
+      "type": "fix",
+      "title": "Creating a purchase order now reaches SAP",
+      "summary": "Purchase orders were silently rejected by SAP: the app was posting them to the sales order entity instead of purchase orders, so no PO ever came out of a tabulation bid. Fixed and verified end to end — the awarded vendor, the price and the item lines all arrive in SAP."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "fix",
+      "title": "Order status is read from the real purchase order",
+      "summary": "The status check behind each purchase order was reading the wrong SAP document type, so document status never reflected reality. It now reads the purchase order itself."
+    },
+    {
+      "date": "2026-11-27",
+      "type": "fix",
+      "title": "Documents created in the app appear in the procurement register",
+      "summary": "SAP does not let an outside application set the department on a purchase request, so requests created here used to be filtered out of the register. The register now also pulls any document whose number is recorded in this app — your PR and PO always show up."
+    },
+    {
       "date": "2026-11-26",
       "type": "fix",
       "title": "Register sync survives an SAP database swap",
