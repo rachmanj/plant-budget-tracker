@@ -53,6 +53,19 @@ class SapServiceEndpointTest extends TestCase
         $this->assertSame('PurchaseRequests', $this->entitySegmentFromPath($path));
     }
 
+    public function test_default_client_has_sap_service_layer_base_uri(): void
+    {
+        $service = new SapService;
+        $reflection = new \ReflectionClass($service);
+        $clientProp = $reflection->getProperty('client');
+        $clientProp->setAccessible(true);
+        /** @var Client $client */
+        $client = $clientProp->getValue($service);
+        $baseUri = (string) $client->getConfig('base_uri');
+
+        $this->assertStringContainsString('/b1s/v1/', $baseUri);
+    }
+
     public function test_create_purchase_order_does_not_post_to_sales_orders_endpoint(): void
     {
         $history = [];
@@ -103,7 +116,10 @@ class SapServiceEndpointTest extends TestCase
             'headers' => ['Content-Type' => 'application/json'],
         ]);
 
-        return new SapService($client);
+        $service = new SapService;
+        $service->useClient($client);
+
+        return $service;
     }
 
     /**

@@ -13,24 +13,25 @@ class SapService
 
     private CookieJar $cookieJar;
 
-    public function __construct(?Client $client = null)
+    public function __construct()
     {
         $this->cookieJar = new CookieJar();
 
-        if ($client !== null) {
-            $this->client = $client;
-            $cookies = $client->getConfig('cookies');
-            if ($cookies instanceof CookieJar) {
-                $this->cookieJar = $cookies;
-            }
-        } else {
-            $this->client = new Client([
-                'base_uri' => rtrim(config('services.sap.server_url'), '/').'/b1s/v1/',
-                'cookies' => $this->cookieJar,
-                'headers' => ['Content-Type' => 'application/json'],
-                'verify' => config('services.sap.verify_ssl'),
-                'timeout' => 15,
-            ]);
+        $this->client = new Client([
+            'base_uri' => rtrim(config('services.sap.server_url'), '/').'/b1s/v1/',
+            'cookies' => $this->cookieJar,
+            'headers' => ['Content-Type' => 'application/json'],
+            'verify' => config('services.sap.verify_ssl'),
+            'timeout' => 15,
+        ]);
+    }
+
+    public function useClient(Client $client): void
+    {
+        $this->client = $client;
+        $cookies = $client->getConfig('cookies');
+        if ($cookies instanceof CookieJar) {
+            $this->cookieJar = $cookies;
         }
     }
 
