@@ -1,9 +1,16 @@
 import { Head, router } from '@inertiajs/react';
-import { Alert, Button, Card, Input, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Input, Table } from 'antd';
 import type { TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { AppPage } from '@/Components/AppPage';
+import {
+    RegisterFiltersCard,
+    RegisterTableCard,
+    StatusPill,
+    formatDocCount,
+} from '@/Pages/Procurement/registerIndexUi';
 
 interface SupplierRow {
     id: number;
@@ -61,6 +68,14 @@ export default function Index({ suppliers, filters, perPage, can, syncSummary }:
         );
     };
 
+    const resetFilters = () => {
+        router.get(
+            '/procurement/suppliers',
+            { per_page: perPage },
+            { preserveState: true, preserveScroll: true }
+        );
+    };
+
     const handleSearch = (value: string) => navigate({ search: value || undefined, page: 1 });
 
     const handleTableChange = (pagination: TablePaginationConfig) => {
@@ -79,6 +94,10 @@ export default function Index({ suppliers, filters, perPage, can, syncSummary }:
         );
     };
 
+    const supplierWord = suppliers.total === 1 ? 'supplier' : 'suppliers';
+    const subtitle = `${formatDocCount(suppliers.total)} ${supplierWord} in master list`;
+    const controlStyle = { minHeight: 44 };
+
     return (
         <AppLayout title="Suppliers">
             <Head title="Suppliers" />
@@ -91,70 +110,77 @@ export default function Index({ suppliers, filters, perPage, can, syncSummary }:
                     description={`${syncSummary.created} created, ${syncSummary.updated} updated.`}
                 />
             )}
-            <Card
-                title="SAP Suppliers"
-                extra={
+            <AppPage
+                title="Suppliers"
+                subtitle={subtitle}
+                kpis={[{ label: 'Suppliers', value: formatDocCount(suppliers.total) }]}
+                actions={
                     can.sync ? (
-                        <Button type="primary" loading={syncing} onClick={runSync}>
+                        <Button type="primary" loading={syncing} onClick={runSync} style={controlStyle}>
                             Sync now
                         </Button>
                     ) : null
                 }
             >
-                <Space wrap style={{ marginBottom: 16 }}>
+                <RegisterFiltersCard onReset={resetFilters}>
                     <Input.Search
                         allowClear
                         placeholder="Search card code or name"
-                        style={{ width: 320 }}
+                        style={{ width: '100%', maxWidth: 320, ...controlStyle }}
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                         onSearch={handleSearch}
                     />
-                </Space>
-                <Table<SupplierRow>
-                    rowKey="id"
-                    dataSource={suppliers.data}
-                    onChange={handleTableChange}
-                    pagination={{
-                        current: suppliers.current_page,
-                        pageSize: suppliers.per_page,
-                        total: suppliers.total,
-                        showSizeChanger: true,
-                        pageSizeOptions: ['25', '50', '100'],
-                    }}
-                    columns={[
-                        { title: 'Card Code', dataIndex: 'card_code', width: 140 },
-                        { title: 'Name', dataIndex: 'card_name', ellipsis: true },
-                        {
-                            title: 'Payment Terms',
-                            dataIndex: 'payment_terms',
-                            render: (value: string | null) => value ?? '—',
-                        },
-                        {
-                            title: 'Currency',
-                            dataIndex: 'currency',
-                            width: 100,
-                            render: (value: string | null) => value ?? '—',
-                        },
-                        {
-                            title: 'Status',
-                            dataIndex: 'is_active',
-                            width: 110,
-                            render: (active: boolean) =>
-                                active ? <Tag color="green">Active</Tag> : <Tag>Inactive</Tag>,
-                        },
-                        {
-                            title: 'Last Synced',
-                            dataIndex: 'synced_at',
-                            width: 170,
-                            render: (value: string | null) => formatSyncedAt(value),
-                        },
-                    ]}
-                />
-                <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                    {suppliers.total} supplier(s)
-                </Typography.Text>
-            </Card>
+                </RegisterFiltersCard>
+
+                <RegisterTableCard showing={suppliers.data.length} total={suppliers.total}>
+                    <Table<SupplierRow>
+                        rowKey="id"
+                        dataSource={suppliers.data}
+                        onChange={handleTableChange}
+                        scroll={{ x: 'max-content' }}
+                        pagination={{
+                            current: suppliers.current_page,
+                            pageSize: suppliers.per_page,
+                            total: suppliers.total,
+                            showSizeChanger: true,
+                            pageSizeOptions: ['25', '50', '100'],
+                        }}
+                        columns={[
+                            { title: 'Card Code', dataIndex: 'card_code', width: 140 },
+                            { title: 'Name', dataIndex: 'card_name', ellipsis: true },
+                            {
+                                title: 'Payment Terms',
+                                dataIndex: 'payment_terms',
+                                render: (value: string | null) => value ?? '—',
+                            },
+                            {
+                                title: 'Currency',
+                                dataIndex: 'currency',
+                                width: 100,
+                                render: (value: string | null) => value ?? '—',
+                            },
+                            {
+                                title: 'Status',
+                                dataIndex: 'is_active',
+                                width: 110,
+                                render: (active: boolean) =>
+                                    active ? (
+                                        <StatusPill tone="green">Active</StatusPill>
+                                    ) : (
+                                        <StatusPill tone="orange">Inactive</StatusPill>
+                                    ),
+                            },
+                            {
+                                title: 'Last Synced',
+                                dataIndex: 'synced_at',
+                                width: 170,
+                                render: (value: string | null) => formatSyncedAt(value),
+                            },
+                        ]}
+                    />
+                </RegisterTableCard>
+            </AppPage>
         </AppLayout>
     );
 }

@@ -7,17 +7,25 @@ import {
     Input,
     Space,
     Table,
-    Tag,
     Typography,
     Upload,
     message,
+    theme,
 } from 'antd';
 import type { UploadProps } from 'antd';
 import type { TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useState, type ReactNode } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { AppPage } from '@/Components/AppPage';
 import { formatIdr } from '@/hooks/useCurrency';
+import {
+    RegisterFiltersCard,
+    RegisterTableCard,
+    StatusPill,
+    formatDocCount,
+    hairlineCardStyle,
+} from '@/Pages/Procurement/registerIndexUi';
 
 const MAX_ERROR_ROWS = 30;
 
@@ -88,7 +96,7 @@ function formatDate(value: string | null): string {
 
 function vendorLabel(vendorCode: string): ReactNode {
     if (!vendorCode || vendorCode.trim() === '') {
-        return <Tag color="cyan">General (all vendors)</Tag>;
+        return <StatusPill tone="blue">General (all vendors)</StatusPill>;
     }
 
     return vendorCode;
@@ -128,6 +136,72 @@ function renderImportErrors(errors: ImportRow['errors']) {
     );
 }
 
+function ImportHistoryCard({
+    importHistory,
+    onTableChange,
+}: {
+    importHistory: Paginator<ImportRow>;
+    onTableChange: (pagination: TablePaginationConfig) => void;
+}) {
+    const { token } = theme.useToken();
+
+    return (
+        <Card
+            style={{ ...hairlineCardStyle(token), marginTop: 12 }}
+            styles={{ body: { padding: 16 } }}
+            title={
+                <div>
+                    <Typography.Text strong style={{ fontSize: 14 }}>
+                        Import history
+                    </Typography.Text>
+                    <div>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            {formatDocCount(importHistory.data.length)} of {formatDocCount(importHistory.total)}
+                        </Typography.Text>
+                    </div>
+                </div>
+            }
+        >
+            <Table<ImportRow>
+                rowKey="id"
+                dataSource={importHistory.data}
+                onChange={onTableChange}
+                scroll={{ x: 'max-content' }}
+                pagination={{
+                    current: importHistory.current_page,
+                    pageSize: importHistory.per_page,
+                    total: importHistory.total,
+                }}
+                expandable={{
+                    expandedRowRender: (record) => renderImportErrors(record.errors),
+                    rowExpandable: (record) => (record.errors?.length ?? 0) > 0,
+                }}
+                columns={[
+                    { title: 'File', dataIndex: 'original_name', ellipsis: true },
+                    {
+                        title: 'Imported by',
+                        dataIndex: 'imported_by_name',
+                        width: 160,
+                        render: (value: string | null) => value ?? '—',
+                    },
+                    {
+                        title: 'Imported at',
+                        dataIndex: 'imported_at',
+                        width: 170,
+                        render: (value: string | null) => formatDateTime(value),
+                    },
+                    {
+                        title: 'Summary',
+                        key: 'summary',
+                        render: (_, row) =>
+                            `${row.rows_total} read, ${row.rows_created} created, ${row.rows_updated} updated, ${row.rows_unchanged} unchanged, ${row.rows_failed} failed`,
+                    },
+                ]}
+            />
+        </Card>
+    );
+}
+
 export default function Index({
     itemPrices,
     importHistory,
@@ -148,6 +222,17 @@ export default function Index({
                 per_page: perPage,
                 import_page: importHistory.current_page,
                 ...overrides,
+            },
+            { preserveState: true, preserveScroll: true }
+        );
+    };
+
+    const resetFilters = () => {
+        router.get(
+            '/procurement/item-prices',
+            {
+                per_page: perPage,
+                import_page: importHistory.current_page,
             },
             { preserveState: true, preserveScroll: true }
         );
@@ -215,23 +300,41 @@ export default function Index({
         },
     };
 
+    const itemWord = itemPrices.total === 1 ? 'item' : 'items';
+    const importWord = importHistory.total === 1 ? 'import' : 'imports';
+    const subtitle = `${formatDocCount(itemPrices.total)} price ${itemWord}, ${formatDocCount(importHistory.total)} ${importWord} on record`;
+    const controlStyle = { minHeight: 44 };
+
     return (
         <AppLayout title="Item Prices">
             <Head title="Item Prices" />
-            <Card title="Import item prices" style={{ marginBottom: 16 }}>
-                <Space wrap>
-                    <Button href={csvTemplateUrl}>Download CSV template</Button>
-                    {can.import && (
-                        <Upload {...uploadProps}>
-                            <Button type="primary" loading={importing}>Upload CSV</Button>
-                        </Upload>
-                    )}
-                </Space>
+            <AppPage
+                title="Item Prices"
+                subtitle={subtitle}
+                kpis={[
+                    { label: 'Items', value: formatDocCount(itemPrices.total) },
+                    { label: 'Imports', value: formatDocCount(importHistory.total) },
+                ]}
+                actions={
+                    <Space wrap>
+                        <Button href={csvTemplateUrl} style={controlStyle}>
+                            Download CSV template
+                        </Button>
+                        {can.import && (
+                            <Upload {...uploadProps}>
+                                <Button type="primary" loading={importing} style={controlStyle}>
+                                    Upload CSV
+                                </Button>
+                            </Upload>
+                        )}
+                    </Space>
+                }
+            >
                 {lastImportSummary && (
                     <Alert
                         type="info"
                         showIcon
-                        style={{ marginTop: 16 }}
+                        style={{ marginBottom: 12 }}
                         message="Last import summary"
                         description={
                             <Descriptions size="small" column={2}>
@@ -254,119 +357,85 @@ export default function Index({
                         }
                     />
                 )}
-            </Card>
 
-            <Card title="Item price master" style={{ marginBottom: 16 }}>
-                <Space wrap style={{ marginBottom: 16 }}>
+                <RegisterFiltersCard onReset={resetFilters}>
                     <Input.Search
                         allowClear
                         placeholder="Search item code or vendor"
-                        style={{ width: 320 }}
+                        style={{ width: '100%', maxWidth: 320, ...controlStyle }}
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                         onSearch={handleSearch}
                     />
-                </Space>
-                <Table<ItemPriceRow>
-                    rowKey="id"
-                    dataSource={itemPrices.data}
-                    onChange={handlePriceTableChange}
-                    pagination={{
-                        current: itemPrices.current_page,
-                        pageSize: itemPrices.per_page,
-                        total: itemPrices.total,
-                        showSizeChanger: true,
-                        pageSizeOptions: ['25', '50', '100'],
-                    }}
-                    columns={[
-                        { title: 'Item Code', dataIndex: 'item_code', width: 140 },
-                        {
-                            title: 'Vendor',
-                            dataIndex: 'vendor_code',
-                            width: 160,
-                            render: (value: string) => vendorLabel(value),
-                        },
-                        {
-                            title: 'UOM',
-                            dataIndex: 'uom',
-                            width: 80,
-                            render: (value: string | null) => value ?? '—',
-                        },
-                        {
-                            title: 'Price',
-                            dataIndex: 'price',
-                            width: 160,
-                            render: (value: string) => formatIdr(value),
-                        },
-                        { title: 'Currency', dataIndex: 'currency', width: 90 },
-                        {
-                            title: 'Effective Date',
-                            dataIndex: 'effective_date',
-                            width: 130,
-                            render: (value: string | null) => formatDate(value),
-                        },
-                        {
-                            title: 'Source',
-                            dataIndex: 'source',
-                            width: 120,
-                            render: (value: string | null) => value ?? '—',
-                        },
-                        {
-                            title: 'Last Updated',
-                            dataIndex: 'updated_at',
-                            width: 200,
-                            render: (value: string | null, row) => (
-                                <span>
-                                    {formatDateTime(value)}
-                                    {row.updated_by_name ? (
-                                        <Typography.Text type="secondary" style={{ display: 'block' }}>
-                                            by {row.updated_by_name}
-                                        </Typography.Text>
-                                    ) : null}
-                                </span>
-                            ),
-                        },
-                    ]}
-                />
-            </Card>
+                </RegisterFiltersCard>
 
-            <Card title="Import history">
-                <Table<ImportRow>
-                    rowKey="id"
-                    dataSource={importHistory.data}
-                    onChange={handleImportHistoryChange}
-                    pagination={{
-                        current: importHistory.current_page,
-                        pageSize: importHistory.per_page,
-                        total: importHistory.total,
-                    }}
-                    expandable={{
-                        expandedRowRender: (record) => renderImportErrors(record.errors),
-                        rowExpandable: (record) => (record.errors?.length ?? 0) > 0,
-                    }}
-                    columns={[
-                        { title: 'File', dataIndex: 'original_name', ellipsis: true },
-                        {
-                            title: 'Imported by',
-                            dataIndex: 'imported_by_name',
-                            width: 160,
-                            render: (value: string | null) => value ?? '—',
-                        },
-                        {
-                            title: 'Imported at',
-                            dataIndex: 'imported_at',
-                            width: 170,
-                            render: (value: string | null) => formatDateTime(value),
-                        },
-                        {
-                            title: 'Summary',
-                            key: 'summary',
-                            render: (_, row) =>
-                                `${row.rows_total} read · ${row.rows_created} created · ${row.rows_updated} updated · ${row.rows_unchanged} unchanged · ${row.rows_failed} failed`,
-                        },
-                    ]}
-                />
-            </Card>
+                <RegisterTableCard showing={itemPrices.data.length} total={itemPrices.total}>
+                    <Table<ItemPriceRow>
+                        rowKey="id"
+                        dataSource={itemPrices.data}
+                        onChange={handlePriceTableChange}
+                        scroll={{ x: 'max-content' }}
+                        pagination={{
+                            current: itemPrices.current_page,
+                            pageSize: itemPrices.per_page,
+                            total: itemPrices.total,
+                            showSizeChanger: true,
+                            pageSizeOptions: ['25', '50', '100'],
+                        }}
+                        columns={[
+                            { title: 'Item Code', dataIndex: 'item_code', width: 140 },
+                            {
+                                title: 'Vendor',
+                                dataIndex: 'vendor_code',
+                                width: 160,
+                                render: (value: string) => vendorLabel(value),
+                            },
+                            {
+                                title: 'UOM',
+                                dataIndex: 'uom',
+                                width: 80,
+                                render: (value: string | null) => value ?? '—',
+                            },
+                            {
+                                title: 'Price',
+                                dataIndex: 'price',
+                                width: 160,
+                                render: (value: string) => formatIdr(value),
+                            },
+                            { title: 'Currency', dataIndex: 'currency', width: 90 },
+                            {
+                                title: 'Effective Date',
+                                dataIndex: 'effective_date',
+                                width: 130,
+                                render: (value: string | null) => formatDate(value),
+                            },
+                            {
+                                title: 'Source',
+                                dataIndex: 'source',
+                                width: 120,
+                                render: (value: string | null) => value ?? '—',
+                            },
+                            {
+                                title: 'Last Updated',
+                                dataIndex: 'updated_at',
+                                width: 200,
+                                render: (value: string | null, row) => (
+                                    <span>
+                                        {formatDateTime(value)}
+                                        {row.updated_by_name ? (
+                                            <Typography.Text type="secondary" style={{ display: 'block' }}>
+                                                by {row.updated_by_name}
+                                            </Typography.Text>
+                                        ) : null}
+                                    </span>
+                                ),
+                            },
+                        ]}
+                    />
+                </RegisterTableCard>
+
+                <ImportHistoryCard importHistory={importHistory} onTableChange={handleImportHistoryChange} />
+            </AppPage>
         </AppLayout>
     );
 }
