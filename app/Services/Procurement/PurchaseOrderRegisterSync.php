@@ -8,9 +8,21 @@ use Illuminate\Support\Collection;
 
 class PurchaseOrderRegisterSync
 {
+    public function __construct(
+        private readonly RegisterDocumentUpsert $documentUpsert = new RegisterDocumentUpsert,
+    ) {}
+
     /**
      * @param  Collection<int, object>  $rows
-     * @return array{documents_created: int, documents_updated: int, lines_created: int, lines_updated: int}
+     * @return array{
+     *     documents_created: int,
+     *     documents_updated: int,
+     *     lines_created: int,
+     *     lines_updated: int,
+     *     documents_matched_by_doc_num: int,
+     *     entry_conflicts_skipped: int,
+     *     duplicate_retries: int
+     * }
      */
     public function sync(Collection $rows): array
     {
@@ -24,6 +36,9 @@ class PurchaseOrderRegisterSync
             'documents_updated' => 0,
             'lines_created' => 0,
             'lines_updated' => 0,
+            'documents_matched_by_doc_num' => 0,
+            'entry_conflicts_skipped' => 0,
+            'duplicate_retries' => 0,
         ];
 
         $syncedAt = now();
@@ -60,22 +75,23 @@ class PurchaseOrderRegisterSync
                 'synced_at' => $syncedAt,
             ];
 
-            $order = SapPurchaseOrder::query()->where('sap_doc_entry', $docEntry)->first();
+            $upsert = $this->documentUpsert->upsert(
+                SapPurchaseOrder::class,
+                SapPurchaseOrderLine::class,
+                'sap_purchase_order_id',
+                $docEntry,
+                $headerRow->doc_num ?? null,
+                $headerAttributes,
+                $summary,
+            );
 
-            if ($order === null) {
-                $order = SapPurchaseOrder::query()->create([
-                    'sap_doc_entry' => $docEntry,
-                    ...$headerAttributes,
-                ]);
+            $order = $upsert['document'];
+            $lineDocEntry = $upsert['line_sap_doc_entry'];
+
+            if ($upsert['created']) {
                 $summary['documents_created']++;
-            } else {
-                $order->fill($headerAttributes);
-                if ($order->isDirty()) {
-                    $order->save();
-                    $summary['documents_updated']++;
-                } else {
-                    $order->touch();
-                }
+            } elseif ($upsert['updated']) {
+                $summary['documents_updated']++;
             }
 
             foreach ($documentRows as $lineRow) {
@@ -85,7 +101,7 @@ class PurchaseOrderRegisterSync
 
                 $lineAttributes = [
                     'sap_purchase_order_id' => $order->id,
-                    'sap_doc_entry' => $docEntry,
+                    'sap_doc_entry' => $lineDocEntry,
                     'line_num' => (int) $lineRow->line_num,
                     'vis_order' => (int) $lineRow->vis_order,
                     'item_code' => $lineRow->item_code ?? null,
@@ -101,7 +117,7 @@ class PurchaseOrderRegisterSync
                 ];
 
                 $existingLine = SapPurchaseOrderLine::query()
-                    ->where('sap_doc_entry', $docEntry)
+                    ->where('sap_doc_entry', $lineDocEntry)
                     ->where('line_num', $lineRow->line_num)
                     ->where('vis_order', $lineRow->vis_order)
                     ->first();

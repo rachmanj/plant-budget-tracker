@@ -159,6 +159,258 @@ class ProcurementRegisterSyncTest extends TestCase
         $this->assertSame(1, SapPurchaseRequestLine::query()->count());
     }
 
+    public function test_pr_sync_matches_by_doc_num_and_rehomes_sap_doc_entry(): void
+    {
+        $legacyEntry = 900_001;
+        $sapEntry = 700_001;
+        $docNum = 12345;
+
+        $legacy = SapPurchaseRequest::query()->create([
+            'sap_doc_entry' => $legacyEntry,
+            'doc_num' => $docNum,
+            'department_code' => '4',
+            'department_name' => 'Plant',
+            'requester' => 'Legacy',
+            'synced_at' => now(),
+        ]);
+
+        SapPurchaseRequestLine::query()->create([
+            'sap_purchase_request_id' => $legacy->id,
+            'sap_doc_entry' => $legacyEntry,
+            'line_num' => 0,
+            'vis_order' => 0,
+            'item_code' => 'OLD',
+            'qty' => '1.00',
+            'unit_price' => '10.00',
+            'line_amount' => '10.00',
+        ]);
+
+        $rows = collect([
+            $this->prRow(
+                sapDocEntry: $sapEntry,
+                lineNum: 0,
+                visOrder: 0,
+                departmentCode: '4',
+                docNum: $docNum,
+                requester: 'From SAP',
+            ),
+        ]);
+
+        $summary = app(PurchaseRequestRegisterSync::class)->sync($rows);
+
+        $this->assertSame(1, $summary['documents_matched_by_doc_num']);
+        $this->assertSame(0, $summary['entry_conflicts_skipped']);
+        $this->assertSame(1, $summary['documents_updated']);
+        $this->assertSame(0, $summary['documents_created']);
+
+        $legacy->refresh();
+        $this->assertSame($sapEntry, (int) $legacy->sap_doc_entry);
+        $this->assertSame('From SAP', $legacy->requester);
+
+        $line = SapPurchaseRequestLine::query()->where('sap_purchase_request_id', $legacy->id)->first();
+        $this->assertNotNull($line);
+        $this->assertSame($sapEntry, (int) $line->sap_doc_entry);
+    }
+
+    public function test_pr_sync_skips_entry_change_when_target_entry_taken(): void
+    {
+        $legacyEntry = 900_002;
+        $sapEntry = 700_002;
+        $docNum = 22345;
+
+        SapPurchaseRequest::query()->create([
+            'sap_doc_entry' => $sapEntry,
+            'doc_num' => 99999,
+            'department_code' => '4',
+            'department_name' => 'Other',
+            'synced_at' => now(),
+        ]);
+
+        $legacy = SapPurchaseRequest::query()->create([
+            'sap_doc_entry' => $legacyEntry,
+            'doc_num' => $docNum,
+            'department_code' => '4',
+            'department_name' => 'Plant',
+            'requester' => 'Before',
+            'synced_at' => now(),
+        ]);
+
+        $rows = collect([
+            $this->prRow(
+                sapDocEntry: $sapEntry,
+                lineNum: 0,
+                visOrder: 0,
+                departmentCode: '4',
+                docNum: $docNum,
+                requester: 'After sync',
+            ),
+        ]);
+
+        $summary = app(PurchaseRequestRegisterSync::class)->sync($rows);
+
+        $this->assertSame(1, $summary['entry_conflicts_skipped']);
+        $this->assertSame(1, $summary['documents_matched_by_doc_num']);
+        $this->assertSame(1, $summary['documents_updated']);
+
+        $legacy->refresh();
+        $this->assertSame($legacyEntry, (int) $legacy->sap_doc_entry);
+        $this->assertSame('After sync', $legacy->requester);
+    }
+
+    public function test_pr_sync_updates_line_rows_after_header_entry_rehomes(): void
+    {
+        $legacyEntry = 900_003;
+        $sapEntry = 700_003;
+        $docNum = 32345;
+
+        $legacy = SapPurchaseRequest::query()->create([
+            'sap_doc_entry' => $legacyEntry,
+            'doc_num' => $docNum,
+            'department_code' => '4',
+            'department_name' => 'Plant',
+            'synced_at' => now(),
+        ]);
+
+        SapPurchaseRequestLine::query()->create([
+            'sap_purchase_request_id' => $legacy->id,
+            'sap_doc_entry' => $legacyEntry,
+            'line_num' => 0,
+            'vis_order' => 0,
+            'item_code' => 'PN-A',
+            'qty' => '2.00',
+            'unit_price' => '100.00',
+            'line_amount' => '200.00',
+        ]);
+
+        $rows = collect([
+            $this->prRow(
+                sapDocEntry: $sapEntry,
+                lineNum: 0,
+                visOrder: 0,
+                departmentCode: '4',
+                docNum: $docNum,
+                qty: 5,
+                unitPrice: 100,
+            ),
+        ]);
+
+        app(PurchaseRequestRegisterSync::class)->sync($rows);
+
+        $this->assertSame(1, SapPurchaseRequestLine::query()->count());
+        $line = SapPurchaseRequestLine::query()->first();
+        $this->assertSame($sapEntry, (int) $line->sap_doc_entry);
+        $this->assertSame('5.00', $line->qty);
+    }
+
+    public function test_pr_sync_retries_on_duplicate_sap_doc_entry_during_create(): void
+    {
+        $sapEntry = 88050;
+        $docNum = 488050;
+        $seeded = false;
+
+        SapPurchaseRequest::creating(function (SapPurchaseRequest $model) use ($sapEntry, &$seeded): void {
+            if ($seeded || (int) $model->sap_doc_entry !== $sapEntry) {
+                return;
+            }
+
+            if (SapPurchaseRequest::query()->where('sap_doc_entry', $sapEntry)->exists()) {
+                return;
+            }
+
+            $seeded = true;
+
+            SapPurchaseRequest::withoutEvents(function () use ($sapEntry): void {
+                SapPurchaseRequest::query()->create([
+                    'sap_doc_entry' => $sapEntry,
+                    'doc_num' => 11111,
+                    'department_code' => '4',
+                    'department_name' => 'Plant',
+                    'requester' => 'Racer',
+                    'synced_at' => now(),
+                ]);
+            });
+        });
+
+        $rows = collect([
+            $this->prRow(
+                sapDocEntry: $sapEntry,
+                lineNum: 0,
+                visOrder: 0,
+                departmentCode: '4',
+                docNum: $docNum,
+                requester: 'Winner',
+            ),
+        ]);
+
+        $summary = app(PurchaseRequestRegisterSync::class)->sync($rows);
+
+        $this->assertSame(1, $summary['duplicate_retries']);
+        $this->assertSame(0, $summary['documents_created']);
+        $this->assertSame(1, SapPurchaseRequest::query()->count());
+        $request = SapPurchaseRequest::query()->first();
+        $this->assertSame('Winner', $request->requester);
+    }
+
+    public function test_pr_sync_falls_back_to_sap_doc_entry_when_doc_num_empty(): void
+    {
+        $entry = 600_100;
+
+        SapPurchaseRequest::query()->create([
+            'sap_doc_entry' => $entry,
+            'doc_num' => null,
+            'department_code' => '4',
+            'department_name' => 'Plant',
+            'requester' => 'No doc num',
+            'synced_at' => now(),
+        ]);
+
+        $rows = collect([
+            $this->prRow(
+                sapDocEntry: $entry,
+                lineNum: 0,
+                visOrder: 0,
+                departmentCode: '4',
+                docNum: null,
+                requester: 'Updated',
+            ),
+        ]);
+
+        $summary = app(PurchaseRequestRegisterSync::class)->sync($rows);
+
+        $this->assertSame(0, $summary['documents_matched_by_doc_num']);
+        $this->assertSame(0, $summary['documents_created']);
+        $this->assertSame(1, $summary['documents_updated']);
+        $this->assertSame(1, $summary['lines_created']);
+    }
+
+    public function test_register_sync_summary_counters_for_create_and_line_update(): void
+    {
+        $sync = app(PurchaseOrderRegisterSync::class);
+
+        $rows = collect([
+            $this->poRow(sapDocEntry: 33001, lineNum: 0, visOrder: 0, deptCode: '40', qty: 1, unitPrice: 100),
+        ]);
+
+        $first = $sync->sync($rows);
+        $this->assertSame(1, $first['documents_created']);
+        $this->assertSame(0, $first['documents_updated']);
+        $this->assertSame(1, $first['lines_created']);
+        $this->assertSame(0, $first['lines_updated']);
+        $this->assertSame(0, $first['documents_matched_by_doc_num']);
+        $this->assertSame(0, $first['entry_conflicts_skipped']);
+        $this->assertSame(0, $first['duplicate_retries']);
+
+        $updatedRows = collect([
+            $this->poRow(sapDocEntry: 33001, lineNum: 0, visOrder: 0, deptCode: '40', qty: 4, unitPrice: 250),
+        ]);
+
+        $second = $sync->sync($updatedRows);
+        $this->assertSame(0, $second['documents_created']);
+        $this->assertSame(0, $second['documents_updated']);
+        $this->assertSame(0, $second['lines_created']);
+        $this->assertSame(1, $second['lines_updated']);
+    }
+
     private function poRow(
         int $sapDocEntry,
         int $lineNum,
@@ -208,25 +460,29 @@ class ProcurementRegisterSyncTest extends TestCase
         int $lineNum,
         int $visOrder,
         string $departmentCode,
+        mixed $docNum = null,
+        ?string $requester = null,
+        float $qty = 3,
+        float $unitPrice = 750,
     ): object {
         return (object) [
             'sap_doc_entry' => $sapDocEntry,
             'line_num' => $lineNum,
             'vis_order' => $visOrder,
-            'doc_num' => 8000 + $sapDocEntry,
+            'doc_num' => $docNum ?? 8000 + $sapDocEntry,
             'doc_date' => '2026-09-02',
             'create_date' => '2026-09-02 09:00:00',
             'pr_type' => 'I',
             'department_code' => $departmentCode,
             'department_name' => 'Plant',
-            'requester' => 'John Planner',
+            'requester' => $requester ?? 'John Planner',
             'mr_no' => 'MR-55',
             'project_code' => '021C',
             'item_code' => 'PN-1',
             'description' => 'Seal kit',
-            'qty' => 3,
+            'qty' => $qty,
             'uom' => 'SET',
-            'unit_price' => 750,
+            'unit_price' => $unitPrice,
             'line_vendor_code' => 'V002',
         ];
     }
