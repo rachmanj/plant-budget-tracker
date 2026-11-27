@@ -33,6 +33,7 @@ class DashboardControllerTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Dashboard', false)
+                ->has('register.totals')
                 ->where('metrics.budget.allocated', '0.00')
                 ->where('metrics.requests.draft', 0)
                 ->where('metrics.procurement.bidsAwaitingReview', 0)
@@ -94,7 +95,10 @@ class DashboardControllerTest extends TestCase
             ->withSession(['current_project' => 'MBL'])
             ->get('/dashboard')
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('Dashboard', false));
+            ->assertInertia(fn ($page) => $page
+                ->component('Dashboard', false)
+                ->where('register', null)
+            );
 
         $can = $response->inertiaProps('can');
         $this->assertFalse($can['budget.view']);

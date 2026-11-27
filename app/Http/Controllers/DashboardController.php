@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Dashboard\DashboardMetrics;
+use App\Services\Dashboard\RegisterMetrics;
 use App\Support\ProjectContext;
 use App\Support\RoleLabels;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ class DashboardController extends Controller
 {
     public function __construct(
         private readonly DashboardMetrics $dashboardMetrics,
+        private readonly RegisterMetrics $registerMetrics,
     ) {}
 
     public function index(Request $request): Response
@@ -43,6 +45,8 @@ class DashboardController extends Controller
             'widgets' => $widgets,
             'roleNames' => $user->getRoleNames()->map(fn (string $role) => RoleLabels::label($role))->values(),
             'metrics' => $this->dashboardMetrics->for($user, $projectCode),
+            'register' => $this->registerMetrics->for($user, $projectCode ?? ''),
+            'sapCompany' => config('services.sap.db_name'),
             'projectCode' => $projectCode,
             'today' => now()->locale('en')->translatedFormat('d M Y'),
             'can' => [
