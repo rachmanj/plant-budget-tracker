@@ -66,6 +66,32 @@ class SapServiceEndpointTest extends TestCase
         $this->assertStringContainsString('/b1s/v1/', $baseUri);
     }
 
+    public function test_get_purchase_order_status_gets_purchase_orders_endpoint(): void
+    {
+        $history = [];
+        $service = $this->makeServiceWithHistory([
+            new Response(200, ['Set-Cookie' => 'B1SESSION=test; Path=/'], '{}'),
+            new Response(200, [], json_encode(['DocEntry' => 123, 'DocumentStatus' => 'bost_Open'])),
+        ], $history);
+
+        $service->getPurchaseOrderStatus('123');
+
+        $getRequest = $this->findGetRequest($history);
+        $this->assertNotNull($getRequest);
+        $path = $getRequest->getUri()->getPath();
+        $this->assertStringContainsString('PurchaseOrders(123)', $path);
+
+        foreach ($history as $transaction) {
+            $request = $transaction['request'];
+            if (str_contains($request->getUri()->getPath(), 'Login')) {
+                continue;
+            }
+            $segment = $this->entitySegmentFromPath($request->getUri()->getPath());
+            $this->assertStringStartsWith('PurchaseOrders', $segment);
+            $this->assertNotSame('Orders', preg_replace('/\(.*$/', '', $segment) ?: '');
+        }
+    }
+
     public function test_create_purchase_order_does_not_post_to_sales_orders_endpoint(): void
     {
         $history = [];
@@ -131,6 +157,21 @@ class SapServiceEndpointTest extends TestCase
             $request = $transaction['request'];
             if (strcasecmp($request->getMethod(), 'POST') === 0
                 && ! str_contains($request->getUri()->getPath(), 'Login')) {
+                return $request;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $history
+     */
+    private function findGetRequest(array $history): ?\Psr\Http\Message\RequestInterface
+    {
+        foreach ($history as $transaction) {
+            $request = $transaction['request'];
+            if (strcasecmp($request->getMethod(), 'GET') === 0) {
                 return $request;
             }
         }

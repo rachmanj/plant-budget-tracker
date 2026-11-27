@@ -114,7 +114,7 @@ class SapService
 
     public function getPurchaseOrderStatus(string $docEntry): array
     {
-        return $this->request('GET', "Orders({$docEntry})");
+        return $this->request('GET', "PurchaseOrders({$docEntry})");
     }
 
     public function getGrpoByPoRef(string $poDocEntry): array

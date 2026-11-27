@@ -68,7 +68,7 @@ class SapReadRepository
             Log::warning('SAP direct SQL PO read failed', ['error' => $e->getMessage()]);
         }
 
-        return $this->sapService->request('GET', "Orders({$docEntry})");
+        return $this->sapService->request('GET', "PurchaseOrders({$docEntry})");
     }
 
     public function getPriceList(array $itemCodes): Collection
