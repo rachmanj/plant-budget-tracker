@@ -56,6 +56,7 @@ class PurchaseOrderController extends Controller
             ->selectRaw(
                 'COUNT(*) as document_count,
                 COALESCE(SUM(total_amount), 0) as total_amount,
+                SUM(CASE WHEN total_amount > 0 THEN 1 ELSE 0 END) as documents_with_amount,
                 SUM(CASE WHEN doc_date >= ? THEN 1 ELSE 0 END) as this_month,
                 COUNT(DISTINCT vendor_code) as suppliers,
                 MAX(doc_date) as latest_doc_date',
@@ -102,6 +103,7 @@ class PurchaseOrderController extends Controller
             'summary' => [
                 'document_count' => (int) ($summaryRow->document_count ?? 0),
                 'total_amount' => (string) ($summaryRow->total_amount ?? '0.00'),
+                'documents_with_amount' => (int) ($summaryRow->documents_with_amount ?? 0),
                 'this_month' => (int) ($summaryRow->this_month ?? 0),
                 'suppliers' => (int) ($summaryRow->suppliers ?? 0),
                 'latest_doc_date' => $summaryRow->latest_doc_date !== null

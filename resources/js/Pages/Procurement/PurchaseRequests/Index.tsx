@@ -17,6 +17,7 @@ import {
     emptyCell,
     formatDocCount,
     prStatusTone,
+    totalValueKpiMeta,
 } from '@/Pages/Procurement/registerIndexUi';
 
 const { RangePicker } = DatePicker;
@@ -73,6 +74,7 @@ interface Filters {
 interface Summary {
     document_count: number;
     total_amount: string;
+    documents_with_amount: number;
     this_month: number;
     departments: number;
     latest_doc_date: string | null;
@@ -166,7 +168,7 @@ export default function Index({
                                 <span>{formatIdrCompact(summary.total_amount)}</span>
                             </Tooltip>
                         }
-                        meta="Sum of document totals"
+                        meta={totalValueKpiMeta(summary.document_count, summary.documents_with_amount)}
                     />
                 </RegisterKpiCol>
                 <RegisterKpiCol>

@@ -131,6 +131,23 @@ class PurchaseRequestRegisterTest extends TestCase
         );
         $this->assertSame(2, $page['props']['summary']['document_count']);
         $this->assertSame('3500000.00', $page['props']['summary']['total_amount']);
+        $this->assertSame(2, $page['props']['summary']['documents_with_amount']);
+    }
+
+    public function test_summary_documents_with_amount_counts_only_positive_totals(): void
+    {
+        $admin = $this->makeUserWithRole('procurement_admin');
+        $this->createPurchaseRequest(['total_amount' => '500.00']);
+        $this->createPurchaseRequest(['total_amount' => '0.00']);
+        $this->createPurchaseRequest(['total_amount' => '0.00']);
+
+        $page = $this->inertiaPageFrom(
+            $this->actingAsProject($admin)->get('/procurement/purchase-requests')->assertOk()
+        );
+
+        $this->assertSame(3, $page['props']['summary']['document_count']);
+        $this->assertSame(1, $page['props']['summary']['documents_with_amount']);
+        $this->assertSame('500.00', $page['props']['summary']['total_amount']);
     }
 
     public function test_summary_includes_extended_register_metrics(): void

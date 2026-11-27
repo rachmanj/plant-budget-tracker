@@ -8,6 +8,14 @@ export function formatDocCount(value: number): string {
     return new Intl.NumberFormat('id-ID').format(value);
 }
 
+export function totalValueKpiMeta(documentCount: number, documentsWithAmount: number): string {
+    if (documentCount === 0 || documentsWithAmount === documentCount) {
+        return 'Sum of document totals';
+    }
+
+    return `From ${formatDocCount(documentsWithAmount)} of ${formatDocCount(documentCount)} documents carrying an amount`;
+}
+
 export function hairlineCardStyle(
     token: ReturnType<typeof theme.useToken>['token'],
     options?: { heightFill?: boolean },

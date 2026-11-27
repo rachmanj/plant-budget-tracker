@@ -149,6 +149,24 @@ class PurchaseOrderRegisterTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('summary.document_count', 2)
                 ->where('summary.total_amount', '3500000.00')
+                ->where('summary.documents_with_amount', 2)
+            );
+    }
+
+    public function test_summary_documents_with_amount_counts_only_positive_totals(): void
+    {
+        $admin = $this->makeUserWithRole('procurement_admin');
+        $this->createPurchaseOrder(['total_amount' => '1000.00']);
+        $this->createPurchaseOrder(['total_amount' => '0.00']);
+        $this->createPurchaseOrder(['total_amount' => '0.00']);
+
+        $this->actingAsProject($admin)
+            ->get('/procurement/purchase-orders')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('summary.document_count', 3)
+                ->where('summary.documents_with_amount', 1)
+                ->where('summary.total_amount', '1000.00')
             );
     }
 
