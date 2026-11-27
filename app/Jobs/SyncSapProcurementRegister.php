@@ -3,7 +3,9 @@
 namespace App\Jobs;
 
 use App\Contracts\Sap\SapProcurementReadRepositoryContract;
+use App\Models\PlantRequest;
 use App\Models\SapSyncLog;
+use App\Models\TabulationBid;
 use App\Services\Procurement\PurchaseOrderRegisterSync;
 use App\Services\Procurement\PurchaseRequestRegisterSync;
 use Carbon\CarbonInterface;
@@ -54,11 +56,33 @@ class SyncSapProcurementRegister implements ShouldQueue
         $log->increment('attempts');
 
         try {
+            $includePrDocNums = PlantRequest::query()
+                ->whereNotNull('sap_pr_no')
+                ->where('sap_pr_no', '!=', '')
+                ->pluck('sap_pr_no')
+                ->unique()
+                ->values()
+                ->all();
+
+            $includePoDocEntries = PlantRequest::query()
+                ->whereNotNull('sap_po_id')
+                ->where('sap_po_id', '!=', '')
+                ->pluck('sap_po_id')
+                ->merge(
+                    TabulationBid::query()
+                        ->whereNotNull('sap_po_id')
+                        ->where('sap_po_id', '!=', '')
+                        ->pluck('sap_po_id')
+                )
+                ->unique()
+                ->values()
+                ->all();
+
             $poSummary = $purchaseOrderRegisterSync->sync(
-                $repository->fetchPurchaseOrderRows($from, $to)
+                $repository->fetchPurchaseOrderRows($from, $to, $includePoDocEntries)
             );
             $prSummary = $purchaseRequestRegisterSync->sync(
-                $repository->fetchPurchaseRequestRows($from, $to)
+                $repository->fetchPurchaseRequestRows($from, $to, $includePrDocNums)
             );
 
             $log->update([

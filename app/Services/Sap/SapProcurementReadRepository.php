@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\DB;
 
 class SapProcurementReadRepository implements SapProcurementReadRepositoryContract
 {
-    public function fetchPurchaseOrderRows(CarbonInterface $from, CarbonInterface $to): Collection
+    private const MAX_INCLUDE_PER_QUERY = 500;
+
+    public function fetchPurchaseOrderRows(CarbonInterface $from, CarbonInterface $to, array $includeDocEntries = []): Collection
     {
         $departmentCodes = config('procurement.po_department_codes', []);
 
@@ -17,7 +19,12 @@ class SapProcurementReadRepository implements SapProcurementReadRepositoryContra
             return collect();
         }
 
-        $placeholders = implode(',', array_fill(0, count($departmentCodes), '?'));
+        [$scopeClause, $scopeBindings] = $this->departmentScopeClause(
+            'cc.[Code]',
+            $departmentCodes,
+            'A.[DocEntry]',
+            $this->cappedIncludeList($includeDocEntries),
+        );
 
         $sql = <<<SQL
             SELECT DISTINCT
@@ -55,19 +62,19 @@ class SapProcurementReadRepository implements SapProcurementReadRepositoryContra
             LEFT JOIN [@MIS_CCDPT] cc ON A.[U_MIS_CCDepartement] = cc.[Code]
             WHERE A.[CreateDate] >= ?
               AND A.[CreateDate] <= ?
-              AND cc.[Code] IN ({$placeholders})
+              AND {$scopeClause}
             SQL;
 
         $bindings = [
             $from->format('Y-m-d H:i:s'),
             $to->format('Y-m-d H:i:s'),
-            ...$departmentCodes,
+            ...$scopeBindings,
         ];
 
         return collect(DB::connection('sap_sql')->select($sql, $bindings));
     }
 
-    public function fetchPurchaseRequestRows(CarbonInterface $from, CarbonInterface $to): Collection
+    public function fetchPurchaseRequestRows(CarbonInterface $from, CarbonInterface $to, array $includeDocNums = []): Collection
     {
         $departmentCodes = config('procurement.pr_department_codes', []);
 
@@ -75,7 +82,12 @@ class SapProcurementReadRepository implements SapProcurementReadRepositoryContra
             return collect();
         }
 
-        $placeholders = implode(',', array_fill(0, count($departmentCodes), '?'));
+        [$scopeClause, $scopeBindings] = $this->departmentScopeClause(
+            'D.[Code]',
+            $departmentCodes,
+            'A.[DocNum]',
+            $this->cappedIncludeList($includeDocNums),
+        );
 
         $sql = <<<SQL
             SELECT DISTINCT
@@ -112,15 +124,54 @@ class SapProcurementReadRepository implements SapProcurementReadRepositoryContra
             LEFT JOIN [OUBR] N ON A.[Branch] = N.[Code]
             WHERE A.[CreateDate] >= ?
               AND A.[CreateDate] <= ?
-              AND D.[Code] IN ({$placeholders})
+              AND {$scopeClause}
             SQL;
 
         $bindings = [
             $from->format('Y-m-d H:i:s'),
             $to->format('Y-m-d H:i:s'),
-            ...$departmentCodes,
+            ...$scopeBindings,
         ];
 
         return collect(DB::connection('sap_sql')->select($sql, $bindings));
+    }
+
+    /**
+     * @param  array<int|string>  $values
+     * @return list<int|string>
+     */
+    private function cappedIncludeList(array $values): array
+    {
+        return collect($values)
+            ->filter(static fn ($value) => $value !== null && $value !== '')
+            ->unique()
+            ->sortByDesc(static fn ($value) => (int) $value)
+            ->take(self::MAX_INCLUDE_PER_QUERY)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<string>  $departmentCodes
+     * @param  list<int|string>  $includeValues
+     * @return array{0: string, 1: list<int|string>}
+     */
+    private function departmentScopeClause(
+        string $departmentColumn,
+        array $departmentCodes,
+        string $includeColumn,
+        array $includeValues,
+    ): array {
+        $deptPlaceholders = implode(',', array_fill(0, count($departmentCodes), '?'));
+        $deptClause = "{$departmentColumn} IN ({$deptPlaceholders})";
+
+        if ($includeValues === []) {
+            return [$deptClause, $departmentCodes];
+        }
+
+        $includePlaceholders = implode(',', array_fill(0, count($includeValues), '?'));
+        $clause = "({$deptClause} OR {$includeColumn} IN ({$includePlaceholders}))";
+
+        return [$clause, [...$departmentCodes, ...$includeValues]];
     }
 }
