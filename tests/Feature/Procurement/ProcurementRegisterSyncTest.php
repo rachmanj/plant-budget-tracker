@@ -91,6 +91,61 @@ class ProcurementRegisterSyncTest extends TestCase
         $this->assertSame('250.00', $order->disc_amount);
     }
 
+    public function test_pr_with_null_department_is_synced_when_doc_num_in_include_list(): void
+    {
+        $docNum = 260100451;
+        $rows = collect([
+            $this->prRow(
+                sapDocEntry: 550451,
+                lineNum: 0,
+                visOrder: 0,
+                departmentCode: null,
+                docNum: $docNum,
+            ),
+        ]);
+
+        $summary = app(PurchaseRequestRegisterSync::class)->sync($rows, [(string) $docNum]);
+
+        $this->assertSame(1, $summary['documents_created']);
+        $this->assertSame(1, $summary['lines_created']);
+        $this->assertSame(1, $summary['documents_included_by_doc_num']);
+        $this->assertDatabaseHas('sap_purchase_requests', ['doc_num' => $docNum, 'department_code' => null]);
+    }
+
+    public function test_pr_outside_department_and_not_in_include_list_is_skipped(): void
+    {
+        $rows = collect([
+            $this->prRow(
+                sapDocEntry: 550452,
+                lineNum: 0,
+                visOrder: 0,
+                departmentCode: '-2',
+                docNum: 260100452,
+            ),
+        ]);
+
+        $summary = app(PurchaseRequestRegisterSync::class)->sync($rows);
+
+        $this->assertSame(0, $summary['documents_created']);
+        $this->assertSame(0, $summary['documents_included_by_doc_num']);
+        $this->assertDatabaseMissing('sap_purchase_requests', ['doc_num' => 260100452]);
+    }
+
+    public function test_po_outside_department_is_synced_when_sap_doc_entry_in_include_list(): void
+    {
+        $entry = 770099;
+        $rows = collect([
+            $this->poRow(sapDocEntry: $entry, lineNum: 0, visOrder: 0, deptCode: '99'),
+        ]);
+
+        $summary = app(PurchaseOrderRegisterSync::class)->sync($rows, [$entry]);
+
+        $this->assertSame(1, $summary['documents_created']);
+        $this->assertSame(1, $summary['lines_created']);
+        $this->assertSame(1, $summary['documents_included_by_entry']);
+        $this->assertDatabaseHas('sap_purchase_orders', ['sap_doc_entry' => $entry, 'dept_code' => '99']);
+    }
+
     public function test_po_line_outside_department_scope_is_skipped(): void
     {
         $rows = collect([
@@ -459,7 +514,7 @@ class ProcurementRegisterSyncTest extends TestCase
         int $sapDocEntry,
         int $lineNum,
         int $visOrder,
-        string $departmentCode,
+        ?string $departmentCode = '4',
         mixed $docNum = null,
         ?string $requester = null,
         float $qty = 3,

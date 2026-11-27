@@ -7,6 +7,8 @@ use App\Jobs\SyncSapProcurementRegister;
 use App\Models\PlantRequest;
 use App\Models\SapSyncLog;
 use App\Models\TabulationBid;
+use App\Services\Procurement\PurchaseOrderRegisterSync;
+use App\Services\Procurement\PurchaseRequestRegisterSync;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -97,6 +99,60 @@ class SyncSapProcurementRegisterJobTest extends TestCase
             app(SapProcurementReadRepositoryContract::class),
             app(\App\Services\Procurement\PurchaseOrderRegisterSync::class),
             app(\App\Services\Procurement\PurchaseRequestRegisterSync::class),
+        );
+    }
+
+    public function test_job_forwards_include_lists_to_register_sync_services(): void
+    {
+        $from = Carbon::parse('2026-09-15')->startOfDay();
+        $to = Carbon::parse('2026-09-16')->endOfDay();
+
+        PlantRequest::factory()->create(['sap_pr_no' => '260100451', 'sap_po_id' => '88001']);
+
+        $emptySummary = [
+            'documents_created' => 0,
+            'documents_updated' => 0,
+            'lines_created' => 0,
+            'lines_updated' => 0,
+            'documents_matched_by_doc_num' => 0,
+            'entry_conflicts_skipped' => 0,
+            'duplicate_retries' => 0,
+            'documents_included_by_doc_num' => 0,
+            'documents_included_by_entry' => 0,
+        ];
+
+        $this->mock(SapProcurementReadRepositoryContract::class, function ($mock) {
+            $mock->shouldReceive('fetchPurchaseOrderRows')->once()->andReturn(collect());
+            $mock->shouldReceive('fetchPurchaseRequestRows')->once()->andReturn(collect());
+        });
+
+        $this->mock(PurchaseOrderRegisterSync::class, function ($mock) use ($emptySummary) {
+            $mock->shouldReceive('sync')
+                ->once()
+                ->withArgs(function ($rows, array $includeDocEntries) {
+                    sort($includeDocEntries);
+
+                    return $includeDocEntries === ['88001'];
+                })
+                ->andReturn($emptySummary);
+        });
+
+        $this->mock(PurchaseRequestRegisterSync::class, function ($mock) use ($emptySummary) {
+            $mock->shouldReceive('sync')
+                ->once()
+                ->withArgs(function ($rows, array $includeDocNums) {
+                    sort($includeDocNums);
+
+                    return $includeDocNums === ['260100451'];
+                })
+                ->andReturn($emptySummary);
+        });
+
+        $job = new SyncSapProcurementRegister($from, $to);
+        $job->handle(
+            app(SapProcurementReadRepositoryContract::class),
+            app(PurchaseOrderRegisterSync::class),
+            app(PurchaseRequestRegisterSync::class),
         );
     }
 }

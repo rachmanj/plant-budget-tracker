@@ -79,10 +79,12 @@ class SyncSapProcurementRegister implements ShouldQueue
                 ->all();
 
             $poSummary = $purchaseOrderRegisterSync->sync(
-                $repository->fetchPurchaseOrderRows($from, $to, $includePoDocEntries)
+                $repository->fetchPurchaseOrderRows($from, $to, $includePoDocEntries),
+                $includePoDocEntries,
             );
             $prSummary = $purchaseRequestRegisterSync->sync(
-                $repository->fetchPurchaseRequestRows($from, $to, $includePrDocNums)
+                $repository->fetchPurchaseRequestRows($from, $to, $includePrDocNums),
+                $includePrDocNums,
             );
 
             $log->update([

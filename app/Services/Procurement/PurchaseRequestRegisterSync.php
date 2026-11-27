@@ -21,14 +21,20 @@ class PurchaseRequestRegisterSync
      *     lines_updated: int,
      *     documents_matched_by_doc_num: int,
      *     entry_conflicts_skipped: int,
-     *     duplicate_retries: int
+     *     duplicate_retries: int,
+     *     documents_included_by_doc_num: int
      * }
      */
-    public function sync(Collection $rows): array
+    public function sync(Collection $rows, array $includeDocNums = []): array
     {
         $allowedDepartments = array_map(
             static fn ($code): string => (string) $code,
             config('procurement.pr_department_codes', [])
+        );
+
+        $includeDocNumsLookup = array_fill_keys(
+            array_map(static fn ($docNum): string => (string) $docNum, $includeDocNums),
+            true
         );
 
         $summary = [
@@ -39,6 +45,7 @@ class PurchaseRequestRegisterSync
             'documents_matched_by_doc_num' => 0,
             'entry_conflicts_skipped' => 0,
             'duplicate_retries' => 0,
+            'documents_included_by_doc_num' => 0,
         ];
 
         $syncedAt = now();
@@ -50,8 +57,15 @@ class PurchaseRequestRegisterSync
                 continue;
             }
 
-            if (! in_array((string) ($headerRow->department_code ?? ''), $allowedDepartments, true)) {
+            $departmentAllowed = in_array((string) ($headerRow->department_code ?? ''), $allowedDepartments, true);
+            $includedByDocNum = isset($includeDocNumsLookup[(string) ($headerRow->doc_num ?? '')]);
+
+            if (! $departmentAllowed && ! $includedByDocNum) {
                 continue;
+            }
+
+            if ($includedByDocNum && ! $departmentAllowed) {
+                $summary['documents_included_by_doc_num']++;
             }
 
             $headerAttributes = [
@@ -96,7 +110,9 @@ class PurchaseRequestRegisterSync
             }
 
             foreach ($documentRows as $lineRow) {
-                if (! in_array((string) ($lineRow->department_code ?? ''), $allowedDepartments, true)) {
+                $lineDepartmentAllowed = in_array((string) ($lineRow->department_code ?? ''), $allowedDepartments, true);
+
+                if (! $lineDepartmentAllowed && ! $includedByDocNum) {
                     continue;
                 }
 

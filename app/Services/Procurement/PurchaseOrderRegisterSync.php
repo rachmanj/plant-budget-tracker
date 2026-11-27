@@ -21,14 +21,20 @@ class PurchaseOrderRegisterSync
      *     lines_updated: int,
      *     documents_matched_by_doc_num: int,
      *     entry_conflicts_skipped: int,
-     *     duplicate_retries: int
+     *     duplicate_retries: int,
+     *     documents_included_by_entry: int
      * }
      */
-    public function sync(Collection $rows): array
+    public function sync(Collection $rows, array $includeDocEntries = []): array
     {
         $allowedDepartments = array_map(
             static fn ($code): string => (string) $code,
             config('procurement.po_department_codes', [])
+        );
+
+        $includeDocEntriesLookup = array_fill_keys(
+            array_map(static fn ($entry): string => (string) $entry, $includeDocEntries),
+            true
         );
 
         $summary = [
@@ -39,6 +45,7 @@ class PurchaseOrderRegisterSync
             'documents_matched_by_doc_num' => 0,
             'entry_conflicts_skipped' => 0,
             'duplicate_retries' => 0,
+            'documents_included_by_entry' => 0,
         ];
 
         $syncedAt = now();
@@ -50,8 +57,15 @@ class PurchaseOrderRegisterSync
                 continue;
             }
 
-            if (! in_array((string) ($headerRow->dept_code ?? ''), $allowedDepartments, true)) {
+            $departmentAllowed = in_array((string) ($headerRow->dept_code ?? ''), $allowedDepartments, true);
+            $includedByEntry = isset($includeDocEntriesLookup[(string) $docEntry]);
+
+            if (! $departmentAllowed && ! $includedByEntry) {
                 continue;
+            }
+
+            if ($includedByEntry && ! $departmentAllowed) {
+                $summary['documents_included_by_entry']++;
             }
 
             $headerAttributes = [
@@ -95,7 +109,9 @@ class PurchaseOrderRegisterSync
             }
 
             foreach ($documentRows as $lineRow) {
-                if (! in_array((string) ($lineRow->dept_code ?? ''), $allowedDepartments, true)) {
+                $lineDepartmentAllowed = in_array((string) ($lineRow->dept_code ?? ''), $allowedDepartments, true);
+
+                if (! $lineDepartmentAllowed && ! $includedByEntry) {
                     continue;
                 }
 
