@@ -286,11 +286,14 @@ function ToggleGroup({
     );
 }
 
-function hairlineCardStyle(token: ReturnType<typeof theme.useToken>['token']): CSSProperties {
+function hairlineCardStyle(
+    token: ReturnType<typeof theme.useToken>['token'],
+    options?: { heightFill?: boolean },
+): CSSProperties {
     return {
         border: `1px solid ${token.colorBorderSecondary}`,
         boxShadow: 'none',
-        height: '100%',
+        ...(options?.heightFill ? { height: '100%' } : {}),
     };
 }
 
@@ -321,7 +324,7 @@ function KpiCard({
         <Card
             hoverable={!!onClick}
             onClick={onClick}
-            style={hairlineCardStyle(token)}
+            style={hairlineCardStyle(token, { heightFill: true })}
             styles={{ body: { padding: 16 } }}
         >
             <Space direction="vertical" size={6} style={{ width: '100%' }}>
@@ -823,7 +826,7 @@ export default function Dashboard({
                     <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
                         <Col xs={24} lg={14}>
                             <Card
-                                style={hairlineCardStyle(token)}
+                                style={hairlineCardStyle(token, { heightFill: true })}
                                 styles={{ body: { padding: 16 } }}
                                 title={
                                     <div>
@@ -843,7 +846,7 @@ export default function Dashboard({
                         </Col>
                         <Col xs={24} lg={10}>
                             <Card
-                                style={hairlineCardStyle(token)}
+                                style={hairlineCardStyle(token, { heightFill: true })}
                                 styles={{ body: { padding: 16 } }}
                                 title={
                                     <div>
@@ -999,7 +1002,7 @@ export default function Dashboard({
                                     <Card
                                         hoverable={!!href}
                                         onClick={href ? () => router.visit(href) : undefined}
-                                        style={hairlineCardStyle(token)}
+                                        style={hairlineCardStyle(token, { heightFill: true })}
                                         styles={{ body: { padding: 14 } }}
                                     >
                                         <Typography.Text strong style={{ display: 'block' }}>
