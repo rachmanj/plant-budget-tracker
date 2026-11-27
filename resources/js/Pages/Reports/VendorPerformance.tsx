@@ -1,7 +1,8 @@
 import { Head } from '@inertiajs/react';
-import { Card, Table } from 'antd';
+import { Table } from 'antd';
 import ReportExportButtons from '@/Components/ReportExportButtons';
 import AppLayout from '@/Layouts/AppLayout';
+import { ReportPage } from '@/Pages/Reports/reportShell';
 
 interface Props {
     data?: unknown[];
@@ -9,15 +10,16 @@ interface Props {
 }
 
 export default function VendorPerformance({ data = [], can = {} }: Props) {
+    const rows = Array.isArray(data) ? data : [];
+    const subtitle = rows.length > 0 ? `${rows.length} vendors` : undefined;
+
     return (
         <AppLayout title="Vendor Performance">
             <Head title="Vendor Performance" />
-            <Card title="Vendor Performance">
-                <ReportExportButtons
-                    reportType="vendor-performance"
-                    canExport={can.export === true}
-                />
+            <ReportPage title="Vendor Performance" subtitle={subtitle}>
+                <ReportExportButtons reportType="vendor-performance" canExport={can.export === true} />
                 <Table
+                    style={{ marginTop: 16 }}
                     rowKey="vendor_code"
                     dataSource={data as never[]}
                     columns={[
@@ -25,7 +27,7 @@ export default function VendorPerformance({ data = [], can = {} }: Props) {
                         { title: 'Indent %', dataIndex: 'indent_pct' },
                     ]}
                 />
-            </Card>
+            </ReportPage>
         </AppLayout>
     );
 }

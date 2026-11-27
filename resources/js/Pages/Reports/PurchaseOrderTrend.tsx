@@ -1,12 +1,14 @@
 import { Head } from '@inertiajs/react';
-import { Card, Col, Row, Statistic, Table, Tooltip, Typography } from 'antd';
+import { Table, Tooltip, Typography } from 'antd';
 import AppLayout from '@/Layouts/AppLayout';
+import { formatDocCount } from '@/Pages/Procurement/registerIndexUi';
 import { formatIdr, formatIdrCompact } from '@/hooks/useCurrency';
 import ProcurementReportToolbar, {
     type DepartmentOption,
     type ProcurementReportFilters,
     type ProjectOption,
 } from '@/Pages/Reports/ProcurementReportToolbar';
+import { formatReportPeriodSubtitle, ReportPage } from '@/Pages/Reports/reportShell';
 
 interface Row {
     period: string;
@@ -50,10 +52,28 @@ export default function PurchaseOrderTrend({
         sap_count: 0,
     };
 
+    const subtitle = formatReportPeriodSubtitle(filters.from, filters.to, rows.length);
+
     return (
         <AppLayout title="Purchase Order Trend">
             <Head title="Purchase Order Trend" />
-            <Card title="Purchase Order Trend">
+            <ReportPage
+                title="Purchase Order Trend"
+                subtitle={subtitle || undefined}
+                kpis={[
+                    { label: 'Documents', value: formatDocCount(summary.document_count) },
+                    {
+                        label: 'Total value',
+                        value: (
+                            <Tooltip title={formatIdr(summary.total_amount)}>
+                                <span>{formatIdrCompact(summary.total_amount)}</span>
+                            </Tooltip>
+                        ),
+                    },
+                    { label: 'From PMB', value: formatDocCount(summary.pmb_count) },
+                    { label: 'From SAP', value: formatDocCount(summary.sap_count) },
+                ]}
+            >
                 <ProcurementReportToolbar
                     reportPath="/reports/purchase-order-trend"
                     reportType="purchase-order-trend"
@@ -64,34 +84,13 @@ export default function PurchaseOrderTrend({
                     canExport={can.export === true}
                 />
 
-                <Row gutter={16} style={{ marginBottom: 24 }}>
-                    <Col xs={12} md={6}>
-                        <Statistic title="PO documents" value={summary.document_count} />
-                    </Col>
-                    <Col xs={12} md={6}>
-                        <Statistic
-                            title="Total PO value"
-                            valueRender={() => (
-                                <Tooltip title={formatIdr(summary.total_amount)}>
-                                    <span>{formatIdrCompact(summary.total_amount)}</span>
-                                </Tooltip>
-                            )}
-                        />
-                    </Col>
-                    <Col xs={12} md={6}>
-                        <Statistic title="PMB origin" value={summary.pmb_count} />
-                    </Col>
-                    <Col xs={12} md={6}>
-                        <Statistic title="SAP origin" value={summary.sap_count} />
-                    </Col>
-                </Row>
-
                 {rows.length === 0 ? (
                     <Typography.Text type="secondary">
                         No purchase orders in this period for the selected filters.
                     </Typography.Text>
                 ) : (
                     <Table
+                        style={{ marginTop: 16 }}
                         rowKey="period"
                         dataSource={rows}
                         pagination={false}
@@ -125,7 +124,7 @@ export default function PurchaseOrderTrend({
                         ]}
                     />
                 )}
-            </Card>
+            </ReportPage>
         </AppLayout>
     );
 }

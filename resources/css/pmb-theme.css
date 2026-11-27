@@ -52,4 +52,27 @@
         align-items: center;
         justify-content: center;
     }
+
+    .ant-input-search-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .ant-pagination .ant-pagination-item,
+    .ant-pagination .ant-pagination-prev .ant-pagination-item-link,
+    .ant-pagination .ant-pagination-next .ant-pagination-item-link {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .ant-input-affix-wrapper .ant-input-clear-icon {
+        padding: 8px;
+        box-sizing: content-box;
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-inline-end: -16px;
+    }
 }

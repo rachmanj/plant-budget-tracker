@@ -1,8 +1,9 @@
 import { Head } from '@inertiajs/react';
-import { Card, Descriptions, Table, Typography } from 'antd';
+import { Table, Typography } from 'antd';
 import ReportExportButtons from '@/Components/ReportExportButtons';
 import AppLayout from '@/Layouts/AppLayout';
 import { formatIdr } from '@/hooks/useCurrency';
+import { ReportPage } from '@/Pages/Reports/reportShell';
 import { statusLabel } from '@/utils/labels';
 
 interface ProjectSummary {
@@ -38,10 +39,23 @@ export default function BudgetConsumption({ data, projectCode, month, can = {} }
     const summary = data?.summary ?? null;
     const units = data?.units ?? [];
 
+    const subtitle =
+        projectCode && month ? `${projectCode}, ${month}, ${units.length} units` : undefined;
+
+    const kpis = summary
+        ? [
+              { label: 'Project ceiling', value: formatIdr(summary.pagu) },
+              { label: 'Committed', value: formatIdr(summary.committed) },
+              { label: 'Actual', value: formatIdr(summary.actual) },
+              { label: 'Remaining', value: formatIdr(summary.remaining) },
+              { label: 'Used', value: `${summary.utilization_pct}%` },
+          ]
+        : undefined;
+
     return (
         <AppLayout title="Budget Consumption">
             <Head title="Budget Consumption" />
-            <Card title={`Budget Consumption — ${projectCode ?? ''} ${month ?? ''}`}>
+            <ReportPage title="Budget Consumption" subtitle={subtitle} kpis={kpis}>
                 <ReportExportButtons
                     reportType="budget-consumption"
                     projectCode={projectCode}
@@ -51,15 +65,9 @@ export default function BudgetConsumption({ data, projectCode, month, can = {} }
 
                 {summary ? (
                     <>
-                        <Descriptions bordered size="small" column={3} style={{ marginBottom: 24 }}>
-                            <Descriptions.Item label="Project ceiling">{formatIdr(summary.pagu)}</Descriptions.Item>
-                            <Descriptions.Item label="Committed">{formatIdr(summary.committed)}</Descriptions.Item>
-                            <Descriptions.Item label="Actual">{formatIdr(summary.actual)}</Descriptions.Item>
-                            <Descriptions.Item label="Remaining">{formatIdr(summary.remaining)}</Descriptions.Item>
-                            <Descriptions.Item label="Used">{summary.utilization_pct}%</Descriptions.Item>
-                        </Descriptions>
-
-                        <Typography.Title level={5}>Detail by unit (from requests)</Typography.Title>
+                        <Typography.Title level={5} style={{ marginTop: 16 }}>
+                            Detail by unit (from requests)
+                        </Typography.Title>
                         <Table
                             rowKey="equipment_id"
                             dataSource={units}
@@ -81,11 +89,9 @@ export default function BudgetConsumption({ data, projectCode, month, can = {} }
                         />
                     </>
                 ) : (
-                    <Typography.Text type="secondary">
-                        No budget data for this period.
-                    </Typography.Text>
+                    <Typography.Text type="secondary">No budget data for this period.</Typography.Text>
                 )}
-            </Card>
+            </ReportPage>
         </AppLayout>
     );
 }

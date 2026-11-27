@@ -1,7 +1,8 @@
 import { Head } from '@inertiajs/react';
-import { Card, Table } from 'antd';
+import { Table } from 'antd';
 import ReportExportButtons from '@/Components/ReportExportButtons';
 import AppLayout from '@/Layouts/AppLayout';
+import { ReportPage } from '@/Pages/Reports/reportShell';
 
 interface Props {
     data?: unknown[];
@@ -11,10 +12,16 @@ interface Props {
 }
 
 export default function EquipmentCost({ data = [], projectCode, month, can = {} }: Props) {
+    const rows = Array.isArray(data) ? data : [];
+    const subtitle =
+        projectCode && month
+            ? `${projectCode}, ${month}, ${rows.length} rows`
+            : undefined;
+
     return (
         <AppLayout title="Equipment Cost">
             <Head title="Equipment Cost" />
-            <Card title={`Equipment Cost Analysis — ${projectCode ?? ''} ${month ?? ''}`}>
+            <ReportPage title="Equipment Cost Analysis" subtitle={subtitle}>
                 <ReportExportButtons
                     reportType="equipment-cost"
                     projectCode={projectCode}
@@ -22,6 +29,7 @@ export default function EquipmentCost({ data = [], projectCode, month, can = {} 
                     canExport={can.export === true}
                 />
                 <Table
+                    style={{ marginTop: 16 }}
                     rowKey="equipment_id"
                     dataSource={data as never[]}
                     columns={[
@@ -29,7 +37,7 @@ export default function EquipmentCost({ data = [], projectCode, month, can = {} 
                         { title: 'Cost/Hour', dataIndex: 'cost_per_hour' },
                     ]}
                 />
-            </Card>
+            </ReportPage>
         </AppLayout>
     );
 }

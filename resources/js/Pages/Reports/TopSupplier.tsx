@@ -1,12 +1,14 @@
 import { Head } from '@inertiajs/react';
-import { Card, Col, Row, Statistic, Table, Tooltip, Typography } from 'antd';
+import { Table, Tooltip, Typography } from 'antd';
 import AppLayout from '@/Layouts/AppLayout';
+import { formatDocCount } from '@/Pages/Procurement/registerIndexUi';
 import { formatIdr, formatIdrCompact } from '@/hooks/useCurrency';
 import ProcurementReportToolbar, {
     type DepartmentOption,
     type ProcurementReportFilters,
     type ProjectOption,
 } from '@/Pages/Reports/ProcurementReportToolbar';
+import { formatReportPeriodSubtitle, ReportPage } from '@/Pages/Reports/reportShell';
 
 interface Row {
     rank: number;
@@ -41,11 +43,27 @@ export default function TopSupplier({
 }: Props) {
     const rows = data?.rows ?? [];
     const summary = data?.summary ?? { document_count: 0, total_amount: '0.00', supplier_count: 0 };
+    const subtitle = formatReportPeriodSubtitle(filters.from, filters.to, rows.length);
 
     return (
         <AppLayout title="Top Suppliers">
             <Head title="Top Suppliers" />
-            <Card title="Top Suppliers by PO Value">
+            <ReportPage
+                title="Top Suppliers by PO Value"
+                subtitle={subtitle || undefined}
+                kpis={[
+                    { label: 'Suppliers', value: formatDocCount(summary.supplier_count) },
+                    { label: 'PO documents', value: formatDocCount(summary.document_count) },
+                    {
+                        label: 'Total PO value',
+                        value: (
+                            <Tooltip title={formatIdr(summary.total_amount)}>
+                                <span>{formatIdrCompact(summary.total_amount)}</span>
+                            </Tooltip>
+                        ),
+                    },
+                ]}
+            >
                 <ProcurementReportToolbar
                     reportPath="/reports/top-supplier"
                     reportType="top-supplier"
@@ -56,31 +74,13 @@ export default function TopSupplier({
                     canExport={can.export === true}
                 />
 
-                <Row gutter={16} style={{ marginBottom: 24 }}>
-                    <Col xs={12} md={8}>
-                        <Statistic title="Suppliers" value={summary.supplier_count} />
-                    </Col>
-                    <Col xs={12} md={8}>
-                        <Statistic title="PO documents" value={summary.document_count} />
-                    </Col>
-                    <Col xs={24} md={8}>
-                        <Statistic
-                            title="Total PO value"
-                            valueRender={() => (
-                                <Tooltip title={formatIdr(summary.total_amount)}>
-                                    <span>{formatIdrCompact(summary.total_amount)}</span>
-                                </Tooltip>
-                            )}
-                        />
-                    </Col>
-                </Row>
-
                 {rows.length === 0 ? (
                     <Typography.Text type="secondary">
                         No supplier PO activity in this period for the selected filters.
                     </Typography.Text>
                 ) : (
                     <Table
+                        style={{ marginTop: 16 }}
                         rowKey="vendor_code"
                         dataSource={rows}
                         pagination={false}
@@ -106,7 +106,7 @@ export default function TopSupplier({
                         ]}
                     />
                 )}
-            </Card>
+            </ReportPage>
         </AppLayout>
     );
 }
