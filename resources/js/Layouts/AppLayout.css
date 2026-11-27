@@ -1,4 +1,7 @@
 .app-layout-header.ant-layout-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     height: 64px;
     line-height: normal;
     overflow: hidden;

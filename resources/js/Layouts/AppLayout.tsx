@@ -455,6 +455,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                     className="app-layout-header"
                     style={{
                         background: token.colorBgContainer,
+                        borderBottom: `1px solid ${token.colorBorderSecondary}`,
                         padding: '0 24px',
                         display: 'flex',
                         alignItems: 'center',
