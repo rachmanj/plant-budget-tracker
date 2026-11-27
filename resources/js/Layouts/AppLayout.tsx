@@ -26,6 +26,22 @@ import {
     BulbOutlined,
     BulbFilled,
     HistoryOutlined,
+    FileAddOutlined,
+    FileTextOutlined,
+    CheckSquareOutlined,
+    WarningOutlined,
+    StopOutlined,
+    SwapOutlined,
+    SyncOutlined,
+    FileSearchOutlined,
+    CalendarOutlined,
+    ShoppingCartOutlined,
+    SettingOutlined,
+    ShopOutlined,
+    TagsOutlined,
+    TableOutlined,
+    BarChartOutlined,
+    AppstoreOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import type { ReactNode } from 'react';
@@ -219,6 +235,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (nav?.canCreatePlantRequest) {
         menuItems.push({
             key: 'plant-requests',
+            icon: <FileAddOutlined />,
             label: <Link href="/plant-requests">Plant Requests</Link>,
         });
     }
@@ -226,6 +243,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (can.includes('dmbd.view') || can.includes('dmbd.update')) {
         menuItems.push({
             key: 'dmbd',
+            icon: <FileTextOutlined />,
             label: <Link href="/dmbd">DMBD</Link>,
         });
     }
@@ -233,6 +251,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (nav?.canViewApprovals) {
         menuItems.push({
             key: 'approvals',
+            icon: <CheckSquareOutlined />,
             label: (
                 <Link href="/approvals">
                     <Badge count={nav.pendingApprovals} size="small" offset={[8, 0]}>
@@ -246,6 +265,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (nav?.canViewOverbudget) {
         menuItems.push({
             key: 'overbudget',
+            icon: <WarningOutlined />,
             label: <Link href="/overbudget">Overbudget</Link>,
         });
     }
@@ -253,6 +273,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (nav?.canViewCancellation) {
         menuItems.push({
             key: 'cancellation',
+            icon: <StopOutlined />,
             label: <Link href="/cancellation">Cancellation</Link>,
         });
     }
@@ -260,6 +281,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (nav?.canViewInterchange) {
         menuItems.push({
             key: 'interchange',
+            icon: <SwapOutlined />,
             label: <Link href="/interchange">Interchange</Link>,
         });
     }
@@ -267,6 +289,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (nav?.viewSapDashboard) {
         menuItems.push({
             key: 'sap-sync',
+            icon: <SyncOutlined />,
             label: <Link href="/sap/sync-dashboard">SAP Sync</Link>,
         });
     }
@@ -274,14 +297,17 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (can.includes('procurement.view')) {
         menuItems.push({
             key: 'purchase-requests',
+            icon: <FileSearchOutlined />,
             label: <Link href="/procurement/purchase-requests">Purchase Requests</Link>,
         });
         menuItems.push({
             key: 'daily-pr',
+            icon: <CalendarOutlined />,
             label: <Link href="/procurement/daily-pr">Daily PR</Link>,
         });
         menuItems.push({
             key: 'purchase-orders',
+            icon: <ShoppingCartOutlined />,
             label: <Link href="/procurement/purchase-orders">Purchase Orders</Link>,
         });
     }
@@ -289,6 +315,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (can.includes('procurement.settings')) {
         menuItems.push({
             key: 'procurement-settings',
+            icon: <SettingOutlined />,
             label: <Link href="/procurement/settings">Procurement Settings</Link>,
         });
     }
@@ -296,6 +323,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (can.includes('supplier.view')) {
         menuItems.push({
             key: 'suppliers',
+            icon: <ShopOutlined />,
             label: <Link href="/procurement/suppliers">Suppliers</Link>,
         });
     }
@@ -303,6 +331,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (can.includes('item_price.view')) {
         menuItems.push({
             key: 'item-prices',
+            icon: <TagsOutlined />,
             label: <Link href="/procurement/item-prices">Item Prices</Link>,
         });
     }
@@ -310,6 +339,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (nav?.canViewTabulationBids) {
         menuItems.push({
             key: 'tabulation-bids',
+            icon: <TableOutlined />,
             label: <Link href="/tabulation-bids">Tabulation Bids</Link>,
         });
     }
@@ -317,6 +347,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (can.includes('reports.view')) {
         menuItems.push({
             key: 'reports',
+            icon: <BarChartOutlined />,
             label: <Link href="/reports">Reports</Link>,
             children: [
                 {
@@ -382,6 +413,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     if (features?.cannibal_beta && can.includes('component.view')) {
         menuItems.push({
             key: 'components',
+            icon: <AppstoreOutlined />,
             label: <Link href="/components">Components</Link>,
         });
     }
