@@ -1,11 +1,13 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Card, InputNumber, Space, Table, Tabs, Tag, Typography, message } from 'antd';
+import { Button, Card, InputNumber, Space, Table, Tabs, Tag, Tooltip, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import AppLayout from '@/Layouts/AppLayout';
+import { AppPage } from '@/Components/AppPage';
 import BudgetProgressBar from '@/Components/BudgetProgressBar';
-import { formatIdr } from '@/hooks/useCurrency';
+import { formatIdr, formatIdrCompact } from '@/hooks/useCurrency';
+import { formatDocCount } from '@/Pages/Procurement/registerIndexUi';
 
 interface AllocationRow {
     id: number;
@@ -56,8 +58,13 @@ function settingUrl(projectCode: string, periodMonth: string): string {
     return `/budget/setting?${params.toString()}`;
 }
 
+function sumAllocations(allocations: AllocationRow[], field: 'allocated_amount' | 'actual_amount'): number {
+    return allocations.reduce((sum, row) => sum + parseFloat(row[field] || '0'), 0);
+}
+
 export default function BudgetIndex({
     projectCode,
+    projects,
     periods,
     canManage,
     isFinanceDirector,
@@ -73,6 +80,56 @@ export default function BudgetIndex({
     });
 
     const activePeriod = periods.find((p) => p.period_month === activeMonth);
+    const openPeriod = periods.find((p) => p.status === 'open');
+
+    const projectLabel = useMemo(() => {
+        const match = projects.find((p) => p.project_code === projectCode);
+        if (match) {
+            return `${match.project_code} · ${match.project_name}`;
+        }
+        return projectCode;
+    }, [projectCode, projects]);
+
+    const openPeriodLabel = openPeriod ? dayjs(openPeriod.period_month).format('MMM YYYY') : 'None';
+
+    const pageSubtitle = useMemo(() => {
+        const openPart = openPeriod
+            ? `Open period ${dayjs(openPeriod.period_month).format('MMM YYYY')}`
+            : 'No open period';
+        return `${projectLabel} · ${openPart}`;
+    }, [projectLabel, openPeriod]);
+
+    const budgetKpis = useMemo(() => {
+        const kpis = [
+            { label: 'Open period', value: openPeriodLabel },
+            { label: 'Periods', value: formatDocCount(periods.length) },
+        ];
+
+        if (openPeriod) {
+            const allocated = sumAllocations(openPeriod.allocations, 'allocated_amount');
+            const used = sumAllocations(openPeriod.allocations, 'actual_amount');
+            kpis.push(
+                {
+                    label: 'Allocated',
+                    value: (
+                        <Tooltip title={formatIdr(String(allocated))}>
+                            <span>{formatIdrCompact(String(allocated))}</span>
+                        </Tooltip>
+                    ),
+                },
+                {
+                    label: 'Used',
+                    value: (
+                        <Tooltip title={formatIdr(String(used))}>
+                            <span>{formatIdrCompact(String(used))}</span>
+                        </Tooltip>
+                    ),
+                }
+            );
+        }
+
+        return kpis;
+    }, [openPeriod, openPeriodLabel, periods.length]);
 
     const startEdit = (row: AllocationRow) => {
         setEditingId(row.id);
@@ -250,18 +307,17 @@ export default function BudgetIndex({
         ),
     }));
 
+    const headerActions =
+        canManage && activePeriod ? (
+            <Button type="primary" style={{ minHeight: 44 }} href={settingUrl(projectCode, activePeriod.period_month)}>
+                {activePeriod.allocations.length > 0 ? 'Edit Allocation' : 'Create Allocation'}
+            </Button>
+        ) : null;
+
     return (
         <AppLayout title="Budget">
             <Head title="Budget" />
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                <Space wrap>
-                    {canManage && activePeriod && (
-                        <Button type="primary" href={settingUrl(projectCode, activePeriod.period_month)}>
-                            {activePeriod.allocations.length > 0 ? 'Edit Allocation' : 'Create Allocation'}
-                        </Button>
-                    )}
-                </Space>
-
+            <AppPage title="Budget" subtitle={pageSubtitle} kpis={periods.length > 0 ? budgetKpis : undefined} actions={headerActions}>
                 {periods.length === 0 ? (
                     <Card>
                         <Typography.Text type="secondary">
@@ -282,7 +338,7 @@ export default function BudgetIndex({
                 ) : (
                     <Tabs activeKey={activeMonth} onChange={setActiveMonth} items={tabItems} type="card" />
                 )}
-            </Space>
+            </AppPage>
         </AppLayout>
     );
 }

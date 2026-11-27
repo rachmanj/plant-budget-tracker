@@ -1,8 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Button, Card, Input, Modal, Radio, Table, Tag, Tooltip, Typography } from 'antd';
+import { Button, Input, Modal, Radio, Table, Tag, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { AppPage } from '@/Components/AppPage';
+import { RegisterTableCard, StatusPill, formatDocCount } from '@/Pages/Procurement/registerIndexUi';
 import { formatIdr, formatIdrCompact } from '@/hooks/useCurrency';
 import { roleLabel } from '@/utils/labels';
 
@@ -30,7 +32,7 @@ interface Approval {
 }
 
 interface Props {
-    approvals: { data: Approval[] };
+    approvals: { data: Approval[]; total?: number };
 }
 
 interface NavPageProps {
@@ -43,6 +45,23 @@ export default function Index({ approvals }: Props) {
     const [decision, setDecision] = useState('approved');
     const [remarks, setRemarks] = useState('');
     const [remarksError, setRemarksError] = useState<string | null>(null);
+
+    const waitingCount = approvals.total ?? approvals.data.length;
+
+    const distinctTypes = useMemo(() => {
+        const types = new Set(approvals.data.map((row) => row.document.type_label).filter(Boolean));
+        return types.size;
+    }, [approvals.data]);
+
+    const pageSubtitle = `${formatDocCount(waitingCount)} request${waitingCount === 1 ? '' : 's'} awaiting your decision`;
+
+    const kpis = useMemo(() => {
+        const items = [{ label: 'Waiting', value: formatDocCount(waitingCount) }];
+        if (approvals.data.some((row) => row.document?.type_label)) {
+            items.push({ label: 'Types', value: formatDocCount(distinctTypes) });
+        }
+        return items;
+    }, [approvals.data, distinctTypes, waitingCount]);
 
     const openModal = (row: Approval) => {
         setSelected(row);
@@ -64,78 +83,81 @@ export default function Index({ approvals }: Props) {
     return (
         <AppLayout title="My Approvals">
             <Head title="My Approvals" />
-            <Card title="Pending Approvals">
-                <Table
-                    rowKey="id"
-                    dataSource={approvals.data}
-                    columns={[
-                        {
-                            title: 'Document',
-                            dataIndex: ['document', 'type_label'],
-                            render: (_: string, row: Approval) => (
-                                <div>
-                                    <Typography.Text strong>{row.document.type_label}</Typography.Text>
-                                    {row.document.is_director_threshold_step && (
-                                        <div>
-                                            <Tag color="gold">President Director threshold</Tag>
-                                        </div>
-                                    )}
-                                </div>
-                            ),
-                        },
-                        {
-                            title: 'Number',
-                            dataIndex: ['document', 'document_no'],
-                            render: (no: string, row: Approval) => (
-                                <Link href={row.document.url}>{no}</Link>
-                            ),
-                        },
-                        {
-                            title: 'Project',
-                            render: (_: unknown, row: Approval) =>
-                                row.document.project_name ??
-                                row.document.project_code ??
-                                '—',
-                        },
-                        {
-                            title: 'Amount',
-                            dataIndex: ['document', 'amount'],
-                            render: (amount: string | null) =>
-                                amount ? (
-                                    <Tooltip title={formatIdr(amount)}>
-                                        <span>{formatIdrCompact(amount)}</span>
-                                    </Tooltip>
-                                ) : (
-                                    '—'
+            <AppPage title="Pending Approvals" subtitle={pageSubtitle} kpis={kpis}>
+                <RegisterTableCard showing={approvals.data.length} total={waitingCount}>
+                    <Table
+                        rowKey="id"
+                        dataSource={approvals.data}
+                        scroll={{ x: 'max-content' }}
+                        columns={[
+                            {
+                                title: 'Document',
+                                dataIndex: ['document', 'type_label'],
+                                render: (_: string, row: Approval) => (
+                                    <div>
+                                        <Typography.Text strong>{row.document.type_label}</Typography.Text>
+                                        {row.document.is_director_threshold_step && (
+                                            <div>
+                                                <StatusPill tone="orange">President Director threshold</StatusPill>
+                                            </div>
+                                        )}
+                                    </div>
                                 ),
-                        },
-                        {
-                            title: 'Step',
-                            dataIndex: ['document', 'step_label'],
-                        },
-                        {
-                            title: 'Role',
-                            dataIndex: 'required_role',
-                            render: (r: string) => <Tag>{roleLabel(r, nav?.roleLabels)}</Tag>,
-                        },
-                        {
-                            title: 'Submitted',
-                            dataIndex: ['document', 'submitted_at'],
-                            render: (at: string | null) =>
-                                at ? dayjs(at).format('D MMM YYYY HH:mm') : '—',
-                        },
-                        {
-                            title: 'Action',
-                            render: (_: unknown, row: Approval) => (
-                                <Button size="small" onClick={() => openModal(row)}>
-                                    Decide
-                                </Button>
-                            ),
-                        },
-                    ]}
-                    pagination={false}
-                />
-            </Card>
+                            },
+                            {
+                                title: 'Number',
+                                dataIndex: ['document', 'document_no'],
+                                render: (no: string, row: Approval) => (
+                                    <Link href={row.document.url}>{no}</Link>
+                                ),
+                            },
+                            {
+                                title: 'Project',
+                                render: (_: unknown, row: Approval) =>
+                                    row.document.project_name ??
+                                    row.document.project_code ??
+                                    '—',
+                            },
+                            {
+                                title: 'Amount',
+                                dataIndex: ['document', 'amount'],
+                                render: (amount: string | null) =>
+                                    amount ? (
+                                        <Tooltip title={formatIdr(amount)}>
+                                            <span>{formatIdrCompact(amount)}</span>
+                                        </Tooltip>
+                                    ) : (
+                                        '—'
+                                    ),
+                            },
+                            {
+                                title: 'Step',
+                                dataIndex: ['document', 'step_label'],
+                            },
+                            {
+                                title: 'Role',
+                                dataIndex: 'required_role',
+                                render: (r: string) => <Tag>{roleLabel(r, nav?.roleLabels)}</Tag>,
+                            },
+                            {
+                                title: 'Submitted',
+                                dataIndex: ['document', 'submitted_at'],
+                                render: (at: string | null) =>
+                                    at ? dayjs(at).format('D MMM YYYY HH:mm') : '—',
+                            },
+                            {
+                                title: 'Action',
+                                render: (_: unknown, row: Approval) => (
+                                    <Button size="small" style={{ minHeight: 44 }} onClick={() => openModal(row)}>
+                                        Decide
+                                    </Button>
+                                ),
+                            },
+                        ]}
+                        pagination={false}
+                    />
+                </RegisterTableCard>
+            </AppPage>
             <Modal open={!!selected} onCancel={() => setSelected(null)} onOk={submit} title="Approval Decision">
                 {selected?.document.is_director_threshold_step && selected.document.amount && (
                     <Typography.Paragraph type="warning">

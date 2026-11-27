@@ -1,22 +1,27 @@
 import { Head, router } from '@inertiajs/react';
 import {
     Button,
-    Card,
     Form,
     Input,
     Modal,
     Select,
     Space,
     Table,
-    Tag,
     Tooltip,
-    Typography,
     message,
 } from 'antd';
 import type { TablePaginationConfig } from 'antd/es/table';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { AppPage } from '@/Components/AppPage';
 import ProjectFilterSelect from '@/Components/ProjectFilterSelect';
+import {
+    RegisterFiltersCard,
+    RegisterTableCard,
+    StatusPill,
+    formatDocCount,
+    type PillTone,
+} from '@/Pages/Procurement/registerIndexUi';
 import { statusLabel } from '@/utils/labels';
 
 interface EquipmentRow {
@@ -62,7 +67,19 @@ interface Props {
     can: { update: boolean };
 }
 
-const statusColor: Record<string, string> = { rfu: 'green', standby: 'gold', breakdown: 'red' };
+function dmbdStatusTone(status: string): PillTone {
+    const normalized = status.trim().toLowerCase();
+
+    if (normalized === 'rfu') {
+        return 'green';
+    }
+
+    if (normalized === 'standby') {
+        return 'orange';
+    }
+
+    return 'orange';
+}
 
 export default function Index({
     units,
@@ -96,6 +113,18 @@ export default function Index({
             },
             { preserveState: true, preserveScroll: true }
         );
+    };
+
+    const resetFilters = () => {
+        router.get(
+            '/dmbd',
+            {
+                project_code: projectCode ?? undefined,
+                per_page: perPage,
+            },
+            { preserveState: true, preserveScroll: true }
+        );
+        setSearchValue('');
     };
 
     const handleSearch = (value: string) => navigate({ search: value || undefined, page: 1 });
@@ -164,13 +193,15 @@ export default function Index({
         );
     };
 
-    const currentProjectName = (): string => {
-        if (!projectCode || projectCode === 'all') {
-            return 'All Projects';
-        }
-        const match = projects.find((p) => p.project_code === projectCode);
-        return match ? `${match.project_code} — ${match.project_name}` : projectCode;
-    };
+    const statusFilterLabel = filters.status ? statusLabel(filters.status) : 'All statuses';
+
+    const pageSubtitle = useMemo(
+        () =>
+            `${formatDocCount(units.total)} units · ${statusFilterLabel} · ${reportDate}`,
+        [units.total, statusFilterLabel, reportDate]
+    );
+
+    const controlStyle = { minHeight: 44 };
 
     const columns = [
         { title: 'Unit', dataIndex: 'unit_code', key: 'unit_code' },
@@ -184,12 +215,12 @@ export default function Index({
             render: (_: unknown, row: EquipmentRow) => {
                 const current = entries[row.id]?.operational_status ?? 'rfu';
                 if (!can.update) {
-                    return <Tag color={statusColor[current]}>{statusLabel(current)}</Tag>;
+                    return <StatusPill tone={dmbdStatusTone(current)}>{statusLabel(current)}</StatusPill>;
                 }
                 return (
                     <Select
                         value={current}
-                        style={{ width: 180 }}
+                        style={{ width: 180, ...controlStyle }}
                         onChange={(v) => handleStatusChange(row, v)}
                         options={[
                             { value: 'rfu', label: statusLabel('rfu') },
@@ -240,50 +271,55 @@ export default function Index({
     return (
         <AppLayout title="DMBD">
             <Head title="DMBD" />
-            <Card title={`Daily Monitoring — ${reportDate} — ${currentProjectName()}`}>
-                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                    <Space wrap>
-                        <Input.Search
-                            placeholder="Search unit code / description"
-                            allowClear
-                            style={{ width: 260 }}
-                            value={searchValue}
-                            onChange={(e) => setSearchValue(e.target.value)}
-                            onSearch={handleSearch}
+            <AppPage
+                title="DMBD"
+                subtitle={pageSubtitle}
+                kpis={[
+                    { label: 'RFU', value: formatDocCount(statusSummary.rfu) },
+                    { label: 'Standby', value: formatDocCount(statusSummary.standby) },
+                    { label: 'Breakdown', value: formatDocCount(statusSummary.breakdown) },
+                    { label: 'Units', value: formatDocCount(units.total) },
+                ]}
+            >
+                <RegisterFiltersCard onReset={resetFilters}>
+                    <Input.Search
+                        placeholder="Search unit code / description"
+                        allowClear
+                        style={{ width: 260, ...controlStyle }}
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        onSearch={handleSearch}
+                    />
+                    <Select
+                        style={{ width: 180, ...controlStyle }}
+                        value={filters.status ?? 'all'}
+                        onChange={handleStatusFilterChange}
+                        options={[
+                            { value: 'all', label: 'All Statuses' },
+                            { value: 'rfu', label: statusLabel('rfu') },
+                            { value: 'standby', label: statusLabel('standby') },
+                            { value: 'breakdown', label: statusLabel('breakdown') },
+                        ]}
+                    />
+                    {projects.length > 1 && (
+                        <ProjectFilterSelect
+                            allowAll
+                            allValue="all"
+                            value={projectCode ?? 'all'}
+                            projects={projects}
+                            tooltip="DMBD can be viewed across projects. The topbar sets the app-wide project context for other pages."
+                            onChange={(code) => handleProjectChange(code ?? 'all')}
                         />
-                        <Select
-                            style={{ width: 180 }}
-                            value={filters.status ?? 'all'}
-                            onChange={handleStatusFilterChange}
-                            options={[
-                                { value: 'all', label: 'All Statuses' },
-                                { value: 'rfu', label: statusLabel('rfu') },
-                                { value: 'standby', label: statusLabel('standby') },
-                                { value: 'breakdown', label: statusLabel('breakdown') },
-                            ]}
-                        />
-                        {projects.length > 1 && (
-                            <ProjectFilterSelect
-                                allowAll
-                                allValue="all"
-                                value={projectCode ?? 'all'}
-                                projects={projects}
-                                tooltip="DMBD can be viewed across projects. The topbar sets the app-wide project context for other pages."
-                                onChange={(code) => handleProjectChange(code ?? 'all')}
-                            />
-                        )}
-                    </Space>
-                    <Space size="middle">
-                        <Typography.Text>Today:</Typography.Text>
-                        <Tag color="green">{statusLabel('rfu')}: {statusSummary.rfu}</Tag>
-                        <Tag color="gold">{statusLabel('standby')}: {statusSummary.standby}</Tag>
-                        <Tag color="red">{statusLabel('breakdown')}: {statusSummary.breakdown}</Tag>
-                    </Space>
+                    )}
+                </RegisterFiltersCard>
+
+                <RegisterTableCard showing={units.data.length} total={units.total}>
                     <Table
                         rowKey="id"
                         dataSource={units.data}
                         columns={columns}
                         onChange={handleTableChange}
+                        scroll={{ x: 'max-content' }}
                         pagination={{
                             current: units.current_page,
                             pageSize: units.per_page,
@@ -292,8 +328,8 @@ export default function Index({
                             pageSizeOptions: [25, 50, 100],
                         }}
                     />
-                </Space>
-            </Card>
+                </RegisterTableCard>
+            </AppPage>
             <Modal
                 title={noteModal?.status === 'breakdown' ? 'Breakdown Cause Note' : 'Unit Note'}
                 open={!!noteModal?.open}
