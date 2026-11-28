@@ -47,4 +47,16 @@
     .app-layout-user-name {
         display: none !important;
     }
+
+    .app-layout-project-select {
+        width: 180px;
+        max-width: 180px;
+    }
+}
+
+@media (max-width: 600px) {
+    .app-layout-project-select {
+        width: 140px;
+        max-width: 140px;
+    }
 }
